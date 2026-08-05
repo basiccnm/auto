@@ -99,3 +99,6 @@ sajangpick/outbox/
 
 # Cloudflare Wrangler 임시 파일 무시
 .wrangler/
+
+# 업로더 브라우저 로그인 세션 (쿠키·인증정보 그 자체 — 2026-08-05)
+**/uploader_profile/
