@@ -1,0 +1,104 @@
+---
+pagination:
+  data: academies
+  size: 1
+  alias: academy
+permalink: "/{{ academy.sido }}/{{ academy.sigungu }}/{{ academy.slug }}/index.html"
+---
+{%- from "widgets.njk" import mapButton, tipoffSection, widgetsScript with context -%}
+{%- set related = academies | relatedAcademies(academy, 5) -%}
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ academy.name }} 수강료·정보 | {{ academy.sigungu }} {{ academy.category_name }}</title>
+<meta name="description" content="{{ academy.sigungu }} {{ academy.category_name }} '{{ academy.name }}' {% if academy.has_fee_data %}수강료, {% endif %}주소, 전화번호, 정원 정보. {% if academy.has_fee_data %}과목별 수강료를 확인하세요.{% else %}수강료는 교육청 미등록으로 학원에 직접 문의가 필요합니다.{% endif %}">
+{% if academy.status == "폐원" %}<meta name="robots" content="noindex">{% endif %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "LocalBusiness",
+  "name": {{ academy.name | dump | safe }},
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": {{ (academy.address_road + " " + academy.address_detail) | trim | dump | safe }},
+    "addressLocality": {{ academy.sigungu | dump | safe }},
+    "addressRegion": {{ academy.sido | dump | safe }},
+    "postalCode": {{ academy.zipcode | dump | safe }},
+    "addressCountry": "KR"
+  }
+  {%- if academy.phone %},
+  "telephone": {{ academy.phone | dump | safe }}
+  {%- endif %}
+}
+</script>
+<style>
+  body{font-family:-apple-system,"Malgun Gothic",sans-serif;max-width:720px;margin:0 auto;padding:24px 16px;line-height:1.6;color:#222}
+  .badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:13px;margin-left:8px}
+  .badge-open{background:#e6f4ea;color:#1a7f37}
+  .badge-closed{background:#fce8e6;color:#c5221f}
+  .notice{background:#fff8e1;border:1px solid #ffe082;padding:12px;border-radius:6px;margin:16px 0}
+  table{width:100%;border-collapse:collapse;margin:12px 0}
+  th,td{text-align:left;padding:8px;border-bottom:1px solid #eee}
+  .meta-table td:first-child{color:#666;width:90px}
+  .related a{display:block;padding:8px 0;border-bottom:1px solid #eee;color:#1a56db;text-decoration:none}
+  h1{font-size:22px;margin-bottom:4px}
+  .breadcrumb{font-size:13px;color:#888;margin-bottom:16px}
+</style>
+</head>
+<body>
+  <p class="breadcrumb">
+    <a href="/{{ academy.sido }}/">{{ academy.sido }}</a> &gt;
+    <a href="/{{ academy.sido }}/{{ academy.sigungu }}/">{{ academy.sigungu }}</a> &gt;
+    <a href="/{{ academy.sido }}/{{ academy.sigungu }}/{{ academy.category_slug }}/">{{ academy.category_name }}</a>
+  </p>
+
+  <h1>{{ academy.name }}
+    {% if academy.status == "개원" %}<span class="badge badge-open">개원중</span>
+    {% elif academy.status == "폐원" %}<span class="badge badge-closed">폐원</span>
+    {% else %}<span class="badge">{{ academy.status }}</span>{% endif %}
+  </h1>
+  <p>{{ academy.sigungu }} · {{ academy.category_name }} · {{ academy.inst_type }}</p>
+
+  {% if academy.status == "폐원" %}
+  <div class="notice">이 학원은 폐원되었습니다. 아래 같은 지역·분야의 다른 학원을 확인해보세요.</div>
+  {% endif %}
+
+  <h2>수강료</h2>
+  {% if academy.has_fee_data %}
+  <table>
+    <thead><tr><th>과목/과정</th><th>수강료</th></tr></thead>
+    <tbody>
+    {% for item in academy.fee_parsed %}
+      <tr><td>{{ item.course }}</td><td>{{ item.price | comma }}원</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="notice">교육청 시스템에 수강료를 등록하지 않은 학원입니다. 연락처로 직접 문의하세요.{% if academy.phone %} ({{ academy.phone }}){% endif %}</div>
+  {% endif %}
+
+  <h2>기본 정보</h2>
+  <table class="meta-table">
+    <tr><td>주소</td><td>{{ academy.address_road }} {{ academy.address_detail }}</td></tr>
+    <tr><td>전화</td><td>{{ academy.phone or "정보 없음" }}</td></tr>
+    <tr><td>분야</td><td>{{ academy.category_name }} ({{ academy.course_name or "미기재" }})</td></tr>
+    <tr><td>정원</td><td>{{ academy.capacity_total }}명 (시간당 {{ academy.capacity_hourly }}명)</td></tr>
+    <tr><td>등록일</td><td>{{ academy.reg_date }}</td></tr>
+  </table>
+
+  {{ mapButton(academy.lat, academy.lng, academy.name) }}
+  {{ tipoffSection("academy", academy.slug, academy.name, academy.phone) }}
+
+  {% if related.length %}
+  <h2>{{ academy.sigungu }}의 다른 {{ academy.category_name }}</h2>
+  <div class="related">
+    {% for r in related %}
+    <a href="/{{ r.sido }}/{{ r.sigungu }}/{{ r.slug }}/">{{ r.name }}{% if r.has_fee_data %} (수강료 확인가능){% endif %}</a>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {{ widgetsScript() }}
+</body>
+</html>

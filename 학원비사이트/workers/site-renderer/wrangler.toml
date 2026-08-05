@@ -1,0 +1,14 @@
+name = "academy-site-renderer"
+main = "src/index.js"
+compatibility_date = "2026-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "academy-site-db"
+database_id = "fd2b9dde-c080-479a-8407-9e76002947b1"
+
+[vars]
+KAKAO_JS_KEY = "e11e39b594f6a745478f0835f4980829"
+TIPOFF_API_BASE = "https://academy-tipoff-api.dndmotor1.workers.dev"
+SITE_INDEXABLE = "false"
+SITE_ORIGIN = "https://academy-site-renderer.dndmotor1.workers.dev"

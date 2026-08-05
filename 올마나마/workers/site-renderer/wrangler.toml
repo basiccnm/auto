@@ -1,0 +1,57 @@
+# 얼마남아 배포 설정 — Cloudflare Workers 정적 자산 (2026-07-17)
+#
+# ★ 왜 D1 + templates.js 가 아니라 정적 자산인가 (학원비사이트와 다른 선택)
+#   학원비사이트는 검색·페이징·필터를 **서버가** 처리한다(index.js에 searchParams 처리 다수) → D1 필요.
+#   얼마남아는 **서버 요청이 0건**이다. 검색은 클라이언트 JS 필터고, 488개 페이지는 이미 정적 생성된다.
+#   매일 바뀌는 건 재료 시세뿐이라 "시세 수집 → 재생성 → 재배포"면 충분하다.
+#
+#   렌더러를 JS로 포팅하면 **파이썬 렌더러와 JS 렌더러 둘을 영원히 동기화**해야 한다.
+#   그 이중화가 2026-07-17 하루에만 두 번 사고를 냈다:
+#     · 도매가를 계산기와 렌더러가 각각 계산 → 표 합계와 헤드라인이 400원 어긋남
+#     · SITE 상수를 4곳에 박음 → canonical 488개가 존재하지 않는 도메인을 가리킴
+#   같은 실수를 구조로 만들지 않는다. 렌더러는 파이썬 하나만 둔다.
+#
+# 배포:
+#   1) python scripts/build_dist.py     # _preview → _dist (검수용 _* 제외)
+#   2) npx wrangler login               # ★ 사용자가 직접 (Claude는 계정 로그인 금지)
+#   3) cd workers/site-renderer && npx wrangler deploy
+#
+# 매일 시세 갱신 (배포 후):
+#   collect_prices → compute_line_costs → 생성기 전부 → gen_sitemap → build_dist → wrangler deploy
+#   작업 스케줄러에 걸면 자동 (GDrive 백업이 21:00에 도는 것과 같은 방식)
+
+name = "eolmanama-site-renderer"
+compatibility_date = "2026-01-01"
+
+# ── 커스텀 도메인 (2026-07-19 olmanama.com — Cloudflare Registrar에서 구입, 같은 계정 zone) ──
+#  deploy 시 wrangler가 도메인을 워커에 자동 연결한다(별도 DNS 설정 불필요).
+routes = [
+  { pattern = "olmanama.com", custom_domain = true },
+  { pattern = "www.olmanama.com", custom_domain = true },
+]
+# 기존 workers.dev 주소는 끈다 — 같은 내용이 두 주소로 서빙되면 중복 콘텐츠(색인 전에 정리)
+workers_dev = false
+
+# 정적 자산만 배포 — Worker 스크립트(main) 없음
+[assets]
+directory = "../../_dist"
+# 확장자 없는 주소(/menu_6)로 와도 menu_6.html 을 준다.
+#  ⚠️ "none"으로 바꿨다가 홈 루트 `/`가 404났다(none은 / → index.html 매핑을 안 함). 되돌림(2026-07-18).
+#  .html → 확장자없음 307 리다이렉트가 남지만 브라우저가 따라가 정상 동작한다.
+html_handling = "auto-trailing-slash"
+# 없는 주소는 404. SPA 폴백을 쓰면 안 된다 — pSEO 사이트에서 soft-404는 색인을 망친다.
+not_found_handling = "404-page"
+
+[vars]
+# ⚠️ scripts/site_config.py 가 이 값을 읽어 canonical·sitemap에 박는다.
+#    도메인을 바꾸면 **여기만** 고치고 생성기를 다시 돌릴 것 (4곳에 박지 말 것).
+SITE_ORIGIN = "https://olmanama.com"
+
+# ── 제거한 설정과 이유 ────────────────────────────────────────────
+# main = "src/index.js"        → 정적 자산 배포라 Worker 스크립트 불필요 (파일도 없었다)
+# [[d1_databases]]             → 서버 쿼리가 없다. D1 시딩·PLACEHOLDER id 모두 불필요
+# SITE_INDEXABLE = "false"     → 🔴 이게 박혀 있으면 **배포해도 검색 노출이 0**이 된다.
+#                                색인 제어는 robots.txt(_dist/robots.txt)가 한다.
+#                                지금 robots.txt는 Allow: / + sitemap 링크 = 노출 허용 상태.
+# COUPANG_PARTNER_ID           → 파트너스 딥링크를 붙일 때 다시 추가 (지금은 복사버튼만)
+# wrangler secret put KAMIS…   → 시세 수집은 로컬 파이썬이 한다. 워커는 키가 필요 없다.

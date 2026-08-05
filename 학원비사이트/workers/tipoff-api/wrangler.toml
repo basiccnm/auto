@@ -1,0 +1,10 @@
+name = "academy-tipoff-api"
+main = "src/index.js"
+compatibility_date = "2026-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "academy-site-db"
+database_id = "fd2b9dde-c080-479a-8407-9e76002947b1"
+
+# wrangler secret put ADMIN_PASSWORD  로 별도 등록 (wrangler.toml에 평문 저장 금지)

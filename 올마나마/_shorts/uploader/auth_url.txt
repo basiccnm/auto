@@ -1,8 +1,0 @@
-C:\Users\hardb\AppData\Local\Programs\Python\Python39\lib\site-packages\google\auth\__init__.py:54: FutureWarning: You are using a Python version 3.9 past its end of life. Google will update google-auth with critical bug fixes on a best-effort basis, but not with any other fixes or features. Please upgrade your Python version, and then update google-auth.
-  warnings.warn(eol_message.format("3.9"), FutureWarning)
-C:\Users\hardb\AppData\Local\Programs\Python\Python39\lib\site-packages\google\oauth2\__init__.py:40: FutureWarning: You are using a Python version 3.9 past its end of life. Google will update google-auth with critical bug fixes on a best-effort basis, but not with any other fixes or features. Please upgrade your Python version, and then update google-auth.
-  warnings.warn(eol_message.format("3.9"), FutureWarning)
-[01:17:43] YT-AUTH 브라우저가 열린다. 구글 로그인 → 권한 허용할 것
-Please visit this URL to authorize this application: https://accounts.google.com/o/oauth2/auth?response_type=code&client_id=887196785032-rh19gfgf8v22v2gfoaopf6dpvo9or6sj.apps.googleusercontent.com&redirect_uri=http%3A%2F%2Flocalhost%3A62606%2F&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fyoutube.upload+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fyoutube.readonly+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fyoutube.force-ssl+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fyt-analytics.readonly+https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fyt-analytics-monetary.readonly&state=YWKcNpWIUavbfbQrT2J1WPaIVqDjyL&code_challenge=Q2ZUg3y6s4_H_JCOrUYRxP33awoHZ80lIdUSGJyHm0s&code_challenge_method=S256&prompt=select_account+consent&access_type=offline
-[01:21:57] YT-AUTH ✅ 인증 완료 → C:\Users\hardb\Desktop\블로그수입관련\올마나마\_shorts\uploader\yt_token.json
-[01:21:57] YT-AUTH 이제 python upload_yt_api.py 로 올릴 수 있다

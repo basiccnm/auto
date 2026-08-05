@@ -1,0 +1,54 @@
+# 올마나마 인증·과금 워커 — 2026-07-27 신설
+#
+# ★ 왜 별도 워커인가 (site-renderer 에 main 을 넣지 않는 이유)
+#   site-renderer 는 olmanama.com 을 custom_domain 으로 잡고 943개 정적 페이지를 서빙한다.
+#   거기에 스크립트를 넣으면 **배포 실수 한 번에 사이트 전체가 죽는다.**
+#   Cloudflare 는 Route 를 Custom Domain 보다 **먼저** 평가하므로, 같은 호스트라도
+#   /api/* 만 이 워커로 떼올 수 있다. 그래서:
+#     · 이 워커가 죽어도 → /api/* 만 죽고 943페이지는 멀쩡하다
+#     · site-renderer 가 죽어도 → 로그인·잔액 API 는 멀쩡하다
+#
+# ★ 왜 api.olmanama.com 서브도메인이 아닌가
+#   같은 호스트라서 쿠키가 1st-party 로 유지된다 → CORS·프리플라이트·SameSite=None 이 전부 불필요.
+#
+# 🔴 routes 패턴을 절대 `olmanama.com/*` 로 쓰지 마라.
+#   그러면 이 워커가 943페이지를 전부 삼켜서 **사이트가 전멸한다.**
+#   scripts/deploy_auth.py 가 배포 전에 이 파일을 파싱해서 그런 패턴이 있으면 배포를 거부한다.
+#
+# 배포:  python scripts/deploy_auth.py      ← 반드시 이걸로. wrangler 를 직접 치지 말 것
+#   (--config 를 빠뜨리면 어느 워커로 나갈지 알 수 없다 — 2026-07-24 사고)
+
+name = "olmanama-auth"
+main = "src/index.js"
+compatibility_date = "2026-01-01"   # site-renderer 와 맞춤. 올릴 땐 양쪽 같이 검토
+
+# workers.dev 주소를 끈다 — 인증·결제 API 가 두 주소로 열려 있을 이유가 없다.
+# (site-renderer 는 중복 콘텐츠 때문에 껐고, 여기는 공격면 때문에 끈다)
+workers_dev = false
+
+# ── 라우트 ─────────────────────────────────────────────────────────
+#  단계마다 하나씩 늘린다 — "무엇 때문에 죽었는지"가 분명해진다.
+#    1단계 /api/*   2단계 /auth/* 추가
+#  ⚠️ 경로는 반드시 /api/ 또는 /auth/ 로 시작해야 한다. scripts/deploy_auth.py 가 검사한다.
+routes = [
+  { pattern = "olmanama.com/api/*",      zone_name = "olmanama.com" },
+  { pattern = "www.olmanama.com/api/*",  zone_name = "olmanama.com" },
+  { pattern = "olmanama.com/auth/*",     zone_name = "olmanama.com" },
+  { pattern = "www.olmanama.com/auth/*", zone_name = "olmanama.com" },
+]
+
+# ── 회원 DB ────────────────────────────────────────────────────────
+#  data/eolmanama.db(재료·메뉴)와 **완전히 별개**다. 재료 DB는 생성기가 매일 갈아엎지만
+#  여기는 절대 지우면 안 되는 데이터라 같은 곳에 두지 않는다.
+#  🔴 D1 은 롤백이 없다. 스키마 변경은 migrations/ 로만, 컬럼 추가만. DROP 금지.
+[[d1_databases]]
+binding = "DB"
+database_name = "olmanama-users"
+database_id = "f4fad7bc-684b-4ea1-8234-b02559184f5f"
+migrations_dir = "migrations"
+
+# ── 시크릿 ─────────────────────────────────────────────────────────
+# npx wrangler secret put KAKAO_REST_KEY --config workers/auth/wrangler.toml
+#   🔴 루트 .env 에 넣지 마라. wrangler 가 .env 의 CF_API_TOKEN/CLOUDFLARE_API_TOKEN 을
+#      자기 인증으로 집어가 배포가 깨진 사고가 있다(2026-07-25).
+#      로컬 dev 용 값은 workers/auth/.dev.vars 에 둔다(wrangler 가 오독하지 않는 파일).

@@ -1,7 +1,0 @@
-User-agent: *
-Allow: /
-
-# 검수용 페이지는 색인 제외 (_logo_audit, _menu_audit 등 내부 확인용)
-Disallow: /_
-
-Sitemap: https://olmanama.com/sitemap.xml

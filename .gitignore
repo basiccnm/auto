@@ -1,7 +1,101 @@
-*.db 
-*.sqlite 
-*.csv 
-*.sql 
-*.json 
-venv/ 
-node_modules/ 
+# 데이터베이스 및 대용량/설정 파일
+*.db
+*.sqlite
+*.csv
+*.sql
+*.json
+
+# 파이썬 및 노드 패키지/환경
+venv/
+node_modules/
+__pycache__/
+*.pyc
+
+# 미디어 및 렌더링 결과물
+sajangpick/outbox/
+**/outbox/
+*.mp4
+*.mp3
+*.wav
+*.srt
+
+# 임시 및 백업/동기화 찌꺼기 파일
+.tmp.*/
+.tmp.driveupload/
+.tmp.drivedownload/
+*.tmp
+*.lnk
+
+# 캐시 및 IDE/에디터 설정 파일
+.claude/
+.obsidian/
+.vscode/
+.idea/
+
+# 데이터베이스 및 대용량/설정 파일
+*.db
+*.sqlite
+*.csv
+*.sql
+*.json
+
+# 파이썬 및 노드 패키지/환경
+venv/
+node_modules/
+__pycache__/
+*.pyc
+
+# 미디어 및 outbox 결과물 폴더 전체 무시 (txt, png, mp4 등 포함)
+sajangpick/outbox/
+sajangpick/outbox/*
+**/outbox/
+**/outbox/*
+*.mp4
+*.mp3
+*.wav
+*.srt
+*.png
+*.jpg
+*.jpeg
+
+# 임시 및 백업/동기화 찌꺼기 파일
+.tmp.*/
+.tmp.driveupload/
+.tmp.drivedownload/
+*.tmp
+*.lnk
+
+# 캐시 및 IDE/에디터 설정 파일
+.claude/
+.obsidian/
+.vscode/
+.idea/
+
+# 한글 웹/HTML 임시 파일 및 dc.html 파일 전체 무시
+*.dc.html
+*.html
+
+# 보안 및 계정 정보 파일
+*.env
+*.txt
+*.apk
+
+# 로그 및 락 파일
+*.log
+*.lock
+
+# sajangpick 아웃박스 폴더 전체 무시
+sajangpick/outbox/
+
+# 환경 변수 및 계정 정보 파일만 핀포인트 무시
+*.env
+*ADMIN_CREDENTIALS*
+*qaAccount*
+
+# 빌드 및 로그/락 파일
+*.apk
+*.log
+*.lock
+
+# Cloudflare Wrangler 임시 파일 무시
+.wrangler/

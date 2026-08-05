@@ -1,0 +1,88 @@
+---
+pagination:
+  data: dojos
+  size: 1
+  alias: dojo
+permalink: "/{{ dojo.sido }}/{{ dojo.sigungu }}/{{ dojo.slug }}/index.html"
+---
+{%- from "widgets.njk" import mapButton, tipoffSection, widgetsScript with context -%}
+{%- set related = dojos | onlyOpen | relatedAcademies(dojo, 5) -%}
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ dojo.name }} 정보 | {{ dojo.sigungu }} {{ dojo.category_name }}</title>
+<meta name="description" content="{{ dojo.sigungu }} {{ dojo.category_name }} '{{ dojo.name }}' 영업상태, 주소, 전화번호 정보.">
+{% if not dojo.is_open %}<meta name="robots" content="noindex">{% endif %}
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SportsActivityLocation",
+  "name": {{ dojo.name | dump | safe }},
+  "address": {
+    "@type": "PostalAddress",
+    "streetAddress": {{ (dojo.address_road or dojo.address_lot) | dump | safe }},
+    "addressLocality": {{ dojo.sigungu | dump | safe }},
+    "addressRegion": {{ dojo.sido | dump | safe }},
+    "addressCountry": "KR"
+  }
+  {%- if dojo.phone %},
+  "telephone": {{ dojo.phone | dump | safe }}
+  {%- endif %}
+}
+</script>
+<style>
+  body{font-family:-apple-system,"Malgun Gothic",sans-serif;max-width:720px;margin:0 auto;padding:24px 16px;line-height:1.6;color:#222}
+  .badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:13px;margin-left:8px}
+  .badge-open{background:#e6f4ea;color:#1a7f37}
+  .badge-closed{background:#fce8e6;color:#c5221f}
+  table{width:100%;border-collapse:collapse;margin:12px 0}
+  th,td{text-align:left;padding:8px;border-bottom:1px solid #eee}
+  .meta-table td:first-child{color:#666;width:90px}
+  .related a{display:block;padding:8px 0;border-bottom:1px solid #eee;color:#1a56db;text-decoration:none}
+  h1{font-size:22px;margin-bottom:4px}
+  .breadcrumb{font-size:13px;color:#888;margin-bottom:16px}
+</style>
+</head>
+<body>
+  <p class="breadcrumb">
+    <a href="/{{ dojo.sido }}/">{{ dojo.sido }}</a> &gt;
+    <a href="/{{ dojo.sido }}/{{ dojo.sigungu }}/">{{ dojo.sigungu }}</a> &gt;
+    <a href="/{{ dojo.sido }}/{{ dojo.sigungu }}/{{ dojo.category_slug }}/">{{ dojo.category_name }}</a>
+  </p>
+
+  <h1>{{ dojo.name }}
+    {% if dojo.is_open %}<span class="badge badge-open">영업중</span>
+    {% else %}<span class="badge badge-closed">폐업</span>{% endif %}
+  </h1>
+  <p>{{ dojo.sigungu }} · {{ dojo.category_name }} · 체육도장업</p>
+
+  {% if not dojo.is_open %}
+  <div class="notice" style="background:#fff8e1;border:1px solid #ffe082;padding:12px;border-radius:6px;margin:16px 0">이 도장은 폐업했습니다. 아래 같은 지역·종목의 다른 도장을 확인해보세요.</div>
+  {% endif %}
+
+  <h2>기본 정보</h2>
+  <table class="meta-table">
+    <tr><td>종목</td><td>{{ dojo.sport_name }}</td></tr>
+    <tr><td>주소</td><td>{{ dojo.address_road or dojo.address_lot }}</td></tr>
+    <tr><td>전화</td><td>{{ dojo.phone or "정보 없음" }}</td></tr>
+    <tr><td>지도자 수</td><td>{{ dojo.leader_count or "미기재" }}명</td></tr>
+    {% if dojo.member_capacity %}<tr><td>회원 정원</td><td>{{ dojo.member_capacity }}명</td></tr>{% endif %}
+    <tr><td>인허가일</td><td>{{ dojo.license_ymd }}</td></tr>
+  </table>
+
+  {{ mapButton(dojo.lat, dojo.lng, dojo.name) }}
+  {{ tipoffSection("dojo", dojo.slug, dojo.name, dojo.phone) }}
+
+  {% if related.length %}
+  <h2>{{ dojo.sigungu }}의 다른 {{ dojo.category_name }}</h2>
+  <div class="related">
+    {% for r in related %}
+    <a href="/{{ r.sido }}/{{ r.sigungu }}/{{ r.slug }}/">{{ r.name }}</a>
+    {% endfor %}
+  </div>
+  {% endif %}
+  {{ widgetsScript() }}
+</body>
+</html>

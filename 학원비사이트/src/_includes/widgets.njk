@@ -1,0 +1,105 @@
+{% macro mapButton(lat, lng, name) %}
+{% if lat and lng %}
+<div class="map-widget" data-lat="{{ lat }}" data-lng="{{ lng }}" data-name="{{ name }}">
+  <button type="button" class="map-toggle-btn">지도 보기</button>
+  <div class="map-box" style="display:none;width:100%;height:280px;margin-top:8px;border-radius:6px;"></div>
+</div>
+{% else %}
+<p class="map-unavailable" style="color:#999;font-size:13px;">지도를 표시할 좌표 정보가 없습니다.</p>
+{% endif %}
+{% endmacro %}
+
+{% macro tipoffSection(entityType, slug, name, phone) %}
+{% if not phone %}
+<div class="tipoff-section" data-entity-type="{{ entityType }}" data-slug="{{ slug }}" data-name="{{ name }}"
+     style="margin-top:20px;padding:14px;background:#f5f7fa;border-radius:6px;">
+  <p style="margin:0 0 8px;font-size:14px;">이 {{ "학원" if entityType == "academy" else "체육관" }} 관계자이신가요? 정보 등록을 요청해주세요.</p>
+  <button type="button" class="tipoff-open-btn">정보 등록 요청</button>
+  <form class="tipoff-form" style="display:none;margin-top:10px;">
+    <div style="margin-bottom:8px;">
+      <input type="tel" name="phone" placeholder="전화번호" required pattern="[0-9\-]+" style="width:100%;padding:8px;box-sizing:border-box;border:1px solid #ccc;border-radius:4px;">
+    </div>
+    <div style="margin-bottom:8px;">
+      <label style="margin-right:12px;"><input type="radio" name="submitter_type" value="관계자" required> 관계자</label>
+      <label><input type="radio" name="submitter_type" value="이용자"> 이용자</label>
+    </div>
+    <button type="submit">제출</button>
+    <span class="tipoff-status" style="margin-left:8px;font-size:13px;"></span>
+  </form>
+</div>
+{% endif %}
+{% endmacro %}
+
+{# 지도/제보 위젯 공용 스크립트. 페이지당 한 번만 로드하면 됨. #}
+{% macro widgetsScript() %}
+<script>
+window.__KAKAO_JS_KEY = {{ site.kakaoJsKey | dump | safe }};
+window.__TIPOFF_API_BASE = {{ site.tipoffApiBase | dump | safe }};
+
+document.addEventListener("click", function (ev) {
+  var mapBtn = ev.target.closest(".map-toggle-btn");
+  if (mapBtn) return handleMapClick(mapBtn);
+
+  var openBtn = ev.target.closest(".tipoff-open-btn");
+  if (openBtn) {
+    var section = openBtn.closest(".tipoff-section");
+    section.querySelector(".tipoff-form").style.display = "block";
+    openBtn.style.display = "none";
+  }
+});
+
+document.addEventListener("submit", function (ev) {
+  if (!ev.target.classList.contains("tipoff-form")) return;
+  ev.preventDefault();
+  handleTipoffSubmit(ev.target);
+});
+
+function handleMapClick(btn) {
+  var wrap = btn.closest(".map-widget");
+  var box = wrap.querySelector(".map-box");
+  var lat = parseFloat(wrap.dataset.lat);
+  var lng = parseFloat(wrap.dataset.lng);
+  var name = wrap.dataset.name;
+  box.style.display = "block";
+  btn.disabled = true;
+  btn.textContent = "지도 불러오는 중...";
+
+  function render() {
+    var center = new kakao.maps.LatLng(lat, lng);
+    var map = new kakao.maps.Map(box, { center: center, level: 3 });
+    new kakao.maps.Marker({ map: map, position: center, title: name });
+    wrap.removeChild(btn);
+  }
+
+  if (window.kakao && window.kakao.maps) return render();
+
+  var script = document.createElement("script");
+  script.src = "https://dapi.kakao.com/v2/maps/sdk.js?appkey=" + window.__KAKAO_JS_KEY + "&autoload=false";
+  script.onload = function () { kakao.maps.load(render); };
+  document.head.appendChild(script);
+}
+
+function handleTipoffSubmit(form) {
+  var section = form.closest(".tipoff-section");
+  var statusEl = form.querySelector(".tipoff-status");
+  statusEl.textContent = "제출 중...";
+  fetch(window.__TIPOFF_API_BASE + "/submit", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      entity_type: section.dataset.entityType,
+      entity_slug: section.dataset.slug,
+      entity_name: section.dataset.name,
+      phone: form.phone.value,
+      submitter_type: form.submitter_type.value,
+    }),
+  })
+    .then(function (r) { if (!r.ok) throw new Error(); return r.json(); })
+    .then(function () {
+      statusEl.textContent = "제출됐습니다. 검토 후 반영됩니다.";
+      form.querySelector("button[type=submit]").disabled = true;
+    })
+    .catch(function () { statusEl.textContent = "제출 실패, 잠시 후 다시 시도해주세요."; });
+}
+</script>
+{% endmacro %}
