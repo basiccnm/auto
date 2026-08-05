@@ -1,0 +1,53 @@
+
+ ⛅️ wrangler 4.110.0
+────────────────────
+Resource location: remote 
+
+[33m▲ [43;33m[[43;30mWARNING[43;33m][0m [1m⚠️ This process may take some time, during which your D1 database will be unavailable to serve queries.[0m
+
+
+🌀 Executing on remote database academy-site-db (fd2b9dde-c080-479a-8407-9e76002947b1):
+🌀 To execute on your local development database, remove the --remote flag from your wrangler command.
+Note: if the execution fails to complete, your DB will return to its original state and you can safely retry.
+├ Checking if file needs uploading
+│
+├ 🌀 Uploading fd2b9dde-c080-479a-8407-9e76002947b1.a136a4af89a081f4.sql
+│ 🌀 Uploading complete.
+│
+🌀 Starting import...
+🌀 Processed 75859 queries.
+🌀 Processed 88221 queries.
+🚣 Executed 88221 queries in 1073.59ms (88221 rows read, 88221 rows written)
+   Database is currently at bookmark 00000037-000005b8-000050a5-8889149d794ef2fb02086eacf926990e.
+[
+  {
+    "results": [
+      {
+        "Total queries executed": 88221,
+        "Rows read": 88221,
+        "Rows written": 88221,
+        "Database size (MB)": "67.51"
+      }
+    ],
+    "success": true,
+    "finalBookmark": "00000037-000005b8-000050a5-8889149d794ef2fb02086eacf926990e",
+    "meta": {
+      "served_by": "v3-prod",
+      "served_by_region": "APAC",
+      "served_by_colo": "ICN",
+      "served_by_primary": true,
+      "timings": {
+        "sql_duration_ms": 1073.5916
+      },
+      "duration": 1073.5916,
+      "changes": 88222,
+      "last_row_id": 0,
+      "changed_db": true,
+      "size_after": 67510272,
+      "rows_read": 88221,
+      "rows_written": 88221,
+      "num_tables": 5,
+      "total_attempts": 1
+    }
+  }
+]

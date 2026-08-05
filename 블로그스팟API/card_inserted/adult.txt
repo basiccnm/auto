@@ -1,0 +1,41 @@
+SLUG: blog-post_447
+
+[상품1]
+NAME: 락토핏 골드
+BRAND: 종근당건강
+DESC: 보장균수 20억 CFU (7종 균주 배합) / 추가성분: 산화아연(아연 2.55mg)
+PRICE:
+IMAGE: https://image13.coupangcdn.com/image/affiliate/banner/9269441e02d4ed2654b4c874b6b642b1@2x.jpg
+LINK: https://link.coupang.com/a/e8ykV7F7hk
+
+[상품2]
+NAME: 바이오코어 건강한 생유산균 500억
+BRAND: CJ웰케어
+DESC: 과채유래유산균(L.plantarum CJLP133), 프로바이오틱스 500억 CFU (개별인정형)
+PRICE:
+IMAGE: https://img2a.coupangcdn.com/image/affiliate/banner/373cf334b6ce7edaeec8460a59d2c89e@2x.jpg
+LINK: https://link.coupang.com/a/e8ynSLXui4
+
+[상품3]
+NAME: 지큐랩 100억 생유산균 골드
+BRAND: 일동제약(지큐랩)
+DESC: 보장균수 100억 CFU / 추가성분: 아연 12mg, 셀레늄 16.5㎍
+PRICE:
+IMAGE: https://image10.coupangcdn.com/image/affiliate/banner/dc2f11a6f52a8e76fbbfb60b25049a2e@2x.jpg
+LINK: https://link.coupang.com/a/e8yye4f5Ii
+
+[상품4]
+NAME: 락토핏 코어맥스
+BRAND: 종근당건강
+DESC: 장건강 강화 프리미엄 (구체적 CFU/균주 비공개, 효능: 면역기능+장건강)
+PRICE:
+IMAGE: https://img5c.coupangcdn.com/image/affiliate/banner/4216f886d5ffd8837c72c7c895bc9ca5@2x.jpg
+LINK: https://link.coupang.com/a/e8zaEQIDMi
+
+[상품5]
+NAME: 바이오코어 100억 유산균(트리플코어)
+BRAND: CJ웰케어
+DESC: 십이지장·소장·대장 3부위 서식균 배합 트리플코어™ 포뮬러, 100억 CFU
+PRICE:
+IMAGE: https://image3.coupangcdn.com/image/affiliate/banner/473f284c9243296caf09bcf71fb3574b@2x.jpg
+LINK: https://link.coupang.com/a/e8zwcRdvY4

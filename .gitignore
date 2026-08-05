@@ -1,0 +1,7 @@
+*.db 
+*.sqlite 
+*.csv 
+*.sql 
+*.json 
+venv/ 
+node_modules/ 

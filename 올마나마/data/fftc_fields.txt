@@ -1,0 +1,12 @@
+yr: 2023
+indutyLclasNm: 외식
+indutyMlsfcNm: 한식
+corpNm: 8797푸드
+brandNm: 돼지가 김치찜했어
+frcsCnt: 4
+newFrcsRgsCnt: 2
+ctrtEndCnt: 0
+ctrtCncltnCnt: 0
+nmChgCnt: 0
+avrgSlsAmt: 0
+arUnitAvrgSlsAmt: 0

@@ -1,0 +1,44 @@
+SLUG: cfu
+
+[상품1]
+NAME: 락토핏 생유산균 키즈
+BRAND: 종근당건강
+DESC: 성장기 아이를 위한 6가지 복합 케어 유산균입니다. 보장균수 10억 CFU, 1일 1포씩 60포(2개월분) 섭취하는 분말 스틱형이며, 건강기능식품·GMP 인증을 받았습니다. 인정 기능성은 관절·연골 건강, 면역력 증진, 장 건강이며, 비타민D 10㎍과 아연 2.55mg이 추가로 함유되어 있습니다. (구체적인 균주명은 제조사가 별도 공개하지 않아 확인불가)
+PRICE_LOW: 18,540
+PRICE_HIGH: 30,910
+PRICE_BASIS: 60포 1통 기준
+ROCKET: Y
+IMAGE: https://static.coupangcdn.com/image/affiliate/banner/76acdcc15203f9b05725eb0e85a24ab5@2x.jpg
+LINK: https://link.coupang.com/a/e69nLmQNlQ
+
+[상품2]
+NAME: 비오비타 키즈
+BRAND: 일동제약
+DESC: 1959년 출시 이후 60년 이상 판매된 국내 대표 유아·어린이 프로바이오틱스 브랜드입니다. 내열성·내산성이 강한 활성 유포자성 유산균과 성장·발육에 필요한 비타민을 함께 배합했으며, 정장작용(설사·변비 개선)과 성장발육 촉진을 목적으로 합니다. 만 3세 이상 어린이 대상 제품입니다. (구체적인 CFU 수치와 균주명은 제조사가 소비자용 페이지에 공개하지 않아 확인불가)
+PRICE: 27,890원
+PRICE_BASIS: 30포x2개입(60포) 기준, 가격비교 데이터 부족으로 범위 대신 단일 참고가
+ROCKET: N
+IMAGE: https://image6.coupangcdn.com/image/affiliate/banner/ae65a391e806d0564c24ecc8c1031707@2x.jpg
+LINK: https://link.coupang.com/a/e69Db9QUzA
+
+[상품3]
+NAME: 락토핏 생유산균 베베
+BRAND: 종근당건강
+DESC: 락토핏 키즈보다 더 어린 영유아를 대상으로 균주 구성과 함량을 별도 설계한 라인입니다. 보장균수 10억 CFU, 1일 1포씩 60포(2개월분) 섭취하는 분말 스틱형이며, 건강기능식품 인증을 받았습니다. 프로바이오틱스는 유산균 증식·유해균 억제, 배변활동 원활, 장 건강에 도움을 줄 수 있고, 함께 든 아연은 정상적인 면역기능과 세포분열에 필요합니다. (구체적인 균주명은 확인불가)
+PRICE_LOW: 18,900
+PRICE_HIGH: 22,900
+PRICE_BASIS: 60포 1통 기준
+ROCKET: Y
+IMAGE: https://image4.coupangcdn.com/image/affiliate/banner/87a045441bbd27f94e06122e48e97960@2x.jpg
+LINK: https://link.coupang.com/a/e69ABf6rNQ
+
+[상품4]
+NAME: 비오비타 유아 배배 유산균 드롭스D
+BRAND: 일동제약
+DESC: 비오비타 브랜드의 액상 드롭 타입 제품으로, 유산균과 비타민D를 함께 배합했습니다. 이유식이나 분유에 몇 방울 섞어 먹이는 방식이라 분말을 삼키기 어려운 영유아에게 적합합니다. 7.5ml 용량입니다. (구체적인 CFU 수치와 균주명은 제조사가 공개하지 않아 확인불가)
+PRICE_LOW: 26,910
+PRICE_HIGH: 56,900
+PRICE_BASIS: 7.5ml 1개 기준, 할인 시점별 편차 큼
+ROCKET: N
+IMAGE: https://img2a.coupangcdn.com/image/affiliate/banner/d67b85ada8a26ad20826ef9d50910295@2x.jpg
+LINK: https://link.coupang.com/a/e69wWMMJYO

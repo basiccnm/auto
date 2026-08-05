@@ -1,0 +1,8 @@
+
+ ⛅️ wrangler 4.110.0
+────────────────────
+
+[31mX [41;31m[[41;97mERROR[41;31m][0m [1mError: Pages only supports up to 20,000 files in a deployment for your current plan. Ensure you have specified your build output directory correctly.[0m
+
+
+🪵  Logs were written to "C:\Users\hardb\AppData\Roaming\xdg.config\.wrangler\logs\wrangler-2026-07-10_08-09-12_442.log"

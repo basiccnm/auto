@@ -1,0 +1,25 @@
+SLUG: bnr17-vs-hy7601ky1032
+
+[상품1]
+NAME: 락토핏 슬림
+BRAND: 종근당건강
+DESC: 체지방감소+장건강 밸런스 (구체적 CFU/균주 비공개)
+PRICE:
+IMAGE: https://img1c.coupangcdn.com/image/affiliate/banner/c15feb14a2a032ee040948087ac38e49@2x.jpg
+LINK: https://link.coupang.com/a/e8BaTw5E6e
+
+[상품2]
+NAME: 락토핏 다이어트
+BRAND: 종근당건강
+DESC: 체지방 감소 기능성 (구체적 CFU/균주 비공개)
+PRICE:
+IMAGE: https://image13.coupangcdn.com/image/affiliate/banner/add97679adacfeec9c3ed53afae6a263@2x.jpg
+LINK: https://link.coupang.com/a/e8BckjO4PI
+
+[상품3]
+NAME: 바이오코어 다이어트 유산균
+BRAND: CJ웰케어
+DESC: 식약처 개별인정형 체지방감소 기능성, 국내 최초 식물유래 (구체적 CFU 비공개)
+PRICE:
+IMAGE: https://static.coupangcdn.com/image/affiliate/banner/910dcd18cee7f0b16037cbbc6f37d19a@2x.jpg
+LINK: https://link.coupang.com/a/e8BjWYwFEq

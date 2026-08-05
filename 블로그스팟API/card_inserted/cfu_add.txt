@@ -1,0 +1,17 @@
+SLUG: cfu
+
+[상품1]
+NAME: 바이오코어 건강한 생유산균 키즈
+BRAND: CJ웰케어
+DESC: CJ 독자균주+다니스코 균주 배합 (구체적 CFU 비공개), 하우아유 인증 / 추가성분: 아연 함유
+PRICE:
+IMAGE: https://image8.coupangcdn.com/image/affiliate/banner/387f8bb597331f7d232d586238b47891@2x.jpg
+LINK: https://link.coupang.com/a/e8yQdR7RjU
+
+[상품2]
+NAME: 큐랩 포스트바이오틱스 츄어블 츄어블
+BRAND: 일동제약(지큐랩)
+DESC: 연령별 세분화 라인 존재 (구체적 성분 비공개)
+PRICE:
+IMAGE: https://image2.coupangcdn.com/image/affiliate/banner/7a13032dab0bc7cd9a080e6c91de85f9@2x.jpg
+LINK: https://link.coupang.com/a/e8y39WvNme

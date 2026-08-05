@@ -1,0 +1,33 @@
+SLUG: blog-post_676
+
+[상품1]
+NAME: 락토핏 골드
+BRAND: 종근당건강
+DESC: 보장균수 20억 CFU (7종 균주 배합) / 추가성분: 산화아연(아연 2.55mg)
+PRICE:
+IMAGE: https://image13.coupangcdn.com/image/affiliate/banner/9269441e02d4ed2654b4c874b6b642b1@2x.jpg
+LINK: https://link.coupang.com/a/e8ykV7F7hk
+
+[상품2]
+NAME: 바이오코어 건강한 생유산균 500억
+BRAND: CJ웰케어
+DESC: 과채유래유산균(L.plantarum CJLP133), 프로바이오틱스 500억 CFU (개별인정형)
+PRICE:
+IMAGE: https://img2c.coupangcdn.com/image/affiliate/banner/4a63fb12ebf93536e10b193cff551499@2x.jpg
+LINK: https://link.coupang.com/a/e8zpbihUKO
+
+[상품3]
+NAME: 지큐랩 100억 생유산균 골드
+BRAND: 일동제약(지큐랩)
+DESC: 보장균수 100억 CFU / 추가성분: 아연 12mg, 셀레늄 16.5㎍
+PRICE:
+IMAGE: https://image10.coupangcdn.com/image/affiliate/banner/dc2f11a6f52a8e76fbbfb60b25049a2e@2x.jpg
+LINK: https://link.coupang.com/a/e8yye4f5Ii
+
+[상품4]
+NAME: 쎌티아이 주니어
+BRAND: 셀로닉스
+DESC: 핵심균주 3종 + 락티플란티바실러스 플란타룸 추가 (구체적 CFU 비공개)
+PRICE:
+IMAGE: https://img5a.coupangcdn.com/image/affiliate/banner/51b241a225b00547fd6d45394d07dc2d@2x.jpg
+LINK: https://link.coupang.com/a/e8yKv4PHdQ
