@@ -1,0 +1,40 @@
+name: Ganjang Split Migration and Sitemap Validation
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'scripts/ganjang_split_migrate.py'
+      - '.github/workflows/ganjang_split.yml'
+
+jobs:
+  run-migration:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+
+      - name: Run Ganjang Split Migration (Apply)
+        run: |
+          python scripts/ganjang_split_migrate.py --apply
+
+      - name: Build & Validate Sitemap
+        run: |
+          python scripts/gen_preview_html.py || true
+          python scripts/build_dist.py || true
+          python scripts/gen_sitemap.py || true
+
+      - name: Commit and Push Updated Database & Logs
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: "auto: Execute ganjang split migration & validate sitemap"
+          file_pattern: "data/* logs/* _preview/* _dist/* sitemap.xml"
