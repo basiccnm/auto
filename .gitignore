@@ -113,3 +113,17 @@ _preview/
 *.bak
 *.bak-*
 *.bak_*
+
+# ─── 2026-08-07 워커 소스 편입 ───
+# 시크릿 — .dev.vars 에 AUTH_SECRET · ADMIN_PASSWORD · 소셜 키가 들어 있다.
+# 이미 a71d75b 커밋에 올라가 있어 이번에 추적을 끊는다(비공개 저장소라 이력은 그대로 둠).
+**/.dev.vars
+
+# wrangler 로컬 캐시 — 미니플레어 D1/R2 실체 파일이라 올릴 것이 아니다.
+# 실제로 이게 올라가 있던 탓에 .sqlite 본체와 -shm/-wal 이 어긋나 로컬 D1 이 깨졌다.
+**/.wrangler/
+
+# 스키마 마이그레이션은 **이력이 남아야 한다** — 위 `*.sql` 무시 규칙의 예외.
+# 스키마가 언제 왜 바뀌었는지 git 에 없으면 서버를 되돌릴 방법이 없다.
+!**/scripts/migrate_*.sql
+!**/scripts/rollback_*.sql

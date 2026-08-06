@@ -1,0 +1,43 @@
+name = "eduthink-site-renderer"
+main = "src/index.js"
+compatibility_date = "2026-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "eduthink-db"
+database_id = "012969d5-40a3-4bf5-a882-5f8a37a9694b"
+
+# 블록1 자녀기록 — 업로드 이미지 원본 저장소(2026-07-19 신설).
+# 비공개 버킷: 공개 URL(r2.dev) 비활성 상태로 두고, 워커가 owner_token→child_id→record 검증을
+# 통과한 요청에만 스트리밍한다. image_key의 랜덤 UUID는 경로 추측 방지용일 뿐 인증 수단이 아니다.
+# 자녀/기록 삭제 시 deleteChildCascade()가 D1보다 먼저 이 버킷의 객체를 지운다(고아 파일 방지).
+[[r2_buckets]]
+binding = "RECORDS"
+bucket_name = "eduthink-records"
+
+# 매분 실행 — 사용자가 지정한 "내 일정" 알림 시각이 되면 발송(정시 도달용). Workers 크론은 분 단위 최소.
+[triggers]
+crons = ["* * * * *"]
+
+[vars]
+# 베타 오픈(2026-07-18) — 검색 색인 허용. robots.txt가 Allow:/ + sitemap 안내로 바뀐다.
+# 비공개(/mypage·/api·/admin)와 얇은 중복 페이지(/forms)는 이 값과 무관하게 항상 차단.
+SITE_INDEXABLE = "true"
+# 블록1 자녀기록(기록 업로드·타임라인·방과후·마이페이지 기록 메뉴) 전체 스위치.
+# **운영 기본 OFF** — 코드가 라이브에 올라가더라도 사용자에겐 진입점·메뉴가 보이지 않는다.
+# 로컬(.dev.vars)에서는 "true"로 개발·검증한다.
+# 사장님이 "배포 + 플래그 ON"을 지시할 때만 사용자에게 공개(2026-07-19 확정 운영 방식).
+FEATURE_RECORDS = "false"
+# 자녀 등록 대시보드(비공개, §PROJECT_TECH_OVERVIEW.md 유료 백엔드 선작업). 디자인 나오기 전까지 "false" 유지.
+# 어디에도 링크 노출 안 함 + robots.txt에서 항상 별도 차단(SITE_INDEXABLE과 무관) — 이 값은 라우트 자체를 죽이는 스위치.
+FEATURE_MYPAGE = "false"
+# PWA 설치·알림 안내 컴포넌트 — "미리 만들되 숨김"(§통합지시서). "true"면 유료 시간표 탭 하단에 노출.
+# 실제 웹푸시 발송 기능 오픈 시점에 맞춰 켤 것. 기본은 숨김.
+FEATURE_PWA_GUIDE = "false"
+# ADMIN_PASSWORD / VAPID_PRIVATE / NEIS_API_KEY / KAKAO_REST_KEY / GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET
+# 는 2026-07-17 배포부터 `wrangler secret put`으로 이전됨 — 여기(평문 vars)에 절대 다시 넣지 말 것.
+# 웹푸시 공개키·subject는 비밀이 아니라 vars 유지.
+VAPID_PUBLIC = "BFfP1pp6OCiIJ6uKz4RtSrYSGvQAASaFt56yy0fLTUZF5jJv6RwClTaSS_g3ITTi-1JWAfUFNABNFC-Sx0SJ4Ss"
+VAPID_SUBJECT = "mailto:dndmotor1@gmail.com"
+# QA용 /dev/login-as 라우트 스위치 — 검증 끝나면 "false"로 내리고 재배포할 것.
+DEV_TOOLS = "true"
