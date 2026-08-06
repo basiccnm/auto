@@ -38,6 +38,7 @@ import { handleAuthApi, linkSocialAccount } from "./api_auth.js";
 import { handleOrdersApi, confirmOrderByAdmin, cancelOrderByAdmin } from "./api_orders.js";
 import { handleSupportApi, answerInquiry, closeInquiry } from "./api_support.js";
 import { handleMissionApi, missionCron } from "./api_mission.js";
+import { handleRewardApi } from "./api_reward.js";   // 별도장 상점·2단계 보상 (2026-08-07)
 import { deleteChildCascade, deleteRecordAssets } from "./data_children.js";
 import { withdrawAccount } from "./data_accounts.js";
 import { findAccountByToken } from "./auth_core.js";
@@ -2593,6 +2594,11 @@ export default {
       else if (path === "/api/v1/missions" || path.match(/^\/api\/v1\/missions\/(\d+\/|U-)/))
         res = await handleMissionApi(request, db, env, url);
       else if (path.startsWith("/api/v1/schools")) res = await handleSchoolsApi(request, db, env, url);
+      // 별도장 상점·2단계 보상 (2026-08-07) — /children/* 밖에 있는 것들
+      else if (path.startsWith("/api/v1/store/") || path.startsWith("/api/v1/rewards/") ||
+               path.startsWith("/api/v1/verify/") || path.startsWith("/api/v1/templates/")) {
+        res = await handleRewardApi(request, db, env, url);
+      }
       else if (path.startsWith("/api/v1/children") || path.startsWith("/api/v1/child/") || path.startsWith("/api/v1/records") ||
                path.startsWith("/api/v1/activities") || path.startsWith("/api/v1/documents") || path.startsWith("/api/v1/community") || path.startsWith("/api/v1/events") ||
                path.startsWith("/api/v1/supplies")) {
@@ -2602,6 +2608,8 @@ export default {
         const a = await resolveApiAuth(request, db, env);
         // 미션이 먼저 — /children/{id}/missions 는 다른 데서 안 잡는다
         res = await handleMissionApi(request, db, env, url);
+        // 상점·검증·칭찬·템플릿 (2026-08-07) — 역시 /children/{id}/* 를 나눠 쓴다
+        if (!res) res = await handleRewardApi(request, db, env, url);
         // 서류·대화·커뮤니티가 그다음(자녀 하위 경로를 공유). 자기 것이 아니면 null을 주고 넘긴다.
         if (!res) res = await handleLifeApi(request, db, env, url, a);
         if (!res) res = await handleRecordsApi(request, db, env, url);
