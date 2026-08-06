@@ -102,3 +102,14 @@ sajangpick/outbox/
 
 # 업로더 브라우저 로그인 세션 (쿠키·인증정보 그 자체 — 2026-08-05)
 **/uploader_profile/
+# ─── 2026-08-07 정리 ───
+# 생성물 — publish.py 가 다시 만든다
+_dist/
+_preview/
+
+# 백업 파일 전체.
+# *.db 는 막혔는데 *.db.bak-* 이 그대로 새어나갔고,
+# 유튜브 토큰도 yt_token.json.bak 으로 같은 구멍을 통해 유출됐다.
+*.bak
+*.bak-*
+*.bak_*

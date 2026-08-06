@@ -60,6 +60,19 @@ Allow: /
 # 검수용 페이지는 색인 제외 (_logo_audit, _menu_audit 등 내부 확인용)
 Disallow: /_
 
+# AI 학습용 크롤러만 차단, 검색·인용용은 허용 (2026-08-05)
+#  대량 자동 스크래핑(원가·재료 데이터 통째로 복제)은 막되,
+#  AI 검색에 인용되면 트래픽이 들어오니 그건 열어둔다.
+#  Google-Extended 차단은 Gemini 학습 opt-out이지 검색 색인(Googlebot)엔 영향 없음.
+User-agent: CCBot
+Disallow: /
+
+User-agent: Bytespider
+Disallow: /
+
+User-agent: Google-Extended
+Disallow: /
+
 Sitemap: {SITE}/sitemap.xml
 """
 else:
