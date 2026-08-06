@@ -112,7 +112,9 @@ CREATE INDEX IF NOT EXISTS idx_mv_pending ON mission_verifications(child_id, ste
 --    ⚠ SQLite 의 ALTER TABLE 에는 IF NOT EXISTS 가 없다. **두 번 돌리면 «duplicate column» 에러**가 난다.
 --      그건 정상이다 — 이미 들어갔다는 뜻이니 그 줄만 건너뛰고 진행하면 된다.
 --    ⚠ plan_months 는 만들지 않는다. orders.months 가 이미 같은 값이다(중복 컬럼 금지).
+--    ⚠ trial_ends_at 도 만들지 않는다 — children.trial_expires_at 이 **이미 있고 코드 45곳이 쓴다.**
+--      지시서 초안에 있어 한 번 넣었다가 뺐다(2026-08-07). 체험 만료일이 두 칸이 되면
+--      어느 쪽이 진짜인지 아무도 모르게 된다. 체험 기간(1주/2주)은 값의 문제이지 칸의 문제가 아니다.
 -- ────────────────────────────────────────────────────────────────
-ALTER TABLE children ADD COLUMN trial_ends_at TEXT;
 ALTER TABLE orders   ADD COLUMN payment_channel TEXT DEFAULT 'inapp';   -- 'inapp' | 'web'
 ALTER TABLE orders   ADD COLUMN child_limit INTEGER DEFAULT 1;          -- 1(단독) | 3(패밀리)

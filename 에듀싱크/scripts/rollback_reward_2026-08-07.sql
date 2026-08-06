@@ -24,6 +24,5 @@ DROP TABLE IF EXISTS store_items;
 DROP TABLE IF EXISTS parent_mission_templates;
 
 -- 컬럼 되돌리기 — 기본값이라 남겨도 무해하다. 꼭 필요할 때만 푼다.
--- ALTER TABLE children DROP COLUMN trial_ends_at;
 -- ALTER TABLE orders   DROP COLUMN payment_channel;
 -- ALTER TABLE orders   DROP COLUMN child_limit;
