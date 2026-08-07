@@ -795,6 +795,7 @@ const S = {
   pickBand: null,         // 미션 고르기 화면에서 보고 있는 학년대
   missionPick: [],        // 시트에서 고른 code 들
   msDetail: null,         // 카드 상세 시트에 띄운 미션 id (2026-08-03 카드판)
+         // 카드 상세 시트에 띄운 미션 id (2026-08-03 카드판)
   /* ── 별도장 상점 · 2단계 보상 (2026-08-07 지시서 §3·§5) ──────────────────
      ⚠ 잔액(별도장)은 **여기 따로 세지 않는다.** `missionStars` 하나만 본다 —
        서버도 `star_ledger` 원장 하나로 세고, 상점 결제는 거기 «음수»로 적힌다.
@@ -1999,7 +2000,6 @@ const Screens = {
     if (!c) return `${subHeader("미션")}
       <div class="ms-empty">
         <b>아이를 등록하면 시작해요</b>
-        <em>하루에 세 개까지 골라 주면, 아이가 해내고 도장을 받아요.</em>
         <button class="btn-primary" onclick="location.hash='#register'">아이 등록하기</button>
       </div>`;
     if (list === null) return `${subHeader("미션")}<p class="sub">불러오는 중…</p>`;
@@ -2100,7 +2100,7 @@ const Screens = {
     <!-- 칭찬 스티커 — 1초 만에 고른다(§5⑤). 아이 폰에 큰 팝업으로 뜬다 -->
     ${(isChildToken() || S.childView || S.kidMode) ? "" : `
     <button class="ms-mkbtn" onclick="App.reactOpen(${c.server_id || 0})">
-      <i aria-hidden="true" class="ti ti-heart"></i>
+      <i aria-hidden="true" class="ti ti-award"></i>
       <span><b>칭찬 보내기</b><em>아이 화면에 스티커가 떠요</em></span></button>`}
 
     <!-- 별도장 상점 — 모은 도장을 쓰는 자리. 미션 화면에서 바로 간다 -->
@@ -2138,7 +2138,6 @@ const Screens = {
     if (!c) return `${subHeader("별도장 상점")}
       <div class="ms-empty">
         <b>아이를 등록하면 열려요</b>
-        <em>모은 별도장으로 무엇과 바꿀지 부모님이 정해 줘요.</em>
         <button class="btn-primary" onclick="location.hash='#register'">아이 등록하기</button>
       </div>`;
     if (S.store === null) return `${subHeader("별도장 상점")}<p class="sub">불러오는 중…</p>`;
@@ -2153,7 +2152,6 @@ const Screens = {
     ${!S.store.length ? `
       <div class="ms-empty">
         <b>진열대가 비어 있어요</b>
-        <em>${kid ? "부모님이 무엇과 바꿀 수 있는지 정해 주면 여기 나와요." : "무엇과 바꿔 줄지 정해서 올려 주세요."}</em>
         ${kid ? "" : `<button class="btn-primary" onclick="App.storeAddOpen()">진열대에 올리기</button>`}
       </div>` : `
       <ul class="st-list">
@@ -2187,7 +2185,7 @@ const Screens = {
       </div>`}`}
 
     <button class="ms-mkbtn" onclick="location.hash='#tickets'">
-      <i aria-hidden="true" class="ti ti-ticket"></i>
+      <i aria-hidden="true" class="ti ti-receipt"></i>
       <span><b>내 티켓</b><em>바꾼 것들이 여기 모여요</em></span></button>
 
     ${storeAddSheet()}`;
@@ -2203,14 +2201,12 @@ const Screens = {
     if (!c) return `${subHeader("내 티켓")}
       <div class="ms-empty">
         <b>아이를 등록하면 열려요</b>
-        <em>별도장으로 바꾼 것들이 여기에 티켓으로 쌓여요.</em>
         <button class="btn-primary" onclick="location.hash='#register'">아이 등록하기</button>
       </div>`;
     if (S.rewards === null) return `${subHeader("내 티켓")}<p class="sub">불러오는 중…</p>`;
     if (!S.rewards.length) return `${subHeader("내 티켓")}
       <div class="ms-empty">
         <b>아직 바꾼 게 없어요</b>
-        <em>별도장을 모아 상점에서 바꾸면 여기에 티켓이 쌓여요.</em>
         <button class="btn-primary" onclick="location.hash='#store'">상점 열기</button>
       </div>`;
 
@@ -2248,7 +2244,6 @@ const Screens = {
     if (!S.loggedIn) return `${subHeader("아이 모드")}
       <div class="ms-empty">
         <b>가입하면 쓸 수 있어요</b>
-        <em>아이에게 폰을 넘길 때 서랍·설정을 숨기고, 돌아올 때만 네 자리 번호를 물어요.</em>
         <button class="btn-primary" onclick="location.hash='#register'">가입하기</button>
       </div>`;
     const has = S.pinHas;
@@ -2270,7 +2265,7 @@ const Screens = {
     </div>
 
     <button class="btn-primary cm-go" onclick="App.kidModeOn()">
-      <i aria-hidden="true" class="ti ti-mood-kid"></i> 아이 모드 켜기</button>
+      <i aria-hidden="true" class="ti ti-user"></i> 아이 모드 켜기</button>
     <p class="mp-hint">번호를 다섯 번 틀리면 5분 동안 잠겨요.</p>
 
     ${pinPadView()}`;
@@ -2489,9 +2484,6 @@ const Screens = {
 
     return `
     <div class="hd-top">
-      <!-- 아이 모드에서는 ☰ 자리가 «나가기»가 된다 (§5④).
-           ⚠ 서랍을 숨기기만 하면 안 된다 — 나갈 길이 없으면 부모가 자기 폰에 갇힌다.
-             나갈 때만 4자리를 묻는다(들어올 땐 안 묻는다). -->
       ${S.kidMode
         ? `<button class="hv3-ham" onclick="App.kidModeOff()" aria-label="부모 모드로 나가기">
              <i aria-hidden="true" class="ti ti-lock"></i></button>`
@@ -2602,11 +2594,11 @@ const Screens = {
       if (!n) return "";
       return `<button class="hv3-card need" onclick="location.hash='#mission'">
         <div class="hv3-hdrow">
-          <span class="ic"><i aria-hidden="true" class="ti ti-eye-check"></i></span>
+          <span class="ic"><i aria-hidden="true" class="ti ti-eye"></i></span>
           <b>확인해 주세요</b><span class="cnt">${n}</span>
           <i aria-hidden="true" class="ti ti-chevron-right go"></i>
         </div>
-        <p class="hv3-morep">보고 나서 보너스를 줄 수 있어요</p></button>`;
+        </button>`;
     })()}
 
     <!-- ⑥ 오늘 미션 — 홈 아래가 통째로 비어 있었다(2026-08-07 §6.4 «MVP 핵심 기능 완전 누락»).
@@ -2625,8 +2617,9 @@ const Screens = {
             <span class="ic"><i aria-hidden="true" class="ti ti-target"></i></span>
             <b>오늘 미션</b><em class="val">아직 없어요</em>
             <i aria-hidden="true" class="ti ti-chevron-right go"></i>
-          </div>
-          <p class="hv3-morep">골라 주면 아이가 해내고 도장을 받아요</p></button>`;
+          </div></button>`;
+          /* ⚠ 설명 한 줄을 덧붙이지 않는다(2026-08-07 지시). 다른 카드는 «제목 + 값 + ›» 한 줄인데
+             여기만 «골라 주면 아이가…» 를 달아 두면 그 카드만 튀고, 매번 읽을 말도 아니다. */
       }
       return `<button class="hv3-card" onclick="location.hash='#mission'">
         <div class="hv3-hdrow">
@@ -2635,7 +2628,11 @@ const Screens = {
           <i aria-hidden="true" class="ti ti-chevron-right go"></i>
         </div>
         <ul class="hv3-msn">${list.slice(0, 3).map((x) => `
-          <li class="${x.status}"><i aria-hidden="true" class="ti ${x.status === "done" ? "ti-circle-check" : "ti-circle"}"></i>
+          <!-- ⚠ 아이콘은 **서브셋에 있는 것만** 쓴다. 없는 이름을 쓰면 그 자리가 «빈칸»으로 뜬다
+               (2026-08-03 에 5개가 그랬고, 2026-08-07 에 내가 6개를 또 그렇게 넣었다).
+               fonts/tabler-subset.css 에 그 이름이 있는지 보고 쓸 것. ti-circle 은 없다 → ti-square.
+               ⚠ 이 주석에 역따옴표를 쓰지 말 것 — 템플릿 문자열 안이라 그 자리에서 문법이 깨진다. -->
+          <li class="${x.status}"><i aria-hidden="true" class="ti ${x.status === "done" ? "ti-circle-check" : "ti-square"}"></i>
             <span class="tx">${esc(x.title)}</span><span class="st">★${x.stars}</span></li>`).join("")}
         </ul></button>`;
     })()}
@@ -2650,12 +2647,9 @@ const Screens = {
           <b>별도장 상점</b><em class="val">★${S.missionStars || 0}</em>
           <i aria-hidden="true" class="ti ti-chevron-right go"></i>
         </div>
-        ${!(S.store || []).length
-          ? `<p class="hv3-morep">무엇과 바꿀 수 있는지 정해 주세요</p>`
-          : can
-            ? `<p class="hv3-morep">지금 바꿀 수 있는 게 <b>${can}개</b> 있어요</p>`
-            : `<p class="hv3-morep">조금만 더 모으면 바꿀 수 있어요</p>`}
       </button>`;
+      /* ⚠ 설명 줄을 안 단다(2026-08-07 지시). 알아야 할 값(★ 잔액)은 이미 오른쪽에 있고,
+         «조금만 더 모으면…» 같은 말은 매번 읽을 것이 아니다. 다른 카드와 같은 한 줄로 둔다. */
     })()}
 
     <!-- 하단 3버튼 (§1) — 좌 달력 · 가운데 큰 ＋ · 우 미션 -->
@@ -3730,6 +3724,10 @@ const Screens = {
          ⚠ 주소가 없으면 **버튼 자체를 안 그린다**(2026-07-31) — 눌러서 안 열리는 링크는
             스토어 심사 반려 사유이고, 사용자에겐 고장으로 보인다. 주소가 생기면 SISTER_SITES 만 채운다. -->
     ${sisterLink("academy", "우리 동네 학원 찾기", "우리아이학원정보 — 학원비·과목별로 비교")}
+    ${STUB.activities.length ? "" : `
+    <button class="ms-mkbtn" onclick="App.planNew()">
+      <i aria-hidden="true" class="ti ti-plus"></i>
+      <span><b>방과후 · 학원 넣기</b></span></button>`}
     <!-- 「[네이티브 자리] 실앱은 드래그를 그대로 씁니다」를 걷어낼 때 엉뚱한 문장이 붙어
          «시간이 늘어납니다 순서는 화살표로 바꿔요»가 됐다(2026-07-27). 사람이 읽는 말로 되돌린다. -->
     <!-- ⚠ 세로 구분선이 없어서 «이게 화요일인지 수요일인지» 안 읽혔다(2026-07-28 사장님 지적).
@@ -4355,7 +4353,7 @@ const Screens = {
     return `
     ${subHeader("대화 · 알림")}
 
-    <div class="mp-sec">${esc(c.nickname)}에게 보내기</div>
+    <div class="mp-sec">${c.nickname ? esc(c.nickname) + "에게 보내기" : "아이에게 보내기"}</div>
     <div class="nt-send">
       <input id="nt" placeholder="아이에게 보낼 말" value="${esc(S.noticeText)}"
              oninput="S.noticeText=this.value" onkeydown="if(event.key==='Enter')App.sendNotice()">
@@ -5230,7 +5228,7 @@ function pinPadView() {
         <button class="pin-k ghost" onclick="App.pinClose()">그만</button>
         <button class="pin-k" ${locked ? "disabled" : ""} onclick="App.pinTap(0)">0</button>
         <button class="pin-k ghost" onclick="App.pinBack()" aria-label="지우기">
-          <i aria-hidden="true" class="ti ti-backspace"></i></button>
+          <i aria-hidden="true" class="ti ti-x"></i></button>
       </div>
     </div>
   </div>`;
@@ -5283,17 +5281,15 @@ function subHeader(title, sub) {
    그 아래가 상시 메뉴, 맨 아래 작게 내 정보·설정.
    당일 것(오늘·달력·미션)은 여기 없다. 그건 홈과 하단 3버튼이 진다. */
 function drawerView(c) {
-  /* 아이 모드에서는 서랍이 아예 열리지 않는다 (§5④ «드로어 및 설정 메뉴를 숨기고»).
-     ⚠ 여는 버튼만 감추는 것으로는 부족하다 — 서랍은 제스처·옛 상태로도 열릴 수 있다.
-       그리는 자리에서 막아야 «숨김»이 아니라 «없음»이 된다. */
+  /* 아이 모드에서는 서랍이 아예 열리지 않는다 (§5④) — 여는 버튼만 감추면 제스처로 열린다 */
   if (S.kidMode) return "";
   if (!S.drawer) return "";
   const undone = STUB.documents.filter((d) => d.kind === "field" && !d.reported).length;
   const unread = unreadFor("parent");
   const ITEMS = [
-    // 별도장 상점 — 미션이 쌓은 것을 «쓰는» 자리. 미션 바로 옆에 있어야 한 바퀴가 닫힌다(§5③)
-    ["ti-building-store", "별도장 상점", "location.hash='#store'", ""],
-    ["ti-mood-kid",  "아이 모드", "location.hash='#childmode'", ""],
+    // 별도장 상점 — 미션이 쌓은 것을 «쓰는» 자리(§5③). ⚠ 아이콘은 서브셋에 있는 것만
+    ["ti-discount", "별도장 상점", "location.hash='#store'", ""],
+    ["ti-user",  "아이 모드", "location.hash='#childmode'", ""],
     ["ti-archive",   "서랍",     "location.hash='#timeline'", ""],
     ["ti-table",     "시간표",   "location.hash='#timetable'", ""],
     ["ti-tools-kitchen-2", "급식", "location.hash='#meal'", ""],
@@ -6682,12 +6678,9 @@ const isGuest = () => !S.loggedIn && !isChildToken() && !!localStorage.getItem("
 /* 자녀 토큰으로 볼 수 있는 화면 — **이 목록 밖은 전부 자녀 화면으로 되돌린다**(2026-08-02).
    자녀 화면이 «결제·삭제·형제 정보는 안 보입니다»라고 적어놓고 뒤로는 다 보여주면 거짓말이다.
    약관·개인정보는 남긴다(법적으로 늘 닿을 수 있어야 한다). login 은 연결을 끊을 길이다. */
-/* ⚠ 여기 없는 화면은 **자녀 토큰으로 열리지 않는다**(라우터가 childview 로 되돌린다).
-   상점·내 티켓은 «아이가 직접 바꾸는» 화면이라 반드시 있어야 한다(§5③).
-   ⚠ `childmode`(아이 모드 설정·PIN)는 **넣지 않는다.** 그건 부모 폰에서 부모가 켜는 것이고,
-     자녀폰에서 열리면 아이가 자기 잠금을 풀 수 있게 된다. 서버도 자녀 토큰을 거절한다. */
 const CHILD_SCREENS = ["childview", "childlink", "login", "terms", "policy",
   "childtheme", "childboard", "childshoot", "childexpired", "childtt", "childmealrate", "childfriend", "childsubject", "childlocked",
+  // 상점·티켓은 아이가 직접 쓴다(§5③). ⚠ childmode 는 넣지 않는다 — 자녀폰에서 열리면 아이가 제 잠금을 푼다
   "store", "tickets"];
 /* §4.5 열람 잠금 — **비웠다**(2026-07-31 «기록 누르면 바로 기록잠금 나오게 하지마»).
    기록을 볼 때마다 지문을 묻는 건 제 폰에서 제 아이 기록을 보는 흐름을 막는다.
@@ -6773,10 +6766,7 @@ const App = {
       name = "childview";
       if (location.hash !== "#childview") history.replaceState(null, "", "#childview");
     }
-    /* 🔒 아이 모드 — 아이에게 열어 줄 화면은 셋뿐이다(§5④ «자녀 미션판/상점만 노출»).
-       ⚠ 서랍을 감추는 것만으로는 못 막는다. 주소가 남아 있거나 뒤로가기 한 번이면
-         설정·결제 화면이 그대로 열린다(자녀 토큰에서 겪은 그 구멍과 같은 함정).
-       ⚠ 나가는 길은 ☰ 자리의 자물쇠뿐이고, 거기서 4자리를 묻는다. */
+    /* 🔒 아이 모드 — 열어 줄 화면은 넷뿐(§5④). 서랍만 감추면 주소·뒤로가기로 샌다 */
     if (S.kidMode && !["home", "mission", "store", "tickets"].includes(name)) {
       name = "home";
       if (location.hash !== "#home") history.replaceState(null, "", "#home");
@@ -6814,14 +6804,11 @@ const App = {
     /* 미션은 **홈에서도** 받아온다 — 홈 카드에 「오늘 2/3」이 떠야 부모가 누를 이유가 생긴다.
        미션·자녀 화면에서도 같은 값을 쓴다. 한 번 받아오면 다시 안 부른다(force 로만 갱신). */
     if (["home", "mission", "childview"].includes(name) && S.loggedIn && S.missions === null) this.loadMissions();
-    /* 별도장 상점·티켓·2단계 검증 (2026-08-07) — **필요한 화면에서만** 받아온다.
-       앱 시작마다 부르면 쓰지도 않을 요청이 늘어 첫 화면이 늦어진다(고객센터와 같은 규칙). */
+    // 보상 화면 로더 (2026-08-07) — 필요한 화면에서만(첫 화면을 늦추지 않게)
     if (["store", "home", "childview"].includes(name) && S.loggedIn && S.store === null) this.loadStore();
     if (["tickets", "store"].includes(name) && S.loggedIn && S.rewards === null) this.loadRewards();
     if (["mission", "home"].includes(name) && S.loggedIn && S.verifyPending === null) this.loadVerify();
     if (name === "childmode" && S.loggedIn && S.pinHas === null) this.loadPinState();
-    /* 아이 화면에 뜰 «칭찬 스티커» — 자녀 화면에 들어올 때 안 본 것이 있나 묻는다.
-       ⚠ 부모 화면에서는 부르지 않는다. 칭찬을 보낸 사람에게 자기 칭찬을 되띄우면 이상하다. */
     if ((isChildToken() || S.childView || S.kidMode) && ["childview", "home", "store"].includes(name)
         && S.loggedIn) this.loadReactions();
     if (name === "report" && S.loggedIn) this.loadReport();
@@ -7392,8 +7379,7 @@ const App = {
     S.currentChildId = id;
     S.commJoined = false; S.commPosts = []; S.commSince = 0;
     S.missions = null; S.missionStars = 0;
-    /* 상점·티켓·확인대기도 **자녀마다 다르다.** 안 비우면 앞 아이의 진열대와 티켓이 그대로 남는다
-       (도장 잔액이 남는 것과 같은 사고 — 2026-08-07 추가). */
+    // 상점·티켓·확인대기도 자녀마다 다르다 — 안 비우면 앞 아이 것이 남는다(2026-08-07)
     S.store = null; S.rewards = null; S.verifyPending = null;
     location.hash = "#home";
   },
