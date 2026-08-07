@@ -5589,3 +5589,32 @@ body:has(#tabbar.hidden) #screen:has(.ib),
 /* 마감 조임 6차 — 마지막 2건 */
 .st-cancel { background: rgba(255,255,255,.14); color: var(--oncard); }   /* card-b(밝음)가 남아 미색 글씨를 지웠다 */
 .msc.ms-wait .msc-tag { background: #FFF6DF; color: #6B4A00; }            /* 반투명(.92)이라 감사가 못 재던 것 — 불투명으로 */
+
+/* ── 🎲 리롤 + 💛 칭찬 (지시서 §4②·§4⑤ · 2026-08-07) ─────────────────────
+   둘 다 «카드 문법»을 그대로 쓴다 — 새 색·새 모양을 만들지 않는다. */
+.rr-row { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+.rr-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 48px; padding: 12px 16px; border: none; border-radius: 22px;
+  background: color-mix(in srgb, var(--accent) 80%, #43464C); color: var(--oncard);
+  font-family: inherit; font-size: 15px; font-weight: 800;
+  box-shadow: 0 8px 22px rgba(40, 80, 140, .10); }
+:root[data-theme="dark"] .rr-btn { background: color-mix(in srgb, var(--drawer-a) 80%, #43464C);
+  box-shadow: 0 8px 22px rgba(0,0,0,.30); }
+.rr-btn[disabled] { background: color-mix(in srgb, var(--accent) 16%, var(--surf)); color: var(--ink);
+  box-shadow: none; }
+:root[data-theme="dark"] .rr-btn[disabled] { background: color-mix(in srgb, var(--drawer-a) 30%, var(--surf));
+  color: rgba(255,255,255,.80); }
+.rr-d { font-size: 18px; }
+.rr-hint { flex: none; font-style: normal; font-size: 12.5px; font-weight: 700; color: var(--muted); }
+
+.rc-row { display: flex; align-items: center; gap: 10px; margin-top: 24px;
+  padding: 12px 14px; border-radius: 22px;
+  background: color-mix(in srgb, var(--accent) 80%, #43464C);
+  box-shadow: 0 8px 22px rgba(40, 80, 140, .10); }
+:root[data-theme="dark"] .rc-row { background: color-mix(in srgb, var(--drawer-a) 80%, #43464C);
+  box-shadow: 0 8px 22px rgba(0,0,0,.30); }
+.rc-lb { flex: 1; font-size: 14.5px; font-weight: 800; color: var(--oncard); }
+/* 48px — 한 손으로 «1초 만에» 누르는 자리라 넉넉히 */
+.rc-b { flex: none; width: 48px; height: 48px; border: none; border-radius: 50%;
+  background: rgba(255,255,255,.16); font-size: 22px; line-height: 1; }
+.rc-b.on { background: rgba(255,255,255,.92); }

@@ -811,6 +811,10 @@ const S = {
   pinBuf: "",             // 지금까지 누른 숫자
   pinErr: "",             // 틀렸을 때 한 줄 (서버가 준 문구를 그대로 쓴다)
   pinBusy: false,         // 서버에 묻는 중 — 키패드 두 번 눌림 방지
+  rerollUsed: false,      // 🎲 오늘 리롤을 썼나 (서버가 알려준다 · §4②)
+  rerollAsk: false,       // 리롤 확인 — 실수 클릭 방지(지시서가 요구한 모달)
+  reactSent: null,        // 방금 보낸 칭찬 스티커 — 잠깐 표시하고 지운다
+  reactBusy: false,
   introIdx: 0,            // 온보딩에서 몇 장·몇 번째 질문인지 (2026-08-03)
   introStep: null,        // 첫 실행 단계 — slides | survey | notify (§5)
   drawer: false,          // ☰ 좌측 서랍 (2026-08-03 홈 v3)
@@ -2050,6 +2054,27 @@ const Screens = {
     <p class="sub">오늘 <b>${esc(c.nickname)}</b>에게 준 것 · 모은 도장 <b class="ms-star">★ ${S.missionStars}</b></p>
     ${childLinkWarn()}
 
+    <!-- 🎲 리롤 (§4②) — 카드 «위»에 둔다. 지시서가 정한 자리이고,
+         아래에 두면 카드를 다 읽고 나서야 «바꿀 수 있었네»를 알게 된다. -->
+    <div class="rr-row">
+      <button class="rr-btn" onclick="App.rerollAsk()" ${S.rerollUsed || S.missionBusy === "reroll" ? "disabled" : ""}>
+        <span class="rr-d">🎲</span>
+        ${S.missionBusy === "reroll" ? "새로 뽑는 중…" : S.rerollUsed ? "오늘 리롤 다 썼어요" : "다른 미션으로 바꾸기"}
+      </button>
+      ${S.rerollUsed ? "" : `<em class="rr-hint">하루 한 번</em>`}
+    </div>
+
+    ${S.rerollAsk ? `
+    <!-- 확인 — 되돌릴 수 없다. ⛔ alert 금지(§10-2)라 앱 안 모달로 -->
+    <div class="modal" onclick="App.rerollCancel()">
+      <div class="modal-card" onclick="event.stopPropagation()">
+        <h2 class="pin-h">미션을 새로 뽑을까요?</h2>
+        <p class="pin-p">아직 안 한 미션만 바뀌어요.<br>한 번 바꾸면 오늘은 다시 못 바꿔요.</p>
+        <button class="btn-primary" style="margin-top:14px" onclick="App.rerollGo()">🎲 새로 뽑기</button>
+        <button class="msc-sub" onclick="App.rerollCancel()">그냥 둘래요</button>
+      </div>
+    </div>` : ""}
+
     ${list.map((x, i) => {
       const st = ST[x.status] || ST.open;
       /* 카드 = 번호·이름·상태 셋만. 자세한 건 눌러서(시안 2026-08-03) */
@@ -2104,6 +2129,17 @@ const Screens = {
       const ask = S.verifyAsk || [];
       if (!ask.length) return "";
       return `
+      <!-- 💛 칭찬 리액션 (§4⑤) — «1초 만에» 보내는 것이 전부다.
+           화면을 따로 파지 않고 여기 뒀다 — 아이가 해낸 것을 보는 그 자리가 칭찬할 자리다.
+           입구를 새로 만들면 부모가 «확인할 게 세 군데»가 된다(승인·티켓에 이어). -->
+      <div class="rc-row">
+        <span class="rc-lb">잘했다고 한마디</span>
+        <button class="rc-b ${S.reactSent === "thumb_up" ? "on" : ""}" onclick="App.react('thumb_up')"
+          ${S.reactBusy ? "disabled" : ""} aria-label="잘했어요">👍</button>
+        <button class="rc-b ${S.reactSent === "heart" ? "on" : ""}" onclick="App.react('heart')"
+          ${S.reactBusy ? "disabled" : ""} aria-label="사랑해요">❤️</button>
+      </div>
+
       <h2 class="rw-h">확인해 주세요 <span class="rw-n">${ask.length}</span></h2>
       <p class="rw-sub">아이는 이미 별 하나를 받았어요. 잘했으면 <b>보너스</b>를 더 줄 수 있어요.</p>
       ${ask.map((v) => `
@@ -7823,6 +7859,39 @@ const App = {
     toast(e?.message || fallback);
   },
 
+  // ── 🎲 리롤 (§4②) ──────────────────────────────────────────
+  /* ⚠ 확인을 한 번 받는다(지시서 요구). 아이가 잘못 눌러 오늘 미션이 통째로 바뀌면
+        그건 되돌릴 수 없다 — 되돌릴 수 없는 것 앞에서는 묻는다(바꾸기 확인과 같은 규칙). */
+  rerollAsk()    { if (S.rerollUsed) return toast("리롤은 하루에 한 번이에요"); S.rerollAsk = true; this.render(); },
+  rerollCancel() { S.rerollAsk = false; this.render(); },
+  async rerollGo() {
+    const c = cur();
+    if (!c?.server_id || S.missionBusy) return;
+    S.missionBusy = "reroll"; S.rerollAsk = false; this.render();
+    const r = await api(`/children/${c.server_id}/missions/reroll`, { method: "POST" });
+    S.missionBusy = null;
+    if (!r?.ok) { this.render(); return this._rewardErr(r, "바꾸지 못했어요"); }
+    S.missions = r.data.items || [];
+    S.rerollUsed = true;
+    this.render();
+    toast(`미션 ${r.data.changed}개를 새로 뽑았어요`);
+  },
+
+  // ── 💛 칭찬 리액션 (§4⑤) ───────────────────────────────────
+  /* 부모가 «1초 만에» 보내는 것이 전부다 — 화면을 따로 만들지 않고 미션 화면에 붙였다.
+     입구를 새로 파면 부모가 «확인할 게 세 군데»가 된다(승인·티켓에 이어). */
+  async react(type) {
+    const c = cur();
+    if (!c?.server_id || S.reactBusy) return;
+    S.reactBusy = true; this.render();
+    const r = await api(`/children/${c.server_id}/reactions`, { method: "POST", body: { sticker_type: type } });
+    S.reactBusy = false;
+    if (!r?.ok) { this.render(); return this._rewardErr(r, "보내지 못했어요"); }
+    S.reactSent = type; this.render();
+    toast(type === "heart" ? "❤️ 보냈어요" : "👍 보냈어요");
+    setTimeout(() => { S.reactSent = null; this.render(); }, 2400);
+  },
+
   // ── 아이 모드 + PIN (§4④) ──
   /* 🔴 **PIN 비교는 서버가 한다.** 앱에서 비교하면 저장된 값을 읽어 우회할 수 있고,
         그러면 «부모 화면 잠금»이 잠금 구실을 못 한다.
@@ -8426,6 +8495,7 @@ const App = {
       if (r?.ok) {
         S.missions = r.data.items || [];
         S.missionStars = r.data.stars || 0;
+        S.rerollUsed = !!r.data.reroll_used;
       } else if (S.missions === null) {
         S.missions = [];                                 // 서버가 «없다»고 답한 것 — 이건 못 박아도 된다
       }
