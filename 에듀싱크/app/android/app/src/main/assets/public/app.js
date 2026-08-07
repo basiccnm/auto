@@ -795,6 +795,26 @@ const S = {
   pickBand: null,         // 미션 고르기 화면에서 보고 있는 학년대
   missionPick: [],        // 시트에서 고른 code 들
   msDetail: null,         // 카드 상세 시트에 띄운 미션 id (2026-08-03 카드판)
+  /* ── 별도장 상점 · 2단계 보상 (지시서 0807 §3·§4③④⑤ · 설계 2026-08-07) ──
+     🔴 지금은 **목업**이다. 서버(api_reward.js 라우트 13개)는 이미 있고 여기만 안 붙었다.
+        배선할 때 아래 세 배열을 API 응답으로 갈아끼우면 화면은 그대로 산다.
+     ⚠ 잔액은 여기 두지 않는다 — `S.missionStars` 하나가 정본이다.
+        앱에 잔액을 하나 더 만들면 두 값이 반드시 어긋나고, 그때부터 어느 쪽이 맞는지 알 수 없다
+        (서버가 balance 컬럼을 안 두고 star_ledger 하나로만 세는 것과 같은 이유). */
+  storeItems: null,       // 진열대 GET /children/{id}/store       (null = 아직 안 받아옴)
+  tickets: null,          // 🎟️ 티켓  GET /children/{id}/rewards
+  verifyAsk: null,        // 확인해 주세요 GET /children/{id}/verify?pending=1
+  storeBuy: null,         // 「★n로 바꿀까?」 확인에 띄운 item_id
+  storeAdd: false,        // 진열대에 새로 올리는 칸이 열렸나
+  kidMode: false,         // 아이 모드 — 드로어·설정을 숨긴다 (§4④)
+  pinAsk: null,           // PIN 키패드 모달: null=닫힘 | "out"=부모로 나가기 | "set"=처음 정하기
+  pinBuf: "",             // 지금까지 누른 숫자
+  pinErr: "",             // 틀렸을 때 한 줄 (서버가 준 문구를 그대로 쓴다)
+  pinBusy: false,         // 서버에 묻는 중 — 키패드 두 번 눌림 방지
+  rerollUsed: false,      // 🎲 오늘 리롤을 썼나 (서버가 알려준다 · §4②)
+  rerollAsk: false,       // 리롤 확인 — 실수 클릭 방지(지시서가 요구한 모달)
+  reactSent: null,        // 방금 보낸 칭찬 스티커 — 잠깐 표시하고 지운다
+  reactBusy: false,
   introIdx: 0,            // 온보딩에서 몇 장·몇 번째 질문인지 (2026-08-03)
   introStep: null,        // 첫 실행 단계 — slides | survey | notify (§5)
   drawer: false,          // ☰ 좌측 서랍 (2026-08-03 홈 v3)
@@ -1736,6 +1756,47 @@ function adSlot(key) {
   return `<div class="adbox" data-ad="${key}"><span>광고</span></div>`;
 }
 
+/* ═══ 별도장 상점 · 2단계 보상 — 목업 데이터와 말 규칙 (지시서 0807 · 설계 2026-08-07) ═══
+   🔴 **말 규칙(대표님 결정 2026-08-07).** 화면·버튼·푸시 전부 이 표를 따른다.
+     바꾸기(구매❌) · 티켓(영수증❌) · 내 티켓 · 티켓 바꿔주기 → [바꿔줬어요](지급❌)
+     상태는 «기다리는 중» → «받았어요» — requested/fulfilled 를 그대로 내보이지 않는다.
+   ⚠ 서버 코드(reward_orders·fulfill)는 안 바꾼다. 말 규칙은 **화면의 일**이다.
+     API 이름을 따라 화면 말을 정했다가 «영수증»이 아이 화면까지 나갈 뻔했다.
+   ⚠ 진짜 돈이 오가는 **인앱결제(이용권) 화면은 「구매·결제」를 그대로 쓴다.**
+     거기까지 게임말로 하면 스토어 심사·소비자 안내에서 문제가 된다. 갈림선은 «실제 돈이냐»다. */
+const REWARD_STUB = {
+  store: [
+    { item_id: "s1", title: "유튜브 30분",  stars_required: 5,  limit_type: "weekly",  limit_count: 2, used: 1 },
+    { item_id: "s2", title: "편의점 과자",  stars_required: 8,  limit_type: "weekly",  limit_count: 1, used: 0 },
+    { item_id: "s3", title: "용돈 2,000원", stars_required: 15, limit_type: "monthly", limit_count: 2, used: 0 },
+    { item_id: "s4", title: "주말 영화관",  stars_required: 30, limit_type: "monthly", limit_count: 1, used: 0 },
+  ],
+  tickets: [
+    { reward_order_id: "r1", item_title: "유튜브 30분", stars_spent: 5, status: "requested", created_at: "오늘" },
+    { reward_order_id: "r2", item_title: "편의점 과자", stars_spent: 8, status: "fulfilled", created_at: "어제" },
+  ],
+  /* 2차 보너스 대기 — 1차는 이미 나갔고(아이가 «했다»고 냄) 부모가 질을 본다 */
+  verify: [
+    { verify_id: "v1", title: "수학 문제집",  step1: "10~20쪽", photo: true,  bonus: 2 },
+    { verify_id: "v2", title: "책 20분 읽기", step1: "20분 채움", photo: true, bonus: 2 },
+  ],
+};
+/* 🔴 **목업 서버(index.mockup.html) 전용.** 화면은 이걸 부르지 않는다 —
+   실제 데이터는 `App.loadReward()` 가 서버에서 받아온다(2026-08-07 배선 완료).
+   ⚠ 화면 안에서 부르면 서버가 못 왔을 때 **있지도 않은 상품**이 실사용자에게 보인다.
+     그건 빈 상태보다 나쁘다. 검수용으로 손수 부를 때만 쓴다. */
+function rewardSeed() {
+  if (S.storeItems === null) S.storeItems = REWARD_STUB.store.map((x) => ({ ...x }));
+  if (S.tickets === null)    S.tickets    = REWARD_STUB.tickets.map((x) => ({ ...x }));
+  if (S.verifyAsk === null)  S.verifyAsk  = REWARD_STUB.verify.map((x) => ({ ...x }));
+}
+/* 상한 표시 — 서버가 세는 값이지만 화면에도 보여야 «왜 못 바꾸는지»를 안다.
+   ⚠ 화면에서 버튼을 가리는 것만으로 끝내지 말 것. 서버가 LIMIT_EXCEEDED 를 돌려주면
+      그걸 사람 말로 보여준다. 가리기만 하면 우회된다. */
+const limitText = (x) => !x.limit_type ? ""
+  : `${x.limit_type === "weekly" ? "주" : "달"} ${x.limit_count}번`;
+const limitLeft = (x) => !x.limit_type ? 99 : Math.max(0, x.limit_count - (x.used || 0));
+
 const Screens = {
   // ── 1. 로그인 — 일반(ID/비번) + 소셜. POST /api/v1/auth/login · GET /auth/{provider} ──
   /* 로그인 — 시안 9a (2026-07-27)
@@ -1993,6 +2054,27 @@ const Screens = {
     <p class="sub">오늘 <b>${esc(c.nickname)}</b>에게 준 것 · 모은 도장 <b class="ms-star">★ ${S.missionStars}</b></p>
     ${childLinkWarn()}
 
+    <!-- 🎲 리롤 (§4②) — 카드 «위»에 둔다. 지시서가 정한 자리이고,
+         아래에 두면 카드를 다 읽고 나서야 «바꿀 수 있었네»를 알게 된다. -->
+    <div class="rr-row">
+      <button class="rr-btn" onclick="App.rerollAsk()" ${S.rerollUsed || S.missionBusy === "reroll" ? "disabled" : ""}>
+        <span class="rr-d">🎲</span>
+        ${S.missionBusy === "reroll" ? "새로 뽑는 중…" : S.rerollUsed ? "오늘 리롤 다 썼어요" : "다른 미션으로 바꾸기"}
+      </button>
+      ${S.rerollUsed ? "" : `<em class="rr-hint">하루 한 번</em>`}
+    </div>
+
+    ${S.rerollAsk ? `
+    <!-- 확인 — 되돌릴 수 없다. ⛔ alert 금지(§10-2)라 앱 안 모달로 -->
+    <div class="modal" onclick="App.rerollCancel()">
+      <div class="modal-card" onclick="event.stopPropagation()">
+        <h2 class="pin-h">미션을 새로 뽑을까요?</h2>
+        <p class="pin-p">아직 안 한 미션만 바뀌어요.<br>한 번 바꾸면 오늘은 다시 못 바꿔요.</p>
+        <button class="btn-primary" style="margin-top:14px" onclick="App.rerollGo()">🎲 새로 뽑기</button>
+        <button class="msc-sub" onclick="App.rerollCancel()">그냥 둘래요</button>
+      </div>
+    </div>` : ""}
+
     ${list.map((x, i) => {
       const st = ST[x.status] || ST.open;
       /* 카드 = 번호·이름·상태 셋만. 자세한 건 눌러서(시안 2026-08-03) */
@@ -2038,6 +2120,67 @@ const Screens = {
       </div>`;
     })()}
 
+    ${(() => {
+      /* ── 2단계 보상 «확인해 주세요» (지시서 0807 §3.2) ────────────
+         1차는 이미 나갔다(아이가 «했다»고 내면 그 자리에서 별 하나).
+         여기서 보는 건 **질**이다 — 채점 상태·독서록을 보고 보너스를 얹는다.
+         ⚠ 승인과 티켓을 **각각 화면으로 파지 않는다.** 따로 만들면 부모가
+            «확인할 게 두 군데»가 되고, 하나만 보고 다 봤다고 여긴다. */
+      const ask = S.verifyAsk || [];
+      if (!ask.length) return "";
+      return `
+      <!-- 💛 칭찬 리액션 (§4⑤) — «1초 만에» 보내는 것이 전부다.
+           화면을 따로 파지 않고 여기 뒀다 — 아이가 해낸 것을 보는 그 자리가 칭찬할 자리다.
+           입구를 새로 만들면 부모가 «확인할 게 세 군데»가 된다(승인·티켓에 이어). -->
+      <div class="rc-row">
+        <span class="rc-lb">잘했다고 한마디</span>
+        <button class="rc-b ${S.reactSent === "thumb_up" ? "on" : ""}" onclick="App.react('thumb_up')"
+          ${S.reactBusy ? "disabled" : ""} aria-label="잘했어요">👍</button>
+        <button class="rc-b ${S.reactSent === "heart" ? "on" : ""}" onclick="App.react('heart')"
+          ${S.reactBusy ? "disabled" : ""} aria-label="사랑해요">❤️</button>
+      </div>
+
+      <h2 class="rw-h">확인해 주세요 <span class="rw-n">${ask.length}</span></h2>
+      <p class="rw-sub">아이는 이미 별 하나를 받았어요. 잘했으면 <b>보너스</b>를 더 줄 수 있어요.</p>
+      ${ask.map((v) => `
+        <div class="rw-card">
+          <div class="rw-top">
+            <b>${esc(v.title)}</b>
+            <em>${esc(v.step1)}</em>
+          </div>
+          ${v.photo ? `<img class="msc-photo" src="${PLACEHOLDER}" alt="아이가 보낸 사진">` : ""}
+          <div class="rw-btns">
+            <button class="btn-primary" onclick="App.verifyBonus('${v.verify_id}', ${v.bonus})">
+              <i aria-hidden="true" class="ti ti-star"></i>보너스 ★${v.bonus} 주기</button>
+            <button class="msc-sub" onclick="App.verifySkip('${v.verify_id}')">이번엔 그냥</button>
+          </div>
+        </div>`).join("")}`;
+    })()}
+
+    ${(() => {
+      /* ── 🎟️ 티켓 바꿔주기 (§4③) ──────────────────────────────────
+         아이가 별로 바꾼 것을 **부모가 실물로 해주는** 자리다.
+         ⚠ 서버는 이걸 fulfill 이라 부르지만 화면에는 그 말을 안 쓴다(말 규칙). */
+      const waiting = (S.tickets || []).filter((t) => t.status === "requested");
+      if (!waiting.length) return "";
+      return `
+      <h2 class="rw-h">🎟️ 티켓 바꿔주기 <span class="rw-n">${waiting.length}</span></h2>
+      <p class="rw-sub">아이가 모은 별로 바꿨어요. 해주고 나서 눌러 주세요.</p>
+      ${waiting.map((t) => `
+        <div class="tk-give">
+          <span class="tk-star">★${t.stars_spent}</span>
+          <span class="tk-nm"><b>${esc(t.item_title)}</b><em>${esc(t.created_at)}</em></span>
+          <button class="tk-ok" onclick="App.ticketGive('${t.reward_order_id}')">바꿔줬어요</button>
+        </div>`).join("")}`;
+    })()}
+
+    <!-- 진열대 — 부모가 «무엇을 얼마에» 정하는 곳. 입구는 드로어가 정본이고
+         여기는 티켓을 보다가 «하나 더 올리자»가 되는 자리라 이어 둔다(같은 화면이 아니라 이동이다) -->
+    <button class="ms-mkbtn" onclick="location.hash='#storeset'">
+      <i aria-hidden="true" class="ti ti-award"></i>
+      <span><b>별도장 상점 꾸미기</b><em>모은 별로 바꿀 것 정하기</em></span>
+    </button>
+
     <!-- 리포트 — 일일 퀘스트가 쌓아온 것을 부모가 보는 자리(2026-08-03) -->
     <button class="ms-mkbtn" onclick="location.hash='#report'">
       <i aria-hidden="true" class="ti ti-chart-bar"></i>
@@ -2053,6 +2196,141 @@ const Screens = {
     <!-- 미션 고르기 «반쪽 시트» 폐지(2026-08-03) — 전용 화면 Screens.missionpick 이 대신한다.
          고를 것이 수십 개라 시트로는 절반밖에 못 봤다. -->
 `;
+  },
+
+  /* ── 별도장 상점: 부모 진열대 세팅 (지시서 0807 §4③) ─────────
+     입구는 **드로어 한 곳**이다. 홈에 또 놓지 않는다 — 이 앱이 반복해서 낸 사고가
+     «같은 것을 두 곳에서 그리기»다(dayPanel·알레르기·급식).
+     ⚠ 여기서 정하는 건 «무엇을 얼마에». 실제로 해주는 것은 미션 화면의 «티켓 바꿔주기»다. */
+  storeset: () => {
+    const c = cur();
+    if (!c) return `${subHeader("별도장 상점")}
+      <div class="ms-empty">
+        <b>아이를 등록하면 시작해요</b>
+        <em>모은 별로 무엇을 바꿀 수 있는지 여기서 정해요.</em>
+        <button class="btn-primary" onclick="location.hash='#register'">아이 등록하기</button>
+      </div>`;
+    /* null = 아직 안 받아옴, [] = 서버가 «없다»고 답한 것. 둘을 갈라야
+       «불러오는 중»과 «올린 게 없음»이 안 섞인다(미션 화면과 같은 규칙). */
+    if (S.storeItems === null) return `${subHeader("별도장 상점", esc(c.nickname))}<p class="sub">불러오는 중…</p>`;
+    const list = S.storeItems;
+    return `
+    ${subHeader("별도장 상점", esc(c.nickname))}
+    <p class="sub">모은 별로 <b>무엇을 바꿀 수 있는지</b> 정해요 · 지금 <b class="ms-star">★ ${S.missionStars}</b></p>
+
+    ${list.map((x) => `
+      <div class="st-row">
+        <span class="st-star">★${x.stars_required}</span>
+        <span class="st-nm"><b>${esc(x.title)}</b>${x.limit_type
+          ? `<em>${limitText(x)}까지${x.used ? ` · 이번에 ${x.used}번 썼어요` : ""}</em>`
+          : `<em>횟수 제한 없음</em>`}</span>
+        <button class="st-del" onclick="App.storeDel('${x.item_id}')" aria-label="${esc(x.title)} 내리기">
+          <i aria-hidden="true" class="ti ti-trash"></i></button>
+      </div>`).join("")}
+
+    ${!list.length ? `<div class="st-none">아직 올린 게 없어요<em>아이가 바꿀 수 있는 걸 하나 올려 보세요</em></div>` : ""}
+
+    ${S.storeAdd ? `
+      <div class="st-new">
+        <input class="st-in" id="stTitle" placeholder="무엇을 줄까요? (예: 유튜브 30분)" maxlength="20">
+        <div class="st-inrow">
+          <label class="st-lb">필요한 별
+            <input class="st-num" id="stStars" type="number" inputmode="numeric" min="1" max="99" value="5"></label>
+          <label class="st-lb">얼마나 자주
+            <select class="st-sel" id="stLimit">
+              <option value="">제한 없음</option>
+              <option value="weekly:1">주 1번</option>
+              <option value="weekly:2" selected>주 2번</option>
+              <option value="monthly:2">달 2번</option>
+              <option value="monthly:1">달 1번</option>
+            </select></label>
+        </div>
+        <div class="st-btns">
+          <button class="st-cancel" onclick="App.storeAddClose()">취소</button>
+          <button class="btn-primary" onclick="App.storeAddSave()">올리기</button>
+        </div>
+      </div>`
+    : `<button class="ms-mkbtn" onclick="App.storeAddOpen()">
+        <i aria-hidden="true" class="ti ti-plus"></i>
+        <span><b>바꿀 것 올리기</b><em>유튜브 30분 · 편의점 과자처럼</em></span>
+      </button>`}
+
+    <p class="mp-hint">아이가 별로 바꾸면 <b>미션 화면</b>에 알려드려요</p>`;
+  },
+
+  /* ── 별도장 상점: 아이가 보는 상점 (지시서 0807 §4③) ─────────
+     입구는 **별의 길 한 곳**이다 — 별을 보는 자리와 별을 쓰는 자리가 이어져야 한다.
+     ⚠ 못 바꾸는 카드를 **지우지 않는다.** 흐리게 두고 «★n 더 모으면»을 붙인다 —
+        목표가 보여야 별을 모을 이유가 생긴다. 지워 버리면 상점이 텅 빈 것처럼 보인다. */
+  store: () => {
+    const total = S.missionStars || 0;
+    if (S.storeItems === null) return `
+    <a class="back" href="#childboard" aria-label="뒤로"><i aria-hidden="true" class="ti ti-chevron-left"></i></a>
+    <h1 class="kd2-h1">무엇으로 바꿀까?</h1>
+    <p class="kd2-sub">불러오는 중…</p>`;
+    const list = S.storeItems;
+    const mine = (S.tickets || []).filter((t) => t.status === "requested");
+    return `
+    <a class="back" href="#childboard" aria-label="뒤로"><i aria-hidden="true" class="ti ti-chevron-left"></i></a>
+    <h1 class="kd2-h1">무엇으로 바꿀까?</h1>
+    <p class="kd2-sub">${kw("collect")} <b>★ ${total}</b></p>
+
+    ${mine.length ? `
+    <!-- 내 티켓 — 바꿔 놓고 아직 못 받은 것. 상점 위에 둔다(먼저 확인할 것이니) -->
+    <div class="tk-mine">
+      <h2 class="tk-h">🎟️ 내 티켓</h2>
+      ${mine.map((t) => `
+        <div class="tk-row wait">
+          <b>${esc(t.item_title)}</b>
+          <span class="tk-st">기다리는 중</span>
+        </div>`).join("")}
+      <p class="tk-hint">엄마·아빠가 준비해 주면 «받았어요»로 바뀌어요</p>
+    </div>` : ""}
+
+    <div class="sp-grid">
+      ${list.map((x) => {
+        /* 살 수 있는지는 **서버가 판정해서 내려준다**(can_buy·reason).
+           앱이 다시 계산하면 두 판정이 갈리는 순간부터 어느 쪽이 맞는지 알 수 없다 —
+           잔액·상한을 세는 곳은 서버 하나여야 한다(잔액을 star_ledger 하나로 세는 것과 같은 이유).
+           ⚠ 옛 응답(can_buy 없음)에도 죽지 않게 폴백만 남긴다. */
+        const enough = x.can_buy != null ? x.reason !== "stars" : total >= x.stars_required;
+        const inLimit = x.can_buy != null ? x.reason !== "limit" : limitLeft(x) > 0;
+        const off = x.can_buy != null ? !x.can_buy : (!enough || !inLimit);
+        return `
+        <button class="sp-card ${off ? "off" : ""}" ${off ? "disabled" : ""}
+                onclick="App.storeBuyOpen('${x.item_id}')">
+          <span class="sp-star">★${x.stars_required}</span>
+          <b class="sp-nm">${esc(x.title)}</b>
+          ${!enough ? `<em class="sp-need">★${Math.max(1, x.stars_required - total)} 더 모으면</em>`
+            : !inLimit ? `<em class="sp-need">${limitText(x)} 다 썼어요</em>`
+            : `<em class="sp-ok">바꿀 수 있어요!</em>`}
+        </button>`;
+      }).join("")}
+    </div>
+
+    ${!list.length ? `<div class="st-none">아직 바꿀 게 없어요<em>엄마·아빠가 곧 올려 주실 거예요</em></div>` : ""}`;
+  },
+
+  /* ── 바꾸기 확인 (§4③) ───────────────────────────────────────
+     ⚠ 한 번 더 묻는다. 별은 모으는 데 며칠 걸리는데 잘못 누르면 그게 날아간다.
+        되돌릴 수 없는 것 앞에서는 확인을 넣는다(미션 리롤과 같은 규칙). */
+  storebuy: () => {
+    const x = (S.storeItems || []).find((v) => v.item_id === S.storeBuy);
+    if (!x) return Screens.store();
+    const total = S.missionStars || 0;
+    return `
+    <a class="back" href="#store" aria-label="뒤로"><i aria-hidden="true" class="ti ti-chevron-left"></i></a>
+    <div class="bw-wrap">
+      <span class="bw-big">★${x.stars_required}</span>
+      <h1 class="bw-h">${esc(x.title)}</h1>
+      <p class="bw-p">별 <b>${x.stars_required}개</b>로 바꿀까요?</p>
+      <div class="bw-calc">
+        <span>지금 ★${total}</span><i aria-hidden="true" class="ti ti-chevron-right"></i><span>바꾸면 ★${total - x.stars_required}</span>
+      </div>
+      <button class="btn-primary bw-go" onclick="App.storeBuyGo()" ${S._rewardBusy ? "disabled" : ""}>
+        ${S._rewardBusy ? "바꾸는 중…" : `★${x.stars_required}로 바꾸기`}</button>
+      <button class="msc-sub" onclick="location.hash='#store'">더 볼래요</button>
+    </div>`;
   },
 
   /* ── 2-2. 고객센터 (2026-08-01) ───────────────────────────────
@@ -2273,10 +2551,9 @@ const Screens = {
            ⚠ 여기에 「가입하기」 버튼을 뒀다가 걷어냈다. 들어오자마자 가입을 들이밀면
              «구경하러 왔는데 문 앞에서 붙잡는» 꼴이다. 가입 길은 서랍(☰)에 있으면 족하다.
            ⚠ 빈 알약은 그리지 않는다 — «내 아이가 사라졌나»로 읽힌다. -->
-      ${c ? `<button class="hd-who" onclick="location.hash='#switch'">
-        ${childFace(c, "hd-face")}<b>${esc(c.nickname)}</b><i aria-hidden="true" class="ti ti-chevron-down"></i>
-      </button>`
-        : `<span class="hd-gap"></span>`}
+      <!-- 자녀칩(프로필)은 뺐다(2026-08-07 대표님 지시) — 드로어 맨 위(hv3-drwho)에 이미 있다.
+           같은 입구를 두 곳에 두지 않는다. 빈 알약도 안 그린다(«내 아이가 사라졌나»로 읽힌다). -->
+      <span class="hd-gap"></span>
       <!-- 서랍은 저빈도지만 «이 앱이 뭐 하는 앱인가»를 말하는 자리다 — 항상 보이게 둔다(§1) -->
       <button class="hd-box" onclick="location.hash='#timeline'" aria-label="서랍">
         <i aria-hidden="true" class="ti ti-archive"></i>
@@ -2362,6 +2639,67 @@ const Screens = {
             <li class="act"><span class="at">${esc(fmtT((a.start_time || "").slice(0, 5)))}</span>
               <span class="tx">${esc(a.name)}</span>
               <span class="til">${esc(fmtT((a.end_time || "").slice(0, 5)))}</span></li>`).join("")}</ul>`}
+      </button>`;
+    })()}
+
+    <!-- ═══ §4①~③ 홈 합성 (지시서 0807 · 2026-08-07) ═══════════════════
+         MVP 핵심 셋(전광판·미션 세트·상점)이 홈에서 만나는 자리다.
+         전광판은 위 boardView() 가 이미 그린다 — 여기는 **미션 3종 + 진열대** 둘.
+         ⚠ 08-03 에 «미션 카드 제거»가 있었지만 그건 학교 카드와 섞여 밀도가 터졌을 때다.
+           지금은 §4② 가 «세트 3개»를 홈의 주인공으로 못 박았다 — 새 지시가 이긴다.
+         ⚠ 오늘카드 편집의 «미션» 스위치를 그대로 따른다(끄면 이 구역이 통째로 사라진다).
+           ⚠ 이 주석에 역따옴표를 쓰지 말 것 — 템플릿 문자열 안이라 그 자리에서 문법이 깨진다. -->
+    ${(() => {
+      if (!T.mission || !c) return "";
+      const ms = S.missions;
+      if (ms === null) return "";                      // 아직 안 받아옴 — 빈 자리로 두지 않고 아예 안 그린다
+      const done = ms.filter((x) => x.status === "done").length;
+      const wait = ms.filter((x) => x.status === "waiting").length;
+      /* 다 했으면 카드를 늘어놓지 않는다 — «끝났다»는 한 줄이 목록보다 낫다 */
+      if (ms.length && done === ms.length) return `
+        <button class="hm-clear" onclick="location.hash='#mission'">
+          <span class="hm-seal"><i aria-hidden="true" class="ti ti-circle-check"></i></span>
+          <span class="hm-ct"><b>오늘 미션 다 했어요</b><em>★ ${done}개 받았어요</em></span>
+        </button>`;
+      return `
+      <div class="hm-hd">
+        <b>오늘 미션</b>
+        <em>${ms.length ? `${done}/${ms.length}${wait ? ` · 확인 ${wait}` : ""}` : "곧 나와요"}</em>
+        <button class="hm-more" onclick="location.hash='#mission'">전체 보기<i aria-hidden="true" class="ti ti-chevron-right"></i></button>
+      </div>
+      ${!ms.length ? `<p class="hm-none">매일 아침 세 개가 자동으로 차요</p>` : `
+      <div class="hm-set">
+        ${ms.slice(0, 3).map((x) => {
+          const st = x.status;
+          return `
+          <button class="hm-m ${st}" onclick="App.msOpen(${x.id})">
+            <span class="hm-no">${st === "done" ? `<i aria-hidden="true" class="ti ti-check"></i>` : `★${x.stars}`}</span>
+            <b>${esc(x.title)}</b>
+            <em>${st === "done" ? "받았어요" : st === "waiting" ? "확인 기다림" : st === "skipped" ? "못 했어요" : "아직"}</em>
+          </button>`;
+        }).join("")}
+      </div>`}`;
+    })()}
+
+    <!-- ③ 별도장 상점 — 홈에서는 «얼마 모았고 뭘 바꿀 수 있나» 한 줄.
+         진열대 편집은 드로어가 정본이다. 여기는 **보여주고 넘기는 자리**라 입구 중복이 아니다. -->
+    ${(() => {
+      if (!T.mission || !c) return "";
+      const items = S.storeItems;
+      const canBuy = (items || []).filter((x) => x.can_buy != null ? x.can_buy : S.missionStars >= x.stars_required);
+      const waitTk = (S.tickets || []).filter((t) => t.status === "requested").length;
+      return `
+      <button class="hm-shop" onclick="location.hash='${items && items.length ? "#store" : "#storeset"}'">
+        <span class="hm-si">🎁</span>
+        <span class="hm-st">
+          <b>별도장 상점</b>
+          <em>${!items ? `모은 별 ★${S.missionStars}`
+            : !items.length ? "바꿀 것을 정해 주세요"
+            : canBuy.length ? `★${S.missionStars} · 바꿀 수 있는 것 ${canBuy.length}`
+            : `★${S.missionStars} 모았어요`}</em>
+        </span>
+        ${waitTk ? `<span class="hm-tk">🎟️ ${waitTk}</span>` : ""}
+        <i aria-hidden="true" class="ti ti-chevron-right"></i>
       </button>`;
     })()}
 
@@ -4307,7 +4645,15 @@ const Screens = {
       }).join("")}
     </div>
 
-    <div class="kb-left">${goal}개까지 <b>${goal - total}개</b> 남았어요!</div>`;
+    <div class="kb-left">${goal}개까지 <b>${goal - total}개</b> 남았어요!</div>
+
+    <!-- 상점 입구는 **여기 한 곳**이다 (설계 2026-08-07).
+         별을 보는 자리와 별을 쓰는 자리가 이어져야 «모으면 바꿀 수 있다»가 읽힌다. -->
+    <button class="kb-shop" onclick="location.hash='#store'">
+      <span class="kb-shopi">🎁</span>
+      <span class="kb-shopt"><b>무엇으로 바꿀까?</b><em>모은 별로 바꾸기</em></span>
+      <i aria-hidden="true" class="ti ti-chevron-right"></i>
+    </button>`;
   },
 
   /* ── 자녀: 사진 인증 ── */
@@ -4364,6 +4710,12 @@ const Screens = {
         <i class="s">★</i><b>${S.missionStars || 0}</b><span>${kw("collect")}</span>
       </button>
       ${waiting ? `<span class="kd3-wait">확인중 ${waiting}</span>` : ""}
+      <!-- 아이 모드에서 나가는 문 (§4④). **자물쇠 모양을 그대로 보여준다** —
+           숨겨 두면 부모가 «내 폰이 잠겼다»고 여긴다. 누르면 PIN 키패드가 뜬다.
+           ⚠ 자녀 토큰(진짜 아이 폰)에는 안 보인다 — 거긴 나갈 곳이 없다. -->
+      ${S.kidMode && !isChildToken() ? `
+        <button class="kd3-out" onclick="App.kidModeOut()" aria-label="엄마·아빠 화면으로">
+          <i aria-hidden="true" class="ti ti-lock"></i></button>` : ""}
     </div>
 
     <div class="kd3-deck">
@@ -4772,6 +5124,8 @@ function boardView() {
   return `
   <div class="bd" id="board" aria-live="polite">
     <!-- 시계 — «날짜 · 요일» 위, «시각» 아래. 한 줄에 몰면 날짜가 시각에 묻힌다(2026-08-04) -->
+    <!-- §6.2 (2026-08-07) — 회색 스티커 박스 폐지. 날짜는 시계 «위» 독립 줄, 시계는 크게.
+         날짜가 시계 옆에 끼어 있으면 찌그러져 읽힌다 — 위계는 «작은 날짜 → 큰 시계 → 전광판» 순. -->
     <div class="bd-time">
       <span class="dt">${fmtD(+TODAY.slice(4, 6), +TODAY.slice(6))} ${["일", "월", "화", "수", "목", "금", "토"][d.getDay()]}요일</span>
       <span class="tm">${hh}<i>:</i>${mm}</span>
@@ -4884,6 +5238,13 @@ function drawerView(c) {
   const undone = STUB.documents.filter((d) => d.kind === "field" && !d.reported).length;
   const unread = unreadFor("parent");
   const ITEMS = [
+    /* 별도장 상점 = 진열대 세팅(부모). **입구는 여기 하나다** — 홈에 또 놓지 않는다.
+       미션 화면 아래쪽에도 버튼이 있지만 그건 «티켓 보다가 하나 더 올리자»로 가는 이동이지
+       두 번째 입구가 아니다(같은 화면을 두 벌 그리지 않는다). */
+    /* ⚠ 아이콘은 **서브셋(tabler-subset.woff2)에 있는 것만** 쓴다. 69개뿐이다.
+       없는 이름을 쓰면 에러가 아니라 **빈칸**으로 나온다 — 2026-08-03에 5개가 그렇게 비어 있었다.
+       확인: grep "\.ti-이름:" app/www/fonts/tabler-subset.css */
+    ["ti-award",     "별도장 상점", "location.hash='#storeset'", ""],
     ["ti-archive",   "서랍",     "location.hash='#timeline'", ""],
     ["ti-table",     "시간표",   "location.hash='#timetable'", ""],
     ["ti-tools-kitchen-2", "급식", "location.hash='#meal'", ""],
@@ -4927,10 +5288,48 @@ function drawerView(c) {
             ${bd ? `<span class="hd-badge" style="position:static;margin-left:auto">${bd}</span>` : ""}</button>`).join("")}
       </div>
       <div class="hv3-drfoot">
+        <!-- 아이 모드 (지시서 0807 §4④)
+             ⚠ 지시서는 «상단 토글»이라고 했는데 상단 줄은 이미 ☰·자녀칩·서랍·🔔 넷이다.
+                다섯째를 넣으면 360px 에서 아이콘이 다시 42px 아래로 눌린다(2026-08-03에 고친 그 자리).
+                자주 누르는 것도 아니라 여기 뒀다 — **상단으로 옮길지는 대표님 판단.** -->
+        <button class="hv3-dritem sub" onclick="App.kidModeOn()">
+          <i aria-hidden="true" class="ti ti-share-2"></i>아이에게 넘겨주기</button>
         <button class="hv3-dritem sub" onclick="App.drawerClose();location.hash='#mypage'">
           <i aria-hidden="true" class="ti ti-settings"></i>내 정보 · 설정</button>
       </div>
     </nav>
+  </div>`;
+}
+
+/* ═══ 아이 모드 PIN 키패드 (지시서 0807 §4④ · §10-2) ═══════════════
+   ⛔ **브라우저 alert·prompt 금지**가 지시다. PIN 을 prompt() 로 받으면
+      ①앱 밖 창이라 테마가 안 먹고 ②안드로이드에서 숫자 자판이 안 뜨고
+      ③«취소»가 무슨 뜻인지 아이도 부모도 모른다.
+   ⚠ 이건 **자물쇠가 아니라 문턱**이다. 저학년이 실수로 부모 화면에 들어가는 걸 막는 것이지
+      작정한 사람을 막지 못한다. 진짜 보호는 서버 토큰이 진다 —
+      그래서 PIN 이 틀려도 «데이터»가 새지 않는다. 여기서 과하게 굴지 말 것. */
+function pinView() {
+  if (!S.pinAsk) return "";
+  const set = S.pinAsk === "set";
+  const n = S.pinBuf.length;
+  return `
+  <div class="modal pin-dim" onclick="App.pinClose()">
+    <div class="pin-box" onclick="event.stopPropagation()">
+      <h2 class="pin-h">${set ? "비밀번호 4자리를 정해요" : "비밀번호를 넣어 주세요"}</h2>
+      <p class="pin-p">${set ? "아이 모드에서 나올 때 쓰는 번호예요 · 0000·1234 는 안 돼요" : "엄마·아빠 화면으로 돌아가요"}</p>
+      <div class="pin-dots">
+        ${[0, 1, 2, 3].map((i) => `<i class="${i < n ? "on" : ""}"></i>`).join("")}
+      </div>
+      ${S.pinErr ? `<p class="pin-err">${esc(S.pinErr)}</p>` : ""}
+      ${S.pinBusy ? `<p class="pin-p">확인하는 중…</p>` : ""}
+      <div class="pin-pad">
+        ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) =>
+          `<button class="pin-k" onclick="App.pinPush('${d}')" ${S.pinBusy ? "disabled" : ""}>${d}</button>`).join("")}
+        <button class="pin-k ghost" onclick="App.pinClose()">취소</button>
+        <button class="pin-k" onclick="App.pinPush('0')" ${S.pinBusy ? "disabled" : ""}>0</button>
+        <button class="pin-k ghost" onclick="App.pinBack()" ${S.pinBusy ? "disabled" : ""}>지우기</button>
+      </div>
+    </div>
   </div>`;
 }
 
@@ -6273,7 +6672,11 @@ const isGuest = () => !S.loggedIn && !isChildToken() && !!localStorage.getItem("
    자녀 화면이 «결제·삭제·형제 정보는 안 보입니다»라고 적어놓고 뒤로는 다 보여주면 거짓말이다.
    약관·개인정보는 남긴다(법적으로 늘 닿을 수 있어야 한다). login 은 연결을 끊을 길이다. */
 const CHILD_SCREENS = ["childview", "childlink", "login", "terms", "policy",
-  "childtheme", "childboard", "childshoot", "childexpired", "childtt", "childmealrate", "childfriend", "childsubject", "childlocked"];
+  "childtheme", "childboard", "childshoot", "childexpired", "childtt", "childmealrate", "childfriend", "childsubject", "childlocked",
+  /* 상점·바꾸기는 **아이 것**이다 (지시서 0807 §4③).
+     ⚠ 여기 안 넣으면 자녀 토큰이 상점에 들어가는 순간 라우터가 childview 로 되돌린다 —
+        에러가 아니라 «눌렀는데 아무 일도 안 남»으로 보인다. */
+  "store", "storebuy"];
 /* §4.5 열람 잠금 — **비웠다**(2026-07-31 «기록 누르면 바로 기록잠금 나오게 하지마»).
    기록을 볼 때마다 지문을 묻는 건 제 폰에서 제 아이 기록을 보는 흐름을 막는다.
    보호는 **앱 잠금**(내정보 → 앱 잠금)이 대신한다 — 그쪽은 앱 전체를 한 번만 막는다.
@@ -6358,6 +6761,16 @@ const App = {
       name = "childview";
       if (location.hash !== "#childview") history.replaceState(null, "", "#childview");
     }
+    /* 🔒 아이 모드(부모 폰 공유, §4④) — 자녀 화면 밖으로 못 나간다.
+       ⚠ 드로어에서 «아이에게 넘겨주기»를 누르는 것만으로는 부족하다. 화면에 입구가 없어도
+          뒤로가기 한 번·위젯·알림탭이면 부모 화면으로 떨어지고, 라우터는 그걸 그대로 그린다
+          (자녀 토큰에서 이미 겪은 일이다 — 2026-08-02).
+       ⚠ 자녀 토큰과 **달리** 여기서는 PIN 이 문이다. 그래서 나가는 길은 kidModeOut() 하나뿐이고
+          이 문지기는 주소를 아무리 두드려도 안 열린다. */
+    if (S.kidMode && !isChildToken() && !CHILD_SCREENS.includes(name)) {
+      name = "childview";
+      if (location.hash !== "#childview") history.replaceState(null, "", "#childview");
+    }
     // 연결이 끝난 자녀폰 — 로그인으로 조용히 튕기지 않는다(2026-08-02 구멍 2-2)
     if (S.childLinkEnded && !["childexpired", "childlink", "terms", "policy"].includes(name)) {
       name = "childexpired";
@@ -6391,6 +6804,9 @@ const App = {
     /* 미션은 **홈에서도** 받아온다 — 홈 카드에 「오늘 2/3」이 떠야 부모가 누를 이유가 생긴다.
        미션·자녀 화면에서도 같은 값을 쓴다. 한 번 받아오면 다시 안 부른다(force 로만 갱신). */
     if (["home", "mission", "childview"].includes(name) && S.loggedIn && S.missions === null) this.loadMissions();
+    /* 보상 화면에 들어갈 때 받아온다. 미션 화면도 «확인해 주세요»·«티켓»을 그리므로 포함 */
+    if (["home", "mission", "storeset", "store", "storebuy"].includes(name) && S.loggedIn
+        && (S.storeItems === null || S.tickets === null)) this.loadReward();
     if (name === "report" && S.loggedIn) this.loadReport();
     // 요금은 자녀마다 다르다(둘째부터 싸다) → 이용권 화면에 들어올 때 그 자녀 기준으로 받아온다
     if (name === "pay" && S.loggedIn && this._planFor !== cur()?.server_id) {
@@ -6443,7 +6859,7 @@ const App = {
     const popBefore = popKey(document);
 
     document.getElementById("screen").innerHTML =
-      Screens[name]() + planBar() + lunchSheet() + promoteSheet() + planKillView() + holdMenuView() + pwAskView();
+      Screens[name]() + planBar() + lunchSheet() + promoteSheet() + planKillView() + holdMenuView() + pwAskView() + pinView();
 
     if (popBefore && popKey(document) === popBefore) {
       [...document.querySelectorAll(POPS)].forEach((e, i) => {
@@ -7419,6 +7835,177 @@ const App = {
     this.render();
     toast("지금은 못 보냈어요. 잠시 뒤 다시 눌러주세요");
   },
+  /* ═══ 별도장 상점 · 2단계 보상 (지시서 0807 §3·§4③④⑤) ═══════════
+     🔴 **목업이다.** 화면 흐름을 보기 위한 것이고 서버에 안 나간다.
+        배선할 때 각 메서드의 `api(...)` 주석대로 바꾸면 화면은 그대로 산다.
+     ⚠ 별을 더하고 빼는 곳이 여기 하나여야 한다. 서버가 star_ledger 로만 세듯,
+        앱도 `S.missionStars` 하나만 만진다. */
+
+  // ── 부모: 진열대 ──
+  storeAddOpen()  { S.storeAdd = true;  this.render(); },
+  storeAddClose() { S.storeAdd = false; this.render(); },
+  async storeAddSave() {
+    const t = (document.getElementById("stTitle")?.value || "").trim();
+    const n = parseInt(document.getElementById("stStars")?.value || "0", 10);
+    /* ⚠ 빈 이름·0개짜리를 막는다. 서버도 VALIDATION 으로 막지만 화면이 먼저 말해줘야
+          «올리기를 눌렀는데 아무 일도 안 남»이 안 된다. */
+    if (!t)        return toast("무엇을 줄지 적어 주세요");
+    if (!(n >= 1)) return toast("필요한 별은 1개부터예요");
+    const [lt, lc] = (document.getElementById("stLimit")?.value || "").split(":");
+    const c = cur();
+    if (!c?.server_id) return toast("아이를 먼저 등록해 주세요");
+    if (S._rewardBusy) return;
+    S._rewardBusy = true; this.render();
+    const r = await api(`/children/${c.server_id}/store`, { method: "POST",
+      body: { title: t, stars_required: n, limit_type: lt || null, limit_count: lc ? +lc : null } });
+    S._rewardBusy = false;
+    if (!r?.ok) return this._rewardErr(r, "올리지 못했어요");
+    S.storeAdd = false;
+    await this.loadReward(true);
+    toast(`${t} 올렸어요`);
+  },
+  async storeDel(id) {
+    const r = await api(`/store/${encodeURIComponent(id)}`, { method: "DELETE" });
+    if (!r?.ok) return this._rewardErr(r, "내리지 못했어요");
+    await this.loadReward(true);
+  },
+
+  // ── 아이: 바꾸기 ──
+  storeBuyOpen(id) { S.storeBuy = id; location.hash = "#storebuy"; },
+  async storeBuyGo() {
+    const x = (S.storeItems || []).find((v) => v.item_id === S.storeBuy);
+    const c = cur();
+    if (!x || !c?.server_id) return;
+    if (S._rewardBusy) return;
+    S._rewardBusy = true; this.render();
+    /* ⚠ 잔액·상한은 **서버가 센다.** 화면에서 버튼을 가리는 것으로 끝내면 우회된다.
+          서버가 돌려주는 LIMIT_EXCEEDED·VALIDATION 을 사람 말 그대로 보여준다. */
+    const r = await api(`/children/${c.server_id}/store/${encodeURIComponent(x.item_id)}/buy`,
+      { method: "POST" });
+    S._rewardBusy = false;
+    if (!r?.ok) { this.render(); return this._rewardErr(r, "바꾸지 못했어요"); }
+    if (typeof r.data?.stars_left === "number") S.missionStars = r.data.stars_left;
+    S.storeBuy = null;
+    location.hash = "#store";
+    await this.loadReward(true);
+    toast("🎟️ 티켓으로 바꿨어요!");
+  },
+
+  // ── 부모: 티켓 바꿔주기 · 2차 보너스 ──
+  async ticketGive(id) {
+    // 서버 이름은 fulfill, 화면 말은 «바꿔줬어요» (말 규칙은 화면의 일이다)
+    const r = await api(`/rewards/${encodeURIComponent(id)}/fulfill`, { method: "POST" });
+    if (!r?.ok) return this._rewardErr(r, "처리하지 못했어요");
+    await this.loadReward(true);
+    toast("아이 화면에 «받았어요»로 바뀌었어요");
+  },
+  async verifyBonus(id, bonus) {
+    const r = await api(`/verify/${encodeURIComponent(id)}/bonus`, { method: "POST", body: { bonus } });
+    if (!r?.ok) return this._rewardErr(r, "보너스를 주지 못했어요");   // 두 번째 승인은 DUPLICATE 로 막힌다
+    if (typeof r.data?.stars === "number") S.missionStars = r.data.stars;
+    await this.loadReward(true);
+    toast(`보너스 ★${bonus} 줬어요`);
+  },
+  /* «이번엔 그냥» — 서버에 지우는 길이 없다(검증 로그는 이력이라 남긴다).
+     화면에서만 접어 둔다. 다시 받아오면 도로 보이는 게 맞다 — 부모가 아직 «안 준» 것이니. */
+  verifySkip(id) {
+    S.verifyAsk = (S.verifyAsk || []).filter((v) => v.verify_id !== id);
+    this.render();
+  },
+  /* 보상 API 오류를 사람 말로. 서버가 준 message 가 있으면 그걸 그대로 쓴다 —
+     «도장이 3개 더 필요해요» 처럼 서버가 이미 아이 눈높이로 써 두었다. */
+  _rewardErr(r, fallback) {
+    const e = r?.error;
+    if (e?.code === "NETWORK") return toast("인터넷 연결을 확인해 주세요");
+    toast(e?.message || fallback);
+  },
+
+  // ── 🎲 리롤 (§4②) ──────────────────────────────────────────
+  /* ⚠ 확인을 한 번 받는다(지시서 요구). 아이가 잘못 눌러 오늘 미션이 통째로 바뀌면
+        그건 되돌릴 수 없다 — 되돌릴 수 없는 것 앞에서는 묻는다(바꾸기 확인과 같은 규칙). */
+  rerollAsk()    { if (S.rerollUsed) return toast("리롤은 하루에 한 번이에요"); S.rerollAsk = true; this.render(); },
+  rerollCancel() { S.rerollAsk = false; this.render(); },
+  async rerollGo() {
+    const c = cur();
+    if (!c?.server_id || S.missionBusy) return;
+    S.missionBusy = "reroll"; S.rerollAsk = false; this.render();
+    const r = await api(`/children/${c.server_id}/missions/reroll`, { method: "POST" });
+    S.missionBusy = null;
+    if (!r?.ok) { this.render(); return this._rewardErr(r, "바꾸지 못했어요"); }
+    S.missions = r.data.items || [];
+    S.rerollUsed = true;
+    this.render();
+    toast(`미션 ${r.data.changed}개를 새로 뽑았어요`);
+  },
+
+  // ── 💛 칭찬 리액션 (§4⑤) ───────────────────────────────────
+  /* 부모가 «1초 만에» 보내는 것이 전부다 — 화면을 따로 만들지 않고 미션 화면에 붙였다.
+     입구를 새로 파면 부모가 «확인할 게 세 군데»가 된다(승인·티켓에 이어). */
+  async react(type) {
+    const c = cur();
+    if (!c?.server_id || S.reactBusy) return;
+    S.reactBusy = true; this.render();
+    const r = await api(`/children/${c.server_id}/reactions`, { method: "POST", body: { sticker_type: type } });
+    S.reactBusy = false;
+    if (!r?.ok) { this.render(); return this._rewardErr(r, "보내지 못했어요"); }
+    S.reactSent = type; this.render();
+    toast(type === "heart" ? "❤️ 보냈어요" : "👍 보냈어요");
+    setTimeout(() => { S.reactSent = null; this.render(); }, 2400);
+  },
+
+  // ── 아이 모드 + PIN (§4④) ──
+  /* 🔴 **PIN 비교는 서버가 한다.** 앱에서 비교하면 저장된 값을 읽어 우회할 수 있고,
+        그러면 «부모 화면 잠금»이 잠금 구실을 못 한다.
+     ⚠ 서버가 시도 횟수도 센다(5번 → 5분 잠금). 4자리는 1만 번이면 다 해 보므로
+        해싱만으로는 못 막는다 — 진짜 방어선은 시도 제한이다. */
+  async kidModeOn() {
+    S.kidMode = true; S.drawer = false; S.childView = true;
+    location.hash = "#childview";
+    this.render();
+    /* PIN 을 아직 안 정했으면 그 자리에서 정하게 한다 —
+       안 정한 채 넘기면 «나갈 때 아무 번호나 통하는» 모드가 된다(잠금이 아니다). */
+    const r = await api("/child-mode/pin");
+    if (r?.ok && !r.data.is_set) { S.pinAsk = "set"; S.pinBuf = ""; S.pinErr = ""; this.render(); return; }
+    toast("아이 모드예요 · 나올 땐 비밀번호");
+  },
+  /* 나가기는 **반드시 PIN 을 거친다.** 여기서 바로 풀면 모드가 있으나 마나다 */
+  kidModeOut() { S.pinAsk = "out"; S.pinBuf = ""; S.pinErr = ""; this.render(); },
+  /* ⚠ «취소»로 아이 모드를 나갈 수는 없다. PIN 을 정하는 중(set)이면 모드도 같이 접는다 —
+        번호를 안 정하고 아이 모드에 갇히면 그게 더 나쁘다. */
+  pinClose() {
+    if (S.pinAsk === "set") { S.kidMode = false; S.childView = false; location.hash = "#home"; }
+    S.pinAsk = null; S.pinBuf = ""; S.pinErr = ""; this.render();
+  },
+  pinBack()  { if (S.pinBusy) return; S.pinBuf = S.pinBuf.slice(0, -1); S.pinErr = ""; this.render(); },
+  async pinPush(d) {
+    if (S.pinBusy || S.pinBuf.length >= 4) return;
+    S.pinBuf += d; S.pinErr = "";
+    if (S.pinBuf.length < 4) return this.render();
+
+    const pin = S.pinBuf;
+    S.pinBusy = true; this.render();
+    if (S.pinAsk === "set") {
+      const r = await api("/child-mode/pin", { method: "POST", body: { pin } });
+      S.pinBusy = false;
+      if (!r?.ok) { S.pinBuf = ""; S.pinErr = r?.error?.message || "정하지 못했어요"; return this.render(); }
+      S.pinAsk = null; S.pinBuf = ""; S.pinErr = ""; this.render();
+      toast("번호를 정했어요 · 나올 땐 이 번호예요");
+      return;
+    }
+    const r = await api("/child-mode/unlock", { method: "POST", body: { pin } });
+    S.pinBusy = false;
+    if (!r?.ok) {
+      S.pinBuf = "";
+      /* 서버가 «3번 남았어요»·«5분 뒤에» 까지 써 준다 — 앱이 다시 지어내지 않는다 */
+      S.pinErr = r?.error?.message || "번호가 달라요";
+      return this.render();
+    }
+    S.pinAsk = null; S.pinBuf = ""; S.pinErr = "";
+    S.kidMode = false; S.childView = false;
+    location.hash = "#home";
+    this.render();
+  },
+
   toggleChildView() {
     S.childView = !S.childView;
     S.chatOpen = false;                       // 역할이 바뀌면 대화창은 접고 시작
@@ -7923,6 +8510,41 @@ const App = {
   /* ⚠ 앱이 켜지는 순간엔 아직 자녀를 못 받아왔다. 그때 «미션 없음»으로 못 박으면
      다음에 다시 안 부른다 — 홈 카드가 영영 「오늘 미션 없음」으로 남는다(2026-08-01 실측).
      **못 묻는 상태와 물어봤는데 없는 상태는 다르다.** 못 묻겠으면 null 로 두고 그냥 돌아간다. */
+  /* ═══ 보상(상점·티켓·확인해주세요) 로딩 ═══════════════════════════════
+     loadMissions 와 같은 문법이다 — 토큰·server_id 없으면 조용히 넘어가고,
+     통신이 끊기면 null 로 두어 다음 그리기에서 다시 묻는다.
+     ⚠ 셋을 한 함수로 묶었다. 화면 하나가 세 값을 같이 쓰는데 따로 부르면
+       «상점은 왔고 티켓은 안 온» 중간 상태가 화면에 그대로 보인다.
+     ⚠ 서버가 못 오면 REWARD_STUB 를 붓지 않는다 — 목업 데이터가 실사용자에게
+       «있지도 않은 상품»으로 보이면 그게 더 나쁘다. 빈 상태가 정직하다. */
+  async loadReward(force) {
+    const c = cur();
+    if (!TOKENS.access || !c?.server_id) return;
+    if (!force && S.storeItems !== null && S.tickets !== null) return;
+    if (S._rewardBusy) return;
+    S._rewardBusy = true;
+    const kid = isChildToken();
+    try {
+      /* 아이는 «확인해 주세요»를 볼 일이 없다(부모 전용). 안 부르면 403 도 안 난다 */
+      const reqs = [
+        api(`/children/${c.server_id}/store`),
+        api(`/children/${c.server_id}/rewards`),
+        kid ? null : api(`/children/${c.server_id}/verify?pending=1`),
+      ];
+      const [rs, rt, rv] = await Promise.all(reqs.map((x) => x || Promise.resolve(null)));
+      if (rs?.ok) { S.storeItems = rs.data.items || []; if (typeof rs.data.stars === "number") S.missionStars = rs.data.stars; }
+      else if (S.storeItems === null) S.storeItems = [];
+      if (rt?.ok) { S.tickets = rt.data.items || []; if (typeof rt.data.stars === "number") S.missionStars = rt.data.stars; }
+      else if (S.tickets === null) S.tickets = [];
+      if (!kid) {
+        if (rv?.ok) S.verifyAsk = rv.data.items || [];
+        else if (S.verifyAsk === null) S.verifyAsk = [];
+      } else if (S.verifyAsk === null) S.verifyAsk = [];
+    } catch (_) { /* 끊긴 것뿐 — null 로 두고 다음에 다시 */ }
+    S._rewardBusy = false;
+    this.render();
+  },
+
   async loadMissions(force) {
     const c = cur();
     if (!TOKENS.access || !c?.server_id) return;        // 아직 못 묻는다 → 다음 그리기에서 다시
@@ -7934,6 +8556,7 @@ const App = {
       if (r?.ok) {
         S.missions = r.data.items || [];
         S.missionStars = r.data.stars || 0;
+        S.rerollUsed = !!r.data.reroll_used;
       } else if (S.missions === null) {
         S.missions = [];                                 // 서버가 «없다»고 답한 것 — 이건 못 박아도 된다
       }

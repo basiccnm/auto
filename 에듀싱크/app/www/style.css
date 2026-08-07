@@ -5091,15 +5091,25 @@ body:has(#tabbar.hidden) #screen:has(.ib),
 
 /* ── 시계 C안 + 반투명 바탕 패널 ────────────────────────────────────
    ⚠ 그늘만으로 버티던 것을 패널로 바꾼다 — 그림 위 글씨는 «바탕이 있어야» 대비가 한 값이 된다. */
+/* ═══ §6.2 시계 위젯 전면 개편 (지시서 0807 · 2026-08-07) ═══════════════
+   회색 알약 박스(rgba 255,255,255,.34)가 테마 일러스트와 겉돌고,
+   날짜가 시계 옆에 끼어 13px 로 찌그러져 있었다 — 둘 다 §6.2 진단 그대로.
+   ① 박스 **완전 제거.** 지시서는 «제거 또는 글래스모피즘» 둘을 허용하는데,
+      글래스모피즘(blur)은 §6(08-03) «backdrop-filter 0개» 확정 규칙과 충돌한다 → 제거를 택했다.
+   ② 대신 기존 그늘(.bd::before — 그림에서 배경색으로 «녹아드는» 그라데이션)을 되살린다.
+      박스와 달리 일러스트와 이어져 보이고, 글씨 밑만 받쳐 준다.
+   ③ 날짜는 시계 **위** 독립 줄(14px 정갈하게) · 시계는 46px 로 시원하게.
+      위계: 작은 날짜 → 큰 시계 → 전광판(.bd-now) 순으로 흘러내린다. */
 .bd { margin-top: -52px; padding: 0; }
-.bd::before { display: none; }
-.bd-time { display: flex; align-items: flex-end; gap: 9px;
-  padding: 9px 14px 10px; border-radius: 16px; text-shadow: none;
-  background: rgba(255, 255, 255, .34); width: fit-content; }
-:root[data-theme="dark"] .bd-time { background: rgba(255, 255, 255, .14); }
-.bd-time .dt { padding-bottom: 7px; font-size: 13px; }
-.bd-time .tm { font-size: 38px; letter-spacing: -1.6px; }
-.bd-time .tm i { font-size: 28px; }
+.bd::before { display: block; }
+.bd-time { display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
+  padding: 0; border-radius: 0; background: none; width: fit-content;
+  text-shadow: 0 1px 2px color-mix(in srgb, var(--art-1) 65%, transparent); }
+.bd-time .dt { padding: 0; font-size: 14px; font-weight: 800; letter-spacing: .01em;
+  color: var(--art-ink); opacity: .85; }
+.bd-time .tm { font-size: 46px; letter-spacing: -1.8px; font-weight: 900; }
+.bd-time .tm i { font-size: 34px; }
+:root[data-theme="dark"] .bd-time { background: none; }
 /* 시각이 바뀔 때 툭 튀지 않게 (2026-08-04 지시) */
 .bd-time .tm { transition: opacity .18s ease; }
 
@@ -5114,8 +5124,9 @@ body:has(#tabbar.hidden) #screen:has(.ib),
 :root[data-theme="dark"] #screen:has(.hv3-art) .hd-bell,
 :root[data-theme="dark"] #screen:has(.hv3-art) .hd-box {
   background: var(--card-a); box-shadow: 0 2px 8px rgba(0,0,0,.12); }
-/* 시계 패널도 같은 면색으로 통일 */
-.bd-time, :root[data-theme="dark"] .bd-time { background: var(--card-a); }
+/* 시계 패널 면색은 §6.2(2026-08-07)로 폐지 — 박스 없이 그늘(.bd::before)만 받친다.
+   ⚠ 이 줄이 §6.2 블록 «뒤»라 background:none 을 이기고 있었다(패치 박스가 안 사라진 원인).
+     같은 클래스의 규칙이 파일 곳곳에 겹겹이면 마지막 것이 이긴다 — 지울 땐 grep 으로 전부 찾을 것. */
 
 /* ── 카드 글씨 = 회색 두 벌 (2026-08-04 지시) ────────────────────────
    «글씨는 밝은 회색 / 어두운 회색을, 밝은 테마 / 어두운 테마에 골라 쓰면 된다»
@@ -5143,3 +5154,536 @@ body:has(#tabbar.hidden) #screen:has(.ib),
 #screen:has(.hv3-art) .hd-bell,
 #screen:has(.hv3-art) .hd-box { color: var(--card-ink); }
 .hv3-cal { color: var(--card-ink); }
+
+/* ═══ 별도장 상점 · 2단계 보상 (지시서 0807 §3·§4③④⑤ · 2026-08-07) ═══════════
+   🔴 **면은 `--card-a` 다. `--card`(순백)를 쓰지 말 것.**
+      `--card` 는 흰색 고정이라 18종 테마가 통째로 죽는다. 그림에서 뽑은 색이 배어 있는 건
+      `--card-a`(= art 색과 흰색의 color-mix)이고, 홈의 알약 카드 `.hv3-card` 가 그걸 쓴다.
+      2026-08-07 첫 목업이 흰 카드로 나가서 «예전에 만들어 둔 테마랑 다르다»는 지적을 받았다.
+   📐 카드 문법은 `.hv3-card` 를 그대로 따른다 — 반지름 22 · **테두리 없음** · 부드러운 그림자.
+      테두리를 그으면 알약이 아니라 «표»가 된다.
+   🔤 카드 위 흐린 글씨는 `--muted`(배경 위 값)가 아니라 **`--muted-card`** 다.
+   ⚠ 색을 새로 만들지 않는다 — 18종은 build_themes.py → gen_css.py 가 생성한 정본이다. */
+
+/* 카드 한 벌 — 새 컴포넌트는 전부 이 문법을 물려받는다 */
+.st-row, .st-new, .rw-card, .tk-give, .tk-mine, .kb-shop, .sp-card {
+  border: none; border-radius: 22px; background: var(--card-a);
+  box-shadow: 0 8px 22px rgba(40, 80, 140, .10); }
+:root[data-theme="dark"] .st-row,   :root[data-theme="dark"] .st-new,
+:root[data-theme="dark"] .rw-card,  :root[data-theme="dark"] .tk-give,
+:root[data-theme="dark"] .tk-mine,  :root[data-theme="dark"] .kb-shop,
+:root[data-theme="dark"] .sp-card { box-shadow: 0 8px 22px rgba(0,0,0,.30); }
+
+/* ── 부모: 진열대 세팅 ── */
+.st-row { display: flex; align-items: center; gap: 11px; margin-top: 12px; padding: 14px 16px; }
+.st-star { flex: none; min-width: 46px; padding: 6px 9px; border-radius: 999px;
+  background: var(--accent); color: var(--on-accent);
+  font-size: 13.5px; font-weight: 800; text-align: center; }
+.st-nm { flex: 1; min-width: 0; }
+.st-nm b { display: block; font-size: 15px; font-weight: 700; color: var(--ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.st-nm em { display: block; margin-top: 2px; font-size: 12.5px; font-style: normal; color: var(--muted-card); }
+/* 44px — 아이콘만 있는 버튼이 터치영역 미달로 제일 자주 잡힌다 */
+.st-del { flex: none; display: flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px; border: none; border-radius: 14px;
+  background: transparent; color: var(--muted-card); font-size: 19px; }
+.st-none { margin-top: 14px; padding: 24px 16px; border-radius: 22px;
+  background: var(--card-a); text-align: center;
+  font-size: 15px; font-weight: 700; color: var(--ink); }
+.st-none em { display: block; margin-top: 5px; font-size: 12.5px; font-style: normal;
+  font-weight: 400; color: var(--muted-card); }
+
+.st-new { margin-top: 12px; padding: 16px; }
+/* 입력칸은 카드 «안»이라 한 겹 더 들어간다 — --card-b 가 그 자리다 */
+.st-in { width: 100%; height: 48px; padding: 0 14px; border: none; border-radius: 14px;
+  background: var(--card-b); color: var(--ink); font-size: 15px; font-family: inherit; }
+.st-inrow { display: flex; gap: 10px; margin-top: 10px; }
+.st-lb { flex: 1; min-width: 0; font-size: 12.5px; font-weight: 700; color: var(--muted-card); }
+.st-num, .st-sel { display: block; width: 100%; height: 46px; margin-top: 5px;
+  padding: 0 12px; border: none; border-radius: 14px;
+  background: var(--card-b); color: var(--ink); font-size: 15px; font-weight: 600; font-family: inherit; }
+.st-btns { display: flex; gap: 10px; margin-top: 13px; }
+.st-btns .btn-primary { flex: 1; }
+.st-cancel { flex: none; min-width: 84px; height: 48px; border: none; border-radius: 16px;
+  background: var(--card-b); color: var(--muted-card); font-size: 15px; font-weight: 700; font-family: inherit; }
+
+/* ── 부모: 확인해 주세요 · 티켓 바꿔주기 ── */
+.rw-h { margin: 26px 0 0; font-size: 17px; font-weight: 800; letter-spacing: -.02em; color: var(--ink); }
+.rw-n { display: inline-block; min-width: 21px; margin-left: 6px; padding: 2px 7px;
+  border-radius: 999px; background: var(--accent); color: var(--on-accent);
+  font-size: 12.5px; font-weight: 800; text-align: center; }
+.rw-sub { margin: 5px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+.rw-card { margin-top: 12px; padding: 16px 18px 17px; }
+.rw-top { display: flex; align-items: baseline; gap: 8px; }
+.rw-top b { font-size: 15px; font-weight: 700; color: var(--ink); }
+.rw-top em { font-size: 12.5px; font-style: normal; color: var(--muted-card); }
+.rw-card .msc-photo { margin-top: 11px; border-radius: 16px; }
+.rw-btns { margin-top: 12px; }
+.rw-btns .msc-sub { margin-top: 7px; }
+
+.tk-give { display: flex; align-items: center; gap: 11px; margin-top: 12px; padding: 13px 15px; }
+.tk-star { flex: none; min-width: 44px; padding: 6px 8px; border-radius: 999px;
+  background: var(--accent); color: var(--on-accent);
+  font-size: 13px; font-weight: 800; text-align: center; }
+.tk-nm { flex: 1; min-width: 0; }
+.tk-nm b { display: block; font-size: 15px; font-weight: 700; color: var(--ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tk-nm em { display: block; margin-top: 2px; font-size: 12px; font-style: normal; color: var(--muted-card); }
+.tk-ok { flex: none; height: 44px; padding: 0 16px; border: none; border-radius: 16px;
+  background: var(--accent); color: var(--on-accent); font-size: 14px; font-weight: 800; font-family: inherit; }
+
+/* ── 아이: 상점 ──
+   ⚠ 2열 고정이다. 360px 에서 3열로 하면 이름이 두 글자에서 잘린다. */
+.sp-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+.sp-card { display: flex; flex-direction: column; align-items: flex-start; gap: 5px;
+  min-height: 116px; padding: 15px 15px 16px; text-align: left; font-family: inherit; }
+.sp-star { padding: 5px 10px; border-radius: 999px;
+  background: var(--k-soft); color: var(--k); font-size: 13.5px; font-weight: 900; }
+.sp-nm { font-size: 15.5px; font-weight: 800; line-height: 1.3; color: var(--ink); }
+.sp-ok { margin-top: auto; font-size: 12px; font-style: normal; font-weight: 800; color: var(--k); }
+.sp-need { margin-top: auto; font-size: 12px; font-style: normal; font-weight: 700; color: var(--muted-card); }
+/* 못 바꾸는 것도 **지우지 않는다** — 목표가 보여야 별을 모을 이유가 생긴다.
+   ⚠ opacity 로 흐리게 하면 글자 대비까지 무너져 4.5:1 을 못 넘는다.
+      그림자만 걷어 «한 겹 뒤»로 보내고 글자는 대비가 확보된 --muted-card 로 둔다. */
+.sp-card.off { box-shadow: none; background: var(--card-b); }
+.sp-card.off .sp-star { background: transparent; color: var(--muted-card); }
+.sp-card.off .sp-nm { color: var(--muted-card); }
+
+/* ── 아이: 내 티켓 ── */
+.tk-mine { margin-top: 14px; padding: 15px 16px 16px; }
+.tk-h { margin: 0; font-size: 15px; font-weight: 800; color: var(--ink); }
+.tk-row { display: flex; align-items: center; gap: 9px; margin-top: 10px; }
+.tk-row b { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 700; color: var(--ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tk-st { flex: none; padding: 5px 11px; border-radius: 999px;
+  background: var(--k-soft); color: var(--k); font-size: 12px; font-weight: 800; }
+.tk-hint { margin: 10px 0 0; font-size: 12px; line-height: 1.5; color: var(--muted-card); }
+
+/* 별의 길 → 상점 입구 */
+.kb-shop { display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 18px;
+  padding: 15px 16px; text-align: left; font-family: inherit; }
+.kb-shopi { flex: none; font-size: 26px; }
+.kb-shopt { flex: 1; min-width: 0; }
+.kb-shopt b { display: block; font-size: 15.5px; font-weight: 800; color: var(--ink); }
+.kb-shopt em { display: block; margin-top: 2px; font-size: 12.5px; font-style: normal; color: var(--muted-card); }
+.kb-shop > .ti { flex: none; font-size: 18px; color: var(--muted-card); }
+
+/* ── 아이: 바꾸기 확인 ── */
+.bw-wrap { display: flex; flex-direction: column; align-items: center;
+  gap: 9px; padding: 30px 4px 0; text-align: center; }
+.bw-big { display: flex; align-items: center; justify-content: center;
+  width: 96px; height: 96px; border-radius: 50%;
+  background: var(--k-soft); color: var(--k); font-size: 27px; font-weight: 900; }
+.bw-h { margin: 8px 0 0; font-size: 23px; font-weight: 800; letter-spacing: -.02em; color: var(--ink); }
+.bw-p { margin: 0; font-size: 15px; color: var(--muted); }
+.bw-calc { display: flex; align-items: center; gap: 10px; margin-top: 6px;
+  padding: 11px 16px; border-radius: 999px; background: var(--card-a);
+  box-shadow: 0 8px 22px rgba(40, 80, 140, .10);
+  font-size: 13.5px; font-weight: 700; color: var(--ink); }
+:root[data-theme="dark"] .bw-calc { box-shadow: 0 8px 22px rgba(0,0,0,.30); }
+.bw-calc .ti { font-size: 15px; color: var(--muted-card); }
+.bw-go { width: 100%; margin-top: 16px; }
+
+/* ── 아이 모드 나가기 + PIN 키패드 (§4④) ── */
+.kd3-out { flex: none; display: flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px; margin-left: auto; border: none; border-radius: 999px;
+  background: var(--card-a); color: var(--muted-card); font-size: 17px; }
+.kd3-wait + .kd3-out { margin-left: 6px; }
+
+.pin-dim { display: flex; align-items: center; justify-content: center; padding: 20px; }
+.pin-box { width: 100%; max-width: 320px; padding: 26px 20px 20px;
+  border-radius: 26px; background: var(--card-a); text-align: center;
+  box-shadow: 0 12px 40px rgba(0,0,0,.28); }
+.pin-h { margin: 0; font-size: 19px; font-weight: 800; letter-spacing: -.02em; color: var(--ink); }
+.pin-p { margin: 6px 0 0; font-size: 13px; line-height: 1.5; color: var(--muted-card); }
+.pin-dots { display: flex; justify-content: center; gap: 13px; margin: 20px 0 0; }
+.pin-dots i { width: 13px; height: 13px; border-radius: 50%; background: var(--card-b); }
+.pin-dots i.on { background: var(--accent); }
+/* ⚠ `--warn` 은 면(배경) 색이다(--warn-line/--warn-soft 와 한 벌).
+     글씨에 쓰면 카드 위에서 1.1:1 로 사실상 안 보인다. 오류 «글씨»는 `--danger` — .fielderr 가 쓰는 값. */
+.pin-err { margin: 11px 0 0; font-size: 13px; font-weight: 700; color: var(--danger); }
+.pin-pad { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin-top: 18px; }
+/* 56px — 숫자판은 손가락으로 빠르게 두드리는 곳이라 44 로는 좁다.
+   면은 카드 «안»이라 --card-b. 테두리는 안 긋는다(알약 문법). */
+.pin-k { height: 56px; border: none; border-radius: 18px;
+  background: var(--card-b); color: var(--ink); font-size: 21px; font-weight: 700; font-family: inherit; }
+.pin-k.ghost { background: transparent; color: var(--muted-card); font-size: 15px; font-weight: 700; }
+
+/* ═══ §6 텍스트·아이콘 색상 개선 (지시서 0807 §6 · 대표님 지시 2026-08-07) ═══════
+   🔴 **카드 색은 건드리지 않는다.** `--card-a` 는 이미 배경(`--surf`)보다 진하다.
+      더 진하게 만들지 말고 **그 위 글자와 아이콘을 밝게** 올린다.
+      (내가 카드를 어둡게도 해보고 흰색으로도 덮어봤는데 둘 다 틀렸다 —
+       고칠 것은 «면»이 아니라 «글씨»다.)
+   ⚠ 완전 흰색은 안 쓴다 — 제목 94% · 본문 86% · 보조 74%로 낮춰 회색으로 떨어뜨린다. */
+
+/* ⚠ **순백은 광이 튄다.** rgba(255,255,255,.94) 로 했더니 파스텔 카드 위에서 글씨가 번쩍였다.
+     흰색에 **그 테마의 짙은 색(--accent)을 조금 섞어** 광을 죽인다 —
+     18종이 각자 자기 색조의 «미색»을 갖게 되고, 회색으로 죽이는 것보다 테마와 붙는다.
+     ⚠ 회색(#EEE)으로 죽이면 안 된다. 채도가 빠져 18종이 전부 같은 톤으로 수렴한다. */
+:root[data-art], html[data-art] {
+  --oncard:   color-mix(in srgb, #FFFFFF 90%, var(--accent));   /* 제목  — 살짝 미색 */
+  --oncard-2: color-mix(in srgb, #FFFFFF 84%, var(--accent));   /* 본문 */
+  --oncard-3: color-mix(in srgb, #FFFFFF 82%, var(--accent)); } /* 보조·아이콘
+     ⚠ 보조를 68% 로 뒀더니 accent 가 밝은 4종(은행나무길·숲속·노을·강가)에서 4.0~4.15 로
+       기준(4.5)을 못 넘었다. 82% 로 올려 18/18 실측 통과(최소 4.5 · 최대 9.2). */
+/* 테마를 안 고른 상태(기본)도 같은 생각으로 */
+:root:not([data-art]) { --oncard: rgba(255,255,255,.90); --oncard-2: rgba(255,255,255,.82); --oncard-3: rgba(255,255,255,.68); }
+
+/* 카드 «안»의 글씨·아이콘만. 배경 위 글씨는 그대로 둔다 */
+.hv3-card, .hv3-card b, .hv3-card .tx, .hv3-hdrow b,
+.st-nm b, .tk-nm b, .rw-top b, .sp-nm, .tk-h, .tk-row b, .kb-shopt b, .pin-h, .st-none {
+  color: var(--oncard); }
+.hv3-evs li .tx, .bw-calc { color: var(--oncard-2); }
+/* §6.1 ②가 짚은 자리 — 「일정이 없어요 ›」 「완료 ›」 가 카드와 명도 차가 없어 안 읽혔다 */
+.hv3-hdrow .val, .hv3-morep, .hv3-evs li .at,
+.st-nm em, .tk-nm em, .rw-top em, .sp-need, .tk-hint, .kb-shopt em, .st-lb,
+.st-none em, .pin-p, .st-cancel, .pin-k.ghost { color: var(--oncard-3); }
+/* 아이콘도 같이 올린다 — 글씨만 밝히면 아이콘이 혼자 탁하게 남아 더 눈에 띈다 */
+.hv3-hdrow .ic, .hv3-hdrow .go, .st-del, .kb-shop > .ti, .bw-calc .ti { color: var(--oncard-3); }
+.hv3-card .ti, .hv3-hdrow i { color: var(--oncard-2); }
+
+/* ── 안2 확정(2026-08-07 대표님) — 카드 면 = 그 테마의 «짙은 색» ─────────────
+   `--drawer-a` 가 아니라 **`--accent`** 다. drawer-a 는 테마마다 밝기가 제각각이라
+   라벤더에서 1.5:1 까지 떨어졌지만, accent 는 4차 정리 때 **L 22~32% 상한**을 걸어 둬서
+   18종이 같은 밝기 대역이다 — 그 위 미색 글씨가 18/18 전부 4.5 를 넘는다(실측).
+   ⚠ 자녀 화면은 applyKidTheme 이 --accent 를 --k 로 바꿔 끼우므로 같은 규칙이 그대로 산다. */
+/* §6.1·§11-2 확정(2026-08-07): **80% 농도 고정.**
+   원색 100%는 쨍하고 붕 뜨며, 65%/50%는 물빠진 느낌 — 80%가 정본이다.
+   ⚠ 섞는 상대는 배경(--surf)이 아니라 **같은 밝기의 무채색**이다.
+     surf(밝음)를 섞으면 카드가 밝아져 미색 글씨가 4.5 를 못 넘는다(85%에서 이미 5종 미달).
+     무채색 #43464C(accent 와 같은 L 대역)를 섞으면 어둡기가 유지돼 색만 눅는다 —
+     18/18 실측 통과, 대비는 오히려 4.5→5.0 으로 오른다. */
+.hv3-card { background: color-mix(in srgb, var(--accent) 80%, #43464C); }
+.st-row, .st-new, .rw-card, .tk-give, .tk-mine, .kb-shop, .sp-card, .st-none, .pin-box {
+  background: color-mix(in srgb, var(--accent) 80%, #43464C); }
+.sp-card.off { background: color-mix(in srgb, var(--accent) 44%, var(--surf)); box-shadow: none; }
+/* 🔴 다크는 accent 를 그대로 못 쓴다 — **다크의 accent 는 밝은 파스텔이다**(STATUS 함정 그대로).
+   accent 80% 로 두면 카드가 «밝은» 하늘색이 되고 그 위 미색 글씨가 통째로 죽는다(실측으로 잡음).
+   다크의 어두운 테마 파생은 --drawer-a(= art-1 20% + #14293F)다 — 어둡기가 고정돼 있고
+   테마 색조만 남는다. 80% 농도 규칙은 같은 무채색으로 동일하게 건다. */
+:root[data-theme="dark"] .hv3-card,
+:root[data-theme="dark"] .st-row,  :root[data-theme="dark"] .st-new,
+:root[data-theme="dark"] .rw-card, :root[data-theme="dark"] .tk-give,
+:root[data-theme="dark"] .tk-mine, :root[data-theme="dark"] .kb-shop,
+:root[data-theme="dark"] .sp-card, :root[data-theme="dark"] .st-none,
+:root[data-theme="dark"] .pin-box {
+  background: color-mix(in srgb, var(--drawer-a) 80%, #43464C); }
+:root[data-theme="dark"] .sp-card.off {
+  background: color-mix(in srgb, var(--drawer-a) 44%, var(--surf)); }
+/* 글씨의 미색도 다크에선 accent(밝은 파스텔)를 섞는다 — 어두운 카드 위라 그대로 잘 산다 */
+
+/* 카드 «안»에 한 겹 더 들어가는 것(입력칸·키패드)도 같은 생각으로 — 흰색을 옅게 얹는다 */
+.st-in, .st-num, .st-sel, .pin-k { background: rgba(255,255,255,.14); color: var(--oncard); border: none; }
+.st-in::placeholder { color: var(--oncard-3); }
+.pin-dots i { background: rgba(255,255,255,.24); }
+.st-row, .st-new, .rw-card, .tk-give, .tk-mine, .kb-shop, .sp-card, .st-none { border: none; }
+
+/* ── 하위 화면도 테마 면을 입는다 ──────────────────────────────────────
+   🔴 `body { background: var(--outer) }` 인데 `--outer` 는 **테마별 정의가 없다**
+      (라이트/다크 두 값뿐). 그래서 홈만 테마색이고 미션·준비물·서랍·상점은 18종 전부
+      같은 회백색 #E8E4DC 였다 → 「테마를 바꿔도 안 바뀐다」로 읽힌다.
+   ⚠ 홈은 `#screen:has(.hv3-art)` 가 위에서 그라데이션으로 덮으므로 영향을 안 받는다. */
+#screen { background: var(--surf); }
+
+/* ═══ 홈 마감 6건 (2026-08-07 대표님 검수) ═══════════════════════════════
+   ①시계 가독성 ②☰ 시인성(테마 적응) ③우상단·달력 칩 일체감 ④하단 3버튼 통일
+   ⑤바탕 그라데이션. (⑥자녀칩 제거는 app.js — 드로어에 이미 있어 입구 중복이었다) */
+
+/* ── ① 시계 — 반투명 받침을 «켠다» (블러는 안 쓴다 — §6 backdrop-filter 0개 규칙)
+   날짜가 그림의 어두운 그늘 경계에 걸쳐 묻히고, 콜론이 회색 덩어리로 떠 보였다.
+   art-1(그림 하단 색)을 비치게 깔면 일러와 한 몸으로 보이면서 글씨가 선다.
+   ⚠ 흰색·회색 받침은 안 된다 — 8월 4일의 «회색 스티커» 가 그거였다. 받침은 그 테마의 색이어야 한다. */
+.bd-time { padding: 9px 15px 11px; border-radius: 18px; width: fit-content;
+  background: color-mix(in srgb, var(--art-1) 78%, transparent); text-shadow: none; }
+:root[data-theme="dark"] .bd-time { background: color-mix(in srgb, #0E1218 58%, transparent); }
+.bd-time .dt { opacity: 1; }                     /* 받침이 생겼으니 날짜를 눌러 둘 이유가 없다 */
+.bd-time .tm i { opacity: .55; text-shadow: none; }   /* 콜론 — 그림자·반투명이 겹쳐 «회색 사각형»으로 보였다 */
+
+/* ── ② ☰ — 어두운 그림 위에서 안 보였다. 테마(라이트/다크)에 따라 색이 갈리고,
+   그림 위에서는 옅은 받침 하나를 깐다(우상단 칩과 같은 문법 = 겉돌지 않는다) */
+#screen:has(.hv3-art) .hv3-ham {
+  color: var(--art-ink); border-radius: 13px; padding: 6px 10px;
+  background: color-mix(in srgb, var(--art-1) 60%, transparent); }
+:root[data-theme="dark"] #screen:has(.hv3-art) .hv3-ham {
+  color: #EEF1F5; background: color-mix(in srgb, #0E1218 55%, transparent); }
+:root[data-theme="dark"] #screen:has(.hv3-art) .hv3-ham i { text-shadow: none; }
+
+/* ── ③ 우상단 서랍·종 + 좌하단 달력 — «카드색에서 2톤 내린 칩» (대표님 지시)
+   회색 알약(--card-a)이 뜬금없이 떠 보이던 원인: 카드는 테마색인데 칩만 무채색이었다.
+   카드(accent 80%)와 같은 핏줄에서 두 단 여리게 — accent 40% + 바탕. */
+#screen:has(.hv3-art) .hd-bell,
+#screen:has(.hv3-art) .hd-box,
+:root[data-theme="dark"] #screen:has(.hv3-art) .hd-bell,
+:root[data-theme="dark"] #screen:has(.hv3-art) .hd-box {
+  background: color-mix(in srgb, var(--accent) 40%, var(--surf));
+  color: var(--oncard); box-shadow: none; }
+:root[data-theme="dark"] #screen:has(.hv3-art) .hd-bell,
+:root[data-theme="dark"] #screen:has(.hv3-art) .hd-box {
+  background: color-mix(in srgb, var(--drawer-a) 62%, var(--surf)); }
+:root[data-theme="dark"] #screen:has(.hv3-art) .hd-bell i,
+:root[data-theme="dark"] #screen:has(.hv3-art) .hd-box i { text-shadow: none; }
+
+/* ── ④ 하단 3버튼 — 크기·그림자·질감이 제각각이라 어수선했다.
+   달력 = ③과 같은 칩 / ＋ = 카드와 같은 accent(주 버튼이라 제일 진하게) /
+   ★ = 브랜드 금색은 지키되 **광을 죽인다**(3D 하이라이트·쨍한 노랑 → 낮춘 금색, 그림자 통일) */
+.hv3-cal { background: color-mix(in srgb, var(--accent) 40%, var(--surf));
+  color: var(--oncard); box-shadow: 0 8px 20px rgba(0,0,0,.16); }
+:root[data-theme="dark"] .hv3-cal { background: color-mix(in srgb, var(--drawer-a) 62%, var(--surf)); }
+.hv3-star { background: linear-gradient(165deg, #F2C63C 0%, #E3AC1E 58%, #CE9410 100%);
+  box-shadow: 0 8px 20px rgba(0,0,0,.16); }
+.hv3-fab { box-shadow: 0 8px 20px rgba(0,0,0,.20); }
+
+/* ── ⑤ 바탕 그라데이션 — 판판한 단색이 심심하다는 지시.
+   홈: 그림 → art-1 → surf → (아래로 갈수록 accent 를 살짝 머금은 깊은 톤).
+   하위 화면도 같은 세로 흐름을 은은하게. ⚠ 아래쪽이 진해져도 카드 대비는 안 깨진다 —
+   카드가 배경보다 훨씬 진해서(80% 농도) 면 구분이 유지된다. */
+#screen { background: linear-gradient(180deg,
+  var(--surf) 0%, color-mix(in srgb, var(--surf) 86%, var(--accent)) 100%); }
+#screen:has(.hv3-art) { background-image: linear-gradient(180deg,
+  var(--art-1) 0 196px,
+  color-mix(in srgb, var(--art-1) 55%, var(--surf)) 224px,
+  var(--surf) 330px,
+  color-mix(in srgb, var(--surf) 84%, var(--accent)) 100%); }
+:root[data-theme="dark"] #screen { background: linear-gradient(180deg,
+  var(--surf) 0%, color-mix(in srgb, var(--surf) 88%, var(--drawer-a)) 100%); }
+:root[data-theme="dark"] #screen:has(.hv3-art) { background-image: linear-gradient(180deg,
+  var(--art-1) 0 196px,
+  color-mix(in srgb, var(--art-1) 55%, var(--surf)) 224px,
+  var(--surf) 330px,
+  color-mix(in srgb, var(--surf) 86%, var(--drawer-a)) 100%); }
+
+/* ═══ 파랑 고정·흰 카드 잔재 청산 (2026-08-07 대표님 지시) ═══════════════════
+   «파란색 카드나 버튼은 없애, 흰색 카드도» — 범인은 셋이었다:
+   ① .btn-primary(3816) — 파랑 «고정» 그라데이션(#2A5FA8→#1B4B8F). 테마가 뭐든 파랬다
+   ② .msc.ms-wait — 파랑 고정(#2F66B5→#1B4B8F)
+   ③ .msc·.ms-mkbtn — var(--card) = 순백
+   전부 그 테마의 accent 계열로 바꾼다. ⚠ 색을 새로 만들지 않는다 — accent 에서 파생만. */
+
+/* ① 주 버튼 — 파랑 대신 그 테마의 accent 로 같은 입체감을 만든다 */
+.btn-primary {
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--accent) 84%, #FFFFFF) 0%,
+    var(--accent) 55%,
+    color-mix(in srgb, var(--accent) 84%, #000000) 100%);
+  color: var(--on-accent);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.24), 0 2px 6px rgba(0,0,0,.16),
+              0 12px 24px -10px rgba(0,0,0,.28);
+}
+/* 카드(accent 80%) «안»의 주 버튼 — 같은 핏줄이라 묻힐 수 있어 흰 윤곽 한 겹으로 갈라 준다 */
+.st-new .btn-primary, .rw-btns .btn-primary, .st-btns .btn-primary {
+  box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.30), 0 2px 6px rgba(0,0,0,.16); }
+
+/* ② ③ 미션 카드 — 흰 카드를 버리고 확정된 카드 문법(§6.1 accent 80%)을 그대로 입는다 */
+.msc { background: color-mix(in srgb, var(--accent) 80%, #43464C); color: var(--oncard); }
+:root[data-theme="dark"] .msc { background: color-mix(in srgb, var(--drawer-a) 80%, #43464C); }
+.msc .msc-no { background: rgba(255,255,255,.16); color: var(--oncard); }
+.msc .msc-tag { color: var(--oncard-3); }
+/* 확인 기다림 — 파랑 대신 **원색 accent** 로 한 단 더 진하게(대기 = 제일 눈에 띄어야 할 줄) */
+.msc.ms-wait { background: var(--accent); }
+:root[data-theme="dark"] .msc.ms-wait { background: var(--drawer-a); }
+.msc.ms-wait > b { color: var(--oncard); }
+.msc.ms-wait .msc-tag { background: rgba(255,255,255,.92); color: #6B4A00; }
+/* 완료 — 눅인 톤 + 초록 체크는 유지(뜻이 있는 색이다) */
+.msc.ms-done { background: color-mix(in srgb, var(--accent) 34%, var(--surf)); box-shadow: none; }
+:root[data-theme="dark"] .msc.ms-done { background: color-mix(in srgb, var(--drawer-a) 40%, var(--surf)); }
+.msc.ms-done > b { color: color-mix(in srgb, var(--ink) 55%, transparent); }
+
+/* «만들기» 점선 버튼 — 흰 카드 대신 카드 톤 + 흰 점선 */
+.ms-mkbtn { background: color-mix(in srgb, var(--accent) 80%, #43464C);
+  border-color: rgba(255,255,255,.34); color: var(--oncard); }
+:root[data-theme="dark"] .ms-mkbtn { background: color-mix(in srgb, var(--drawer-a) 80%, #43464C); }
+.ms-mkbtn i { color: var(--oncard-2); }
+.ms-mkbtn b { color: var(--oncard); }
+.ms-mkbtn em { color: var(--oncard-3); }
+
+/* 사진 자리 — 흰 판 대신 배경 톤(사진이 오면 사진이 덮는다) */
+.msc-photo { background: color-mix(in srgb, var(--surf) 72%, #FFFFFF); }
+:root[data-theme="dark"] .msc-photo { background: color-mix(in srgb, var(--surf) 80%, #000000); }
+
+/* ═══ 아이 화면(키드 테마) 갈래 (2026-08-07) ═══════════════════════════════
+   🔴 applyKidTheme 이 --accent 를 --k(밝은 파스텔)로 바꿔 끼운다 — 다크와 «같은 함정»이
+   아이 쪽에서 또 뒤집혔다. 어두운 카드 공식(accent 80% + 미색 글씨)이 밝은 파스텔 카드가
+   되어 미색 글씨가 1.7~2.4:1 로 무너졌다(감사에서 잡음).
+   아이 화면은 **기존 아이 문법**대로 간다 — 밝은 파스텔 카드 + 진한 글씨(kd3 카드와 같은 생각). */
+:root[data-kid-theme] .sp-card, :root[data-kid-theme] .tk-mine,
+:root[data-kid-theme] .kb-shop, :root[data-kid-theme] .pin-box,
+:root[data-kid-theme] .st-none, :root[data-kid-theme] .bw-calc {
+  background: color-mix(in srgb, var(--k) 24%, var(--surf)); }
+:root[data-kid-theme] .sp-card.off { background: color-mix(in srgb, var(--k) 10%, var(--surf)); }
+:root[data-kid-theme] .sp-nm, :root[data-kid-theme] .tk-h, :root[data-kid-theme] .tk-row b,
+:root[data-kid-theme] .kb-shopt b, :root[data-kid-theme] .pin-h,
+:root[data-kid-theme] .bw-h, :root[data-kid-theme] .bw-calc, :root[data-kid-theme] .st-none {
+  color: var(--ink); }
+:root[data-kid-theme] .sp-need, :root[data-kid-theme] .tk-hint,
+:root[data-kid-theme] .kb-shopt em, :root[data-kid-theme] .pin-p,
+:root[data-kid-theme] .bw-p, :root[data-kid-theme] .st-none em,
+:root[data-kid-theme] .kb-shop > .ti, :root[data-kid-theme] .bw-calc .ti,
+:root[data-kid-theme] .sp-card.off .sp-nm { color: var(--sub-ink, var(--muted)); }
+/* 포인트는 k 계열 유지 — 단 «글씨»는 진한 k-ink 로 (밝은 k 원색은 면에만) */
+:root[data-kid-theme] .sp-ok { color: var(--k-ink, var(--k)); }
+:root[data-kid-theme] .bw-big { background: var(--k-soft); color: var(--k-ink, var(--k)); }
+:root[data-kid-theme] .pin-k { background: rgba(0,0,0,.06); color: var(--ink); }
+:root[data-kid-theme] .pin-k.ghost { background: transparent; color: var(--sub-ink, var(--muted)); }
+:root[data-kid-theme] .pin-dots i { background: rgba(0,0,0,.14); }
+:root[data-kid-theme] .pin-dots i.on { background: var(--k-ink, var(--k)); }
+/* 오류 글씨 — 키드 테마가 --danger 를 --k 로 바꿔 파스텔이 된다(자녀 화면엔 삭제가 없다는 전제).
+   PIN 오류는 진짜 오류라 원래 danger 값을 박아 쓴다 */
+:root[data-kid-theme] .pin-err { color: #A8322F; }
+
+/* ── 감사로 잡은 진짜 결함 2건 + k 변수 폴백 (2026-08-07) ─────────────────
+   ① sp-card.off — 중간 톤(accent 44%) 위 미색 글씨가 2.4:1. 면을 옅게 내리고 글씨는 진하게
+   ② pin-err — 어두운 카드 위 진빨강(#A8322F)이 1.5:1. 흰빛을 섞어 밝은 경고색으로
+   ③ 자녀 화면인데 키드 테마를 아직 안 골랐으면 --k 가 «빈 값»이라 별 알약이 투명해진다
+      → 부모 테마에서 파생한 폴백을 깔아 둔다(키드 테마를 고르면 그쪽이 이긴다) */
+:root { --k: var(--accent); --k-soft: color-mix(in srgb, var(--accent) 14%, var(--surf));
+        --k-ink: var(--accent-ink); }
+.sp-card.off { background: color-mix(in srgb, var(--accent) 16%, var(--surf)); }
+:root[data-theme="dark"] .sp-card.off { background: color-mix(in srgb, var(--drawer-a) 30%, var(--surf)); }
+.sp-card.off .sp-nm  { color: var(--sub-ink, var(--ink)); }
+.sp-card.off .sp-need { color: var(--sub-ink, var(--ink)); }
+.sp-card.off .sp-star { background: transparent; border: 1px solid color-mix(in srgb, var(--ink) 25%, transparent);
+  color: var(--sub-ink, var(--ink)); }
+:root[data-theme="dark"] .sp-card.off .sp-nm,
+:root[data-theme="dark"] .sp-card.off .sp-need { color: rgba(255,255,255,.80); }
+.pin-err { color: color-mix(in srgb, #FFFFFF 72%, var(--danger)); }
+:root[data-kid-theme] .pin-err { color: #A8322F; }   /* 키드 카드(밝은 파스텔)에선 도로 진하게 */
+
+/* 감사 마감 조임 (2026-08-07) — 경계값 5건 */
+:root { --k-ink: color-mix(in srgb, var(--accent) 70%, #000000); }  /* accent-ink 는 accent 와 같은 값이라 «잉크» 구실을 못 한다 */
+.sp-card.off .sp-need { color: var(--ink); }
+.bw-p { color: var(--sub-ink, var(--ink)); }
+/* bw-calc — 카드 목록에서 빠져 옛 --card-a(중간 톤)가 남아 있었다. 같은 카드 문법으로 */
+.bw-calc { background: color-mix(in srgb, var(--accent) 80%, #43464C); }
+:root[data-theme="dark"] .bw-calc { background: color-mix(in srgb, var(--drawer-a) 80%, #43464C); }
+.tk-st { color: var(--k-ink); }
+.pin-err { color: color-mix(in srgb, #FFFFFF 80%, var(--danger)); }
+/* 마감 조임 2차 — 남은 4건 전부 «옅은 면 위 중간 글씨» 계열 */
+.sp-card.off .sp-nm { color: var(--ink); }
+.sp-card.off .sp-star { color: var(--ink); border-color: color-mix(in srgb, var(--ink) 35%, transparent); }
+.sp-star { color: var(--k-ink); }
+.bw-p { color: var(--ink); }
+:root[data-theme="dark"] .tk-st { background: rgba(255,255,255,.15); color: rgba(255,255,255,.88); }
+:root[data-theme="dark"] .sp-star { background: rgba(255,255,255,.15); color: rgba(255,255,255,.88); }
+:root[data-theme="dark"] .sp-ok { color: rgba(255,255,255,.88); }
+/* 마감 조임 3차 — 미션 카드 상태별 글씨 (완료 카드는 «옅은 면»이라 미색 규칙이 뒤집힌다) */
+.msc.ms-done > b { color: color-mix(in srgb, var(--ink) 72%, transparent); }
+.msc.ms-done .msc-tag { color: #1E6B49; }        /* 초록 «완료»는 뜻 있는 색 — 옅은 면용으로 진하게 */
+.msc.ms-skip .msc-tag { color: var(--sub-ink, var(--ink)); }
+.rw-sub { color: var(--sub-ink, var(--ink)); }
+/* sp-ok — k 폴백이 accent 라 카드(accent80)와 «같은 색»이 되어 1.0:1 로 사라졌다 */
+.sp-ok { color: var(--oncard); }
+:root[data-kid-theme] .sp-ok { color: var(--k-ink); }
+/* 마감 조임 4차 — 완료 카드는 «중간 톤»이 함정이었다. 글씨를 더 조이는 대신 면을 옅게 */
+.msc.ms-done { background: color-mix(in srgb, var(--accent) 13%, var(--surf)); }
+:root[data-theme="dark"] .msc.ms-done { background: color-mix(in srgb, var(--drawer-a) 22%, var(--surf)); }
+.msc.ms-done > b { color: var(--sub-ink, var(--ink)); }
+.msc.ms-done .msc-no { background: #2F9E6E; color: #FFF; }
+:root[data-theme="dark"] .msc.ms-done > b { color: rgba(255,255,255,.78); }
+:root[data-theme="dark"] .msc.ms-done .msc-tag { color: #6FD3A8; }
+.rw-sub { color: var(--ink); }
+/* 마감 조임 5차(끝) — 완료 카드는 거의 배경까지 내리고 글씨는 잉크로 통일 */
+.msc.ms-done { background: color-mix(in srgb, var(--accent) 6%, var(--surf)); color: var(--sub-ink, var(--ink)); }
+.msc.ms-done > b { color: var(--sub-ink, var(--ink)); }
+.msc.ms-done .msc-tag { color: #17583C; }
+:root[data-theme="dark"] .msc.ms-done { background: color-mix(in srgb, var(--drawer-a) 14%, var(--surf)); color: rgba(255,255,255,.80); }
+/* 마감 조임 6차 — 마지막 2건 */
+.st-cancel { background: rgba(255,255,255,.14); color: var(--oncard); }   /* card-b(밝음)가 남아 미색 글씨를 지웠다 */
+.msc.ms-wait .msc-tag { background: #FFF6DF; color: #6B4A00; }            /* 반투명(.92)이라 감사가 못 재던 것 — 불투명으로 */
+
+/* ── 🎲 리롤 + 💛 칭찬 (지시서 §4②·§4⑤ · 2026-08-07) ─────────────────────
+   둘 다 «카드 문법»을 그대로 쓴다 — 새 색·새 모양을 만들지 않는다. */
+.rr-row { display: flex; align-items: center; gap: 10px; margin-top: 14px; }
+.rr-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 48px; padding: 12px 16px; border: none; border-radius: 22px;
+  background: color-mix(in srgb, var(--accent) 80%, #43464C); color: var(--oncard);
+  font-family: inherit; font-size: 15px; font-weight: 800;
+  box-shadow: 0 8px 22px rgba(40, 80, 140, .10); }
+:root[data-theme="dark"] .rr-btn { background: color-mix(in srgb, var(--drawer-a) 80%, #43464C);
+  box-shadow: 0 8px 22px rgba(0,0,0,.30); }
+.rr-btn[disabled] { background: color-mix(in srgb, var(--accent) 16%, var(--surf)); color: var(--ink);
+  box-shadow: none; }
+:root[data-theme="dark"] .rr-btn[disabled] { background: color-mix(in srgb, var(--drawer-a) 30%, var(--surf));
+  color: rgba(255,255,255,.80); }
+.rr-d { font-size: 18px; }
+.rr-hint { flex: none; font-style: normal; font-size: 12.5px; font-weight: 700; color: var(--muted); }
+
+.rc-row { display: flex; align-items: center; gap: 10px; margin-top: 24px;
+  padding: 12px 14px; border-radius: 22px;
+  background: color-mix(in srgb, var(--accent) 80%, #43464C);
+  box-shadow: 0 8px 22px rgba(40, 80, 140, .10); }
+:root[data-theme="dark"] .rc-row { background: color-mix(in srgb, var(--drawer-a) 80%, #43464C);
+  box-shadow: 0 8px 22px rgba(0,0,0,.30); }
+.rc-lb { flex: 1; font-size: 14.5px; font-weight: 800; color: var(--oncard); }
+/* 48px — 한 손으로 «1초 만에» 누르는 자리라 넉넉히 */
+.rc-b { flex: none; width: 48px; height: 48px; border: none; border-radius: 50%;
+  background: rgba(255,255,255,.16); font-size: 22px; line-height: 1; }
+.rc-b.on { background: rgba(255,255,255,.92); }
+
+/* ── §4①~③ 홈 합성 — 미션 세트 + 상점 (2026-08-07) ──────────────────────
+   홈의 밀도 규칙(§1 «한 줄에 한 가지»)을 지킨다 — 미션은 3장짜리 가로 카드로
+   납작하게, 상점은 한 줄. 여기서 상세를 다 보여주면 홈이 미션 화면이 된다. */
+.hm-hd { display: flex; align-items: baseline; gap: 8px; margin: 22px 2px 0; }
+.hm-hd b { font-size: 16px; font-weight: 800; color: var(--ink); }
+.hm-hd em { font-style: normal; font-size: 12.5px; font-weight: 700; color: var(--muted); }
+.hm-more { margin-left: auto; display: flex; align-items: center; gap: 2px;
+  min-height: 44px; padding: 0 2px; border: none; background: none;
+  font-family: inherit; font-size: 13px; font-weight: 800; color: var(--accent-ink); }
+.hm-none { margin: 10px 2px 0; font-size: 13px; color: var(--muted); }
+
+.hm-set { display: flex; flex-direction: column; gap: 9px; margin-top: 10px; }
+.hm-m { display: flex; align-items: center; gap: 11px; width: 100%;
+  padding: 13px 15px; border: none; border-radius: 20px; text-align: left; font-family: inherit;
+  background: color-mix(in srgb, var(--accent) 80%, #43464C);
+  box-shadow: 0 8px 22px rgba(40, 80, 140, .10); }
+:root[data-theme="dark"] .hm-m { background: color-mix(in srgb, var(--drawer-a) 80%, #43464C);
+  box-shadow: 0 8px 22px rgba(0,0,0,.30); }
+.hm-m .hm-no { flex: none; min-width: 40px; height: 30px; display: grid; place-items: center;
+  border-radius: 11px; background: rgba(255,255,255,.16); color: var(--oncard);
+  font-size: 13px; font-weight: 900; }
+.hm-m > b { flex: 1; min-width: 0; font-size: 15px; font-weight: 700; color: var(--oncard);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hm-m > em { flex: none; font-style: normal; font-size: 12.5px; font-weight: 800; color: var(--oncard-3); }
+/* 끝난 것은 «옅은 면»으로 한 겹 뒤에 — 미색 글씨 규칙이 뒤집히므로 잉크로 */
+.hm-m.done { background: color-mix(in srgb, var(--accent) 8%, var(--surf)); box-shadow: none; }
+:root[data-theme="dark"] .hm-m.done { background: color-mix(in srgb, var(--drawer-a) 16%, var(--surf)); }
+.hm-m.done > b { color: var(--sub-ink, var(--ink)); text-decoration: line-through; }
+.hm-m.done > em { color: #17583C; }
+.hm-m.done .hm-no { background: #2F9E6E; color: #FFF; }
+:root[data-theme="dark"] .hm-m.done > b { color: rgba(255,255,255,.80); }
+:root[data-theme="dark"] .hm-m.done > em { color: #6FD3A8; }
+
+/* 다 했을 때 — 카드 세 장 대신 한 장 */
+.hm-clear { display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 22px;
+  padding: 16px; border: none; border-radius: 22px; text-align: left; font-family: inherit;
+  background: color-mix(in srgb, var(--accent) 80%, #43464C);
+  box-shadow: 0 8px 22px rgba(40, 80, 140, .10); }
+:root[data-theme="dark"] .hm-clear { background: color-mix(in srgb, var(--drawer-a) 80%, #43464C); }
+.hm-seal { flex: none; width: 40px; height: 40px; display: grid; place-items: center;
+  border-radius: 50%; background: #2F9E6E; color: #FFF; font-size: 21px; }
+.hm-ct b { display: block; font-size: 15.5px; font-weight: 800; color: var(--oncard); }
+.hm-ct em { display: block; margin-top: 2px; font-style: normal; font-size: 12.5px; color: var(--oncard-3); }
+
+/* 상점 한 줄 */
+.hm-shop { display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 12px;
+  padding: 15px 16px; border: none; border-radius: 22px; text-align: left; font-family: inherit;
+  background: color-mix(in srgb, var(--accent) 80%, #43464C);
+  box-shadow: 0 8px 22px rgba(40, 80, 140, .10); }
+:root[data-theme="dark"] .hm-shop { background: color-mix(in srgb, var(--drawer-a) 80%, #43464C);
+  box-shadow: 0 8px 22px rgba(0,0,0,.30); }
+.hm-si { flex: none; font-size: 24px; }
+.hm-st { flex: 1; min-width: 0; }
+.hm-st b { display: block; font-size: 15.5px; font-weight: 800; color: var(--oncard); }
+.hm-st em { display: block; margin-top: 2px; font-style: normal; font-size: 12.5px; color: var(--oncard-3); }
+.hm-tk { flex: none; padding: 5px 10px; border-radius: 999px;
+  background: rgba(255,255,255,.16); color: var(--oncard); font-size: 12.5px; font-weight: 800; }
+.hm-shop > .ti { flex: none; font-size: 18px; color: var(--oncard-3); }
+/* ⚠ 홈에 미션 세트·상점이 붙으면서 **마지막 줄이 하단 3버튼 뒤에 숨었다**(2026-08-07 실측).
+   기존 112px 로는 모자란다 — 카드가 늘어 화면 끝까지 내용이 차기 때문이다.
+   ⚠ `body:has(#tabbar.hidden) #screen` 이 padding 을 20px 로 눕히므로 **같은 무게**로 써야 먹는다
+     (코드에 이미 적힌 함정 — 2026-08-03 에 「카드 고르기」가 ＋ 버튼에 깔린 그 자리다).
+   ⚠ fixed 를 얹으면 그 높이만큼 padding 을 늘 같이 준다(§3 입력바와 같은 규칙). */
+body:has(#tabbar.hidden) #screen:has(.hv3-fab),
+#screen:has(.hv3-fab) { padding-bottom: calc(env(safe-area-inset-bottom) + 132px); }
+/* 홈은 «한 줄에 한 가지»(§1) — 상점 줄이 두 줄로 넘치면 밀도 규칙이 깨진다 */
+.hm-st em { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hm-st b  { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

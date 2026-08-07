@@ -94,18 +94,7 @@ async function ensureToday(db, child) {
   const have = await todayRows(db, child.id, ymd);
   if (have.length) return have;
 
-  const band = bandOf(child.grade), season = seasonOf();
-  const pick = async (verify, n) => {
-    const { results } = await db.prepare(
-      `SELECT code FROM missions
-        WHERE band = ? AND season = ? AND verify = ? AND active = 1
-        ORDER BY (id * 7 + ?) % 97 LIMIT ?`      // 날짜를 섞어 매일 같은 것만 나오지 않게
-    ).bind(band, season, verify, parseInt(ymd, 10) % 97, n).all();
-    return (results || []).map((x) => x.code);
-  };
-  let codes = [...(await pick("instant", 2)), ...(await pick("review", 1))];
-  if (codes.length < DAY_PICK) codes = [...codes, ...(await pick("endday", DAY_PICK - codes.length))];
-  codes = [...new Set(codes)].slice(0, DAY_PICK);
+  const codes = await pickCodes(db, child, ymd, 0, []);
 
   const now = nowIso();
   for (const c of codes) {
@@ -125,6 +114,77 @@ async function addStars(db, childId, delta, reason) {
     .bind(childId, delta, reason, nowIso()).run();
 }
 
+
+/* 오늘 줄 미션 코드를 고른다 — ensureToday 와 리롤이 **같은 함수**를 쓴다.
+   따로 두면 «처음 받은 세트»와 «리롤한 세트»의 규칙이 갈라진다.
+     salt   : 같은 날 다시 뽑을 때 다른 것이 나오게(리롤이 0 이면 첫 배정과 같다)
+     exclude: 이미 갖고 있는 코드는 빼고 뽑는다 — 리롤했는데 같은 게 나오면 «안 바뀌었다»로 읽힌다 */
+async function pickCodes(db, child, ymd, salt, exclude) {
+  const band = bandOf(child.grade), season = seasonOf();
+  const ex = (exclude || []).map(String);
+  const notIn = ex.length ? ` AND code NOT IN (${ex.map(() => "?").join(",")})` : "";
+  const pick = async (verify, n) => {
+    if (n <= 0) return [];
+    const { results } = await db.prepare(
+      `SELECT code FROM missions
+        WHERE band = ? AND season = ? AND verify = ? AND active = 1${notIn}
+        ORDER BY (id * 7 + ?) % 97 LIMIT ?`      // 날짜를 섞어 매일 같은 것만 나오지 않게
+    ).bind(band, season, verify, ...ex, (parseInt(ymd, 10) + salt * 31) % 97, n).all();
+    return (results || []).map((x) => x.code);
+  };
+  let codes = [...(await pick("instant", 2)), ...(await pick("review", 1))];
+  if (codes.length < DAY_PICK) codes = [...codes, ...(await pick("endday", DAY_PICK - codes.length))];
+  return [...new Set(codes)].slice(0, DAY_PICK);
+}
+
+/* ── POST /api/v1/children/{id}/missions/reroll — 🎲 하루 한 번 (지시서 §4②) ──
+   ⚠ **아직 손대지 않은 것(open)만 바꾼다.** 이미 한 것·확인 기다리는 것까지 갈아치우면
+     아이가 받은 도장이 사라지거나 부모가 보던 사진이 없어진다.
+   ⚠ 횟수는 **서버가 센다.** 화면에서 버튼을 가리는 것으로 끝내면 우회된다 —
+     상점 상한과 같은 원칙이다(§4③).
+   ⚠ 부모·아이 둘 다 누를 수 있다. 지시서가 «자율성»이라 부른 것이라 아이 것이다. */
+async function reroll(request, db, env, childId) {
+  const { child, err } = await gate(request, db, env, childId);
+  if (err) return err;
+  const ymd = ymdKst();
+  await ensureToday(db, child);
+
+  const used = await db.prepare(
+    "SELECT COUNT(*) n FROM star_ledger WHERE child_id = ? AND reason = ?"
+  ).bind(child.id, `reroll:${ymd}`).first();
+  if (((used && used.n) || 0) >= 1)
+    return apiErr("LIMIT_EXCEEDED", null, "리롤은 하루에 한 번이에요. 내일 또 할 수 있어요.");
+
+  const rows = await todayRows(db, child.id, ymd);
+  const openRows = rows.filter((r) => r.status === "open");
+  if (!openRows.length)
+    return apiErr("VALIDATION", null, "바꿀 미션이 없어요. 오늘 것을 벌써 다 했네요!");
+
+  /* 갈아치우지 않을 것(진행·완료)은 그대로 두고, 그 코드도 제외 목록에 넣는다 —
+     안 그러면 «남아 있는 것과 똑같은 미션»이 새로 뽑힐 수 있다. */
+  const keep = rows.filter((r) => r.status !== "open").map((r) => r.mission_code);
+  const fresh = await pickCodes(db, child, ymd, 1, [...keep, ...rows.map((r) => r.mission_code)]);
+  const need = openRows.length;
+  const use = fresh.slice(0, need);
+  if (!use.length)
+    return apiErr("VALIDATION", null, "바꿀 만한 다른 미션이 없어요.");
+
+  await db.prepare("DELETE FROM mission_assign WHERE child_id = ? AND ymd = ? AND status = 'open'")
+    .bind(child.id, ymd).run();
+  const now = nowIso();
+  for (const c of use) {
+    await db.prepare(
+      "INSERT OR IGNORE INTO mission_assign (child_id, mission_code, ymd, status, created_at) VALUES (?, ?, ?, 'open', ?)"
+    ).bind(child.id, c, ymd, now).run();
+  }
+  /* 쓴 표시는 star_ledger 에 delta 0 으로 남긴다 — 표를 새로 만들지 않는다.
+     별 개수에는 영향이 없고(0), «오늘 리롤했나»는 reason 으로 센다. */
+  await addStars(db, child.id, 0, `reroll:${ymd}`);
+
+  const after = await todayRows(db, child.id, ymd);
+  return apiOk({ items: after.map(shape), changed: use.length, stars: await starsOf(db, child.id) });
+}
+
 // ── GET /api/v1/children/{id}/missions ──────────────────────
 async function getToday(request, db, env, childId) {
   const { child, isChild, err } = await gate(request, db, env, childId);
@@ -135,6 +195,10 @@ async function getToday(request, db, env, childId) {
   return apiList(rows.map(shape), {
     ymd: ymdKst(), band: bandOf(child.grade), season: seasonOf(),
     done, waiting, total: rows.length, stars: await starsOf(db, child.id), viewer: isChild ? "child" : "parent",
+    /* 🎲 리롤을 오늘 썼나 — 화면이 버튼을 흐리게 하는 데 쓴다.
+       ⚠ 이 값을 근거로 «막지는» 않는다. 막는 것은 서버(reroll 라우트)다. */
+    reroll_used: !!((await db.prepare("SELECT COUNT(*) n FROM star_ledger WHERE child_id = ? AND reason = ?")
+      .bind(child.id, `reroll:${ymdKst()}`).first())?.n),
   });
 }
 
@@ -616,6 +680,9 @@ export async function handleMissionApi(request, db, env, url) {
     if (m === "PUT") return setToday(request, db, env, x[1]);
     return apiErr("VALIDATION", null, "지원하지 않는 요청 방식이에요.");
   }
+  x = p.match(/^\/api\/v1\/children\/(\d+)\/missions\/reroll$/);
+  if (x && m === "POST") return reroll(request, db, env, x[1]);
+
   x = p.match(/^\/api\/v1\/missions\/(\d+)\/(done|photo|skip|approve|revert)$/);
   if (x) {
     const id = x[1], act = x[2];
