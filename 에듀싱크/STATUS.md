@@ -5,7 +5,7 @@
 > - **08-03 이전 상세**(테마 색 4차·홈 v4·§1~§7 개편 함정 기록)는
 >   `docs/_archive/STATUS-20260803.md` 로 넘겼다. 「왜 코드가 이렇게 생겼나」가 궁금할 때만 연다.
 >
-> 최종 갱신 **2026-08-07 밤 (배포 스크립트 결함 3건 수정 · 검증 4종 재현)**
+> 최종 갱신 **2026-08-07 밤 (A(DB) 실서버 적용 완료 · 배포 스크립트 결함 3건 수정)**
 
 ## ① 지금 상태
 
@@ -20,8 +20,8 @@
 
 | § | 항목 | 서버 | 앱 화면 |
 |:-:|---|:-:|:-:|
-| §8 | DB 표 6개 + `orders` 확장 | ✅ 작성·검증 · **⛔ 실서버 미적용** | — |
-| §8+ | PIN 시도 제한 컬럼 2개(`migrate_pin_2026-08-07`) | ✅ 작성·검증 · **⛔ 실서버 미적용** | — |
+| §8 | DB 표 6개 + `orders` 확장 | ✅ **실서버 적용 완료**(08-07 밤) | — |
+| §8+ | PIN 시도 제한 컬럼 2개(`migrate_pin_2026-08-07`) | ✅ **실서버 적용 완료**(08-07 밤) | — |
 | §3 | 2단계 보상 검증(1차 즉시·2차 보너스) | ✅ API | ✅ **배선 완료** |
 | §4③ | 별도장 상점(진열대·바꾸기·티켓) | ✅ API | ✅ **배선 완료** |
 | §4⑤ | 칭찬 리액션 | ✅ API | ✅ **배선 완료**(미션 화면 안) |
@@ -74,22 +74,42 @@
 
 ## ② 진행 중 — 🔴 PC 세션에서 이어받을 것 (2026-08-07)
 
-**코드·서버 작업은 전부 끝났고 푸시됐다.** 남은 건 «실서버 적용 + 에뮬 확인» 셋뿐이고,
-그건 PC 에서만 된다. 클라우드 코드탭은 Cloudflare 자격증명도 없고 에뮬에도 못 닿는다
-(실측: `CLOUDFLARE_API_TOKEN` 없음 · Cloudflare MCP 401 · adb 설치해도 5555 직결 막힘 ·
- 안드로이드 SDK 는 프록시가 dl.google.com 을 403 으로 막는다).
+> ## ✅ A(DB) 는 **실서버에 적용됐다** (2026-08-07 밤, 대표님 「다 진행해」 승인)
+>
+> Cloudflare MCP 가 이번엔 붙었다(어제는 401 이었다) → 코드탭에서 바로 적용했다.
+> **남은 것은 B(워커)·C(APK) 둘뿐이다.**
+>
+> | 확인 | 값 |
+> |---|---|
+> | 대상 DB | `eduthink-db` `012969d5-40a3-4bf5-a882-5f8a37a9694b` — **wrangler.toml 의 id 와 대조 후** 실행 |
+> | 적용 | 17문장 전부 성공(표 6 · 인덱스 7 · `orders` +2 · `child_mode_config` +2) |
+> | 적용 후 실측 | 표 **6/6** · 인덱스 **7/7** · 컬럼 **2+2** |
+> | 안전 | `orders` 는 **0행**이라 새 컬럼이 건드린 값이 없다. 삽입문 2곳 모두 **컬럼명을 적어 넣는다**
+>   (`INSERT INTO orders (…) VALUES`) → 옛 워커가 새 컬럼 때문에 깨질 자리가 없다 |
+>
+> ⚠ **지금은 «DB 만 새것 · 워커는 옛것»** 이다. 런북이 이 순서를 고른 이유가 이것이다 —
+> 옛 워커는 새 표를 **안 쓸 뿐** 아무 일도 안 난다. 반대였으면 없는 표를 찾아 500 이 났다.
+> ⚠ 되돌리려면 `scripts/rollback_reward_2026-08-07.sql`(표 6개 DROP · 실측 통과).
+>   **B 를 배포한 뒤에는 되돌리지 말 것** — 그때부터는 워커가 그 표를 쓴다.
 
-### PC 에서 세 줄
+**B(워커)·C(APK) 는 PC 에서만 된다.** 이 컨테이너에는 Cloudflare **배포** 수단이 없다
+(실측: `CLOUDFLARE_API_TOKEN` 없음 · MCP 는 Workers 를 **읽기만** 한다 — list·get·get_code 뿐 ·
+ `wrangler login` 은 브라우저가 필요 · adb 5555 직결 막힘 · 프록시가 dl.google.com 을 403).
+D1 은 MCP 에 쿼리 도구가 있어서 A 만 여기서 됐다.
+
+### PC 에서 두 줄 (A 는 끝났다)
 ```powershell
 cd C:\Users\hardb\Desktop\블로그수입관련
 git pull origin claude/deploy-validation-complete-h7ea4s
 cd 에듀싱크
 
-powershell -ExecutionPolicy Bypass -File scripts\deploy-0807.ps1          # 미리보기
-powershell -ExecutionPolicy Bypass -File scripts\deploy-0807.ps1 -Apply   # A(DB)+B(워커)
-powershell -ExecutionPolicy Bypass -File scripts\apk-emul.ps1             # C(APK+에뮬)
+powershell -ExecutionPolicy Bypass -File scripts\deploy-0807.ps1                  # 미리보기(표 6개가 보이면 정상)
+powershell -ExecutionPolicy Bypass -File scripts\deploy-0807.ps1 -Apply -Force    # B(워커)
+powershell -ExecutionPolicy Bypass -File scripts\apk-emul.ps1                     # C(APK+에뮬)
 ```
-자세한 건 `docs/배포점검-0807-보상시스템.md`.
+🔴 **`-Force` 를 반드시 붙일 것.** A 가 이미 들어가 있어서 `-Apply` 만 주면
+「duplicate column name」으로 멈춘다 — **실패가 아니라 «이미 됐다»** 는 뜻이다.
+`-Force` 는 그 자리를 건너뛰고 B(워커)로 간다. 자세한 건 `docs/배포점검-0807-보상시스템.md`.
 
 > 🔴 **받을 브랜치가 바뀌었다** — `claude/status-md-reading-gkoeee` 가 아니라
 > **`claude/deploy-validation-complete-h7ea4s`** 다(옛 브랜치 23커밋을 여기로 합쳤다).
@@ -138,7 +158,7 @@ powershell -ExecutionPolicy Bypass -File scripts\apk-emul.ps1             # C(AP
 
 1. ~~모듈 B 앱 화면~~ · ~~아이 모드 PIN~~ — **끝**(2026-08-07 배선까지)
 2. ~~§4⑤ 칭찬~~ · ~~§4② 리롤~~ — **끝**(2026-08-07)
-3. **실서버 마이그레이션 적용** — 추가만 하는 마이그레이션, 롤백 SQL 준비됨. **승인 필요**
+3. ~~실서버 마이그레이션 적용~~ — **끝**(2026-08-07 밤, 표 6/6 실측). 남은 건 **B(워커)·C(APK)**
 4. §7 PC 대시보드 · §8 출시 점검(푸터 법정정보 · 인앱결제 · 계정 삭제 웹페이지)
 5. **요금제 6,900/12,900** (§0-3) — 값만 바꾸면 되니 뒤로(대표님 판단 2026-08-07).
    체험 기간도 같이 정한다(지시서 §1.3=1주 / 현재 코드=2주)
