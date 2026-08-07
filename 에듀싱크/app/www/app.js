@@ -2642,6 +2642,67 @@ const Screens = {
       </button>`;
     })()}
 
+    <!-- ═══ §4①~③ 홈 합성 (지시서 0807 · 2026-08-07) ═══════════════════
+         MVP 핵심 셋(전광판·미션 세트·상점)이 홈에서 만나는 자리다.
+         전광판은 위 boardView() 가 이미 그린다 — 여기는 **미션 3종 + 진열대** 둘.
+         ⚠ 08-03 에 «미션 카드 제거»가 있었지만 그건 학교 카드와 섞여 밀도가 터졌을 때다.
+           지금은 §4② 가 «세트 3개»를 홈의 주인공으로 못 박았다 — 새 지시가 이긴다.
+         ⚠ 오늘카드 편집의 «미션» 스위치를 그대로 따른다(끄면 이 구역이 통째로 사라진다).
+           ⚠ 이 주석에 역따옴표를 쓰지 말 것 — 템플릿 문자열 안이라 그 자리에서 문법이 깨진다. -->
+    ${(() => {
+      if (!T.mission || !c) return "";
+      const ms = S.missions;
+      if (ms === null) return "";                      // 아직 안 받아옴 — 빈 자리로 두지 않고 아예 안 그린다
+      const done = ms.filter((x) => x.status === "done").length;
+      const wait = ms.filter((x) => x.status === "waiting").length;
+      /* 다 했으면 카드를 늘어놓지 않는다 — «끝났다»는 한 줄이 목록보다 낫다 */
+      if (ms.length && done === ms.length) return `
+        <button class="hm-clear" onclick="location.hash='#mission'">
+          <span class="hm-seal"><i aria-hidden="true" class="ti ti-circle-check"></i></span>
+          <span class="hm-ct"><b>오늘 미션 다 했어요</b><em>★ ${done}개 받았어요</em></span>
+        </button>`;
+      return `
+      <div class="hm-hd">
+        <b>오늘 미션</b>
+        <em>${ms.length ? `${done}/${ms.length}${wait ? ` · 확인 ${wait}` : ""}` : "곧 나와요"}</em>
+        <button class="hm-more" onclick="location.hash='#mission'">전체 보기<i aria-hidden="true" class="ti ti-chevron-right"></i></button>
+      </div>
+      ${!ms.length ? `<p class="hm-none">매일 아침 세 개가 자동으로 차요</p>` : `
+      <div class="hm-set">
+        ${ms.slice(0, 3).map((x) => {
+          const st = x.status;
+          return `
+          <button class="hm-m ${st}" onclick="App.msOpen(${x.id})">
+            <span class="hm-no">${st === "done" ? `<i aria-hidden="true" class="ti ti-check"></i>` : `★${x.stars}`}</span>
+            <b>${esc(x.title)}</b>
+            <em>${st === "done" ? "받았어요" : st === "waiting" ? "확인 기다림" : st === "skipped" ? "못 했어요" : "아직"}</em>
+          </button>`;
+        }).join("")}
+      </div>`}`;
+    })()}
+
+    <!-- ③ 별도장 상점 — 홈에서는 «얼마 모았고 뭘 바꿀 수 있나» 한 줄.
+         진열대 편집은 드로어가 정본이다. 여기는 **보여주고 넘기는 자리**라 입구 중복이 아니다. -->
+    ${(() => {
+      if (!T.mission || !c) return "";
+      const items = S.storeItems;
+      const canBuy = (items || []).filter((x) => x.can_buy != null ? x.can_buy : S.missionStars >= x.stars_required);
+      const waitTk = (S.tickets || []).filter((t) => t.status === "requested").length;
+      return `
+      <button class="hm-shop" onclick="location.hash='${items && items.length ? "#store" : "#storeset"}'">
+        <span class="hm-si">🎁</span>
+        <span class="hm-st">
+          <b>별도장 상점</b>
+          <em>${!items ? `모은 별 ★${S.missionStars}`
+            : !items.length ? "바꿀 것을 정해 주세요"
+            : canBuy.length ? `★${S.missionStars} · 바꿀 수 있는 것 ${canBuy.length}`
+            : `★${S.missionStars} 모았어요`}</em>
+        </span>
+        ${waitTk ? `<span class="hm-tk">🎟️ ${waitTk}</span>` : ""}
+        <i aria-hidden="true" class="ti ti-chevron-right"></i>
+      </button>`;
+    })()}
+
 
     <!-- 하단 3버튼 (§1) — 좌 달력 · 가운데 큰 ＋ · 우 미션 -->
     <!-- 달력에만 라벨이 없어 셋이 삐뚤어 보였다(2026-08-04 지적) — 같은 자리에 같은 라벨을 준다 -->
@@ -6744,7 +6805,7 @@ const App = {
        미션·자녀 화면에서도 같은 값을 쓴다. 한 번 받아오면 다시 안 부른다(force 로만 갱신). */
     if (["home", "mission", "childview"].includes(name) && S.loggedIn && S.missions === null) this.loadMissions();
     /* 보상 화면에 들어갈 때 받아온다. 미션 화면도 «확인해 주세요»·«티켓»을 그리므로 포함 */
-    if (["mission", "storeset", "store", "storebuy"].includes(name) && S.loggedIn
+    if (["home", "mission", "storeset", "store", "storebuy"].includes(name) && S.loggedIn
         && (S.storeItems === null || S.tickets === null)) this.loadReward();
     if (name === "report" && S.loggedIn) this.loadReport();
     // 요금은 자녀마다 다르다(둘째부터 싸다) → 이용권 화면에 들어올 때 그 자녀 기준으로 받아온다

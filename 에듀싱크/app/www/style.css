@@ -5618,3 +5618,72 @@ body:has(#tabbar.hidden) #screen:has(.ib),
 .rc-b { flex: none; width: 48px; height: 48px; border: none; border-radius: 50%;
   background: rgba(255,255,255,.16); font-size: 22px; line-height: 1; }
 .rc-b.on { background: rgba(255,255,255,.92); }
+
+/* ── §4①~③ 홈 합성 — 미션 세트 + 상점 (2026-08-07) ──────────────────────
+   홈의 밀도 규칙(§1 «한 줄에 한 가지»)을 지킨다 — 미션은 3장짜리 가로 카드로
+   납작하게, 상점은 한 줄. 여기서 상세를 다 보여주면 홈이 미션 화면이 된다. */
+.hm-hd { display: flex; align-items: baseline; gap: 8px; margin: 22px 2px 0; }
+.hm-hd b { font-size: 16px; font-weight: 800; color: var(--ink); }
+.hm-hd em { font-style: normal; font-size: 12.5px; font-weight: 700; color: var(--muted); }
+.hm-more { margin-left: auto; display: flex; align-items: center; gap: 2px;
+  min-height: 44px; padding: 0 2px; border: none; background: none;
+  font-family: inherit; font-size: 13px; font-weight: 800; color: var(--accent-ink); }
+.hm-none { margin: 10px 2px 0; font-size: 13px; color: var(--muted); }
+
+.hm-set { display: flex; flex-direction: column; gap: 9px; margin-top: 10px; }
+.hm-m { display: flex; align-items: center; gap: 11px; width: 100%;
+  padding: 13px 15px; border: none; border-radius: 20px; text-align: left; font-family: inherit;
+  background: color-mix(in srgb, var(--accent) 80%, #43464C);
+  box-shadow: 0 8px 22px rgba(40, 80, 140, .10); }
+:root[data-theme="dark"] .hm-m { background: color-mix(in srgb, var(--drawer-a) 80%, #43464C);
+  box-shadow: 0 8px 22px rgba(0,0,0,.30); }
+.hm-m .hm-no { flex: none; min-width: 40px; height: 30px; display: grid; place-items: center;
+  border-radius: 11px; background: rgba(255,255,255,.16); color: var(--oncard);
+  font-size: 13px; font-weight: 900; }
+.hm-m > b { flex: 1; min-width: 0; font-size: 15px; font-weight: 700; color: var(--oncard);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hm-m > em { flex: none; font-style: normal; font-size: 12.5px; font-weight: 800; color: var(--oncard-3); }
+/* 끝난 것은 «옅은 면»으로 한 겹 뒤에 — 미색 글씨 규칙이 뒤집히므로 잉크로 */
+.hm-m.done { background: color-mix(in srgb, var(--accent) 8%, var(--surf)); box-shadow: none; }
+:root[data-theme="dark"] .hm-m.done { background: color-mix(in srgb, var(--drawer-a) 16%, var(--surf)); }
+.hm-m.done > b { color: var(--sub-ink, var(--ink)); text-decoration: line-through; }
+.hm-m.done > em { color: #17583C; }
+.hm-m.done .hm-no { background: #2F9E6E; color: #FFF; }
+:root[data-theme="dark"] .hm-m.done > b { color: rgba(255,255,255,.80); }
+:root[data-theme="dark"] .hm-m.done > em { color: #6FD3A8; }
+
+/* 다 했을 때 — 카드 세 장 대신 한 장 */
+.hm-clear { display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 22px;
+  padding: 16px; border: none; border-radius: 22px; text-align: left; font-family: inherit;
+  background: color-mix(in srgb, var(--accent) 80%, #43464C);
+  box-shadow: 0 8px 22px rgba(40, 80, 140, .10); }
+:root[data-theme="dark"] .hm-clear { background: color-mix(in srgb, var(--drawer-a) 80%, #43464C); }
+.hm-seal { flex: none; width: 40px; height: 40px; display: grid; place-items: center;
+  border-radius: 50%; background: #2F9E6E; color: #FFF; font-size: 21px; }
+.hm-ct b { display: block; font-size: 15.5px; font-weight: 800; color: var(--oncard); }
+.hm-ct em { display: block; margin-top: 2px; font-style: normal; font-size: 12.5px; color: var(--oncard-3); }
+
+/* 상점 한 줄 */
+.hm-shop { display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 12px;
+  padding: 15px 16px; border: none; border-radius: 22px; text-align: left; font-family: inherit;
+  background: color-mix(in srgb, var(--accent) 80%, #43464C);
+  box-shadow: 0 8px 22px rgba(40, 80, 140, .10); }
+:root[data-theme="dark"] .hm-shop { background: color-mix(in srgb, var(--drawer-a) 80%, #43464C);
+  box-shadow: 0 8px 22px rgba(0,0,0,.30); }
+.hm-si { flex: none; font-size: 24px; }
+.hm-st { flex: 1; min-width: 0; }
+.hm-st b { display: block; font-size: 15.5px; font-weight: 800; color: var(--oncard); }
+.hm-st em { display: block; margin-top: 2px; font-style: normal; font-size: 12.5px; color: var(--oncard-3); }
+.hm-tk { flex: none; padding: 5px 10px; border-radius: 999px;
+  background: rgba(255,255,255,.16); color: var(--oncard); font-size: 12.5px; font-weight: 800; }
+.hm-shop > .ti { flex: none; font-size: 18px; color: var(--oncard-3); }
+/* ⚠ 홈에 미션 세트·상점이 붙으면서 **마지막 줄이 하단 3버튼 뒤에 숨었다**(2026-08-07 실측).
+   기존 112px 로는 모자란다 — 카드가 늘어 화면 끝까지 내용이 차기 때문이다.
+   ⚠ `body:has(#tabbar.hidden) #screen` 이 padding 을 20px 로 눕히므로 **같은 무게**로 써야 먹는다
+     (코드에 이미 적힌 함정 — 2026-08-03 에 「카드 고르기」가 ＋ 버튼에 깔린 그 자리다).
+   ⚠ fixed 를 얹으면 그 높이만큼 padding 을 늘 같이 준다(§3 입력바와 같은 규칙). */
+body:has(#tabbar.hidden) #screen:has(.hv3-fab),
+#screen:has(.hv3-fab) { padding-bottom: calc(env(safe-area-inset-bottom) + 132px); }
+/* 홈은 «한 줄에 한 가지»(§1) — 상점 줄이 두 줄로 넘치면 밀도 규칙이 깨진다 */
+.hm-st em { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hm-st b  { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
