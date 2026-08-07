@@ -2501,10 +2501,9 @@ const Screens = {
            ⚠ 여기에 「가입하기」 버튼을 뒀다가 걷어냈다. 들어오자마자 가입을 들이밀면
              «구경하러 왔는데 문 앞에서 붙잡는» 꼴이다. 가입 길은 서랍(☰)에 있으면 족하다.
            ⚠ 빈 알약은 그리지 않는다 — «내 아이가 사라졌나»로 읽힌다. -->
-      ${c ? `<button class="hd-who" onclick="location.hash='#switch'">
-        ${childFace(c, "hd-face")}<b>${esc(c.nickname)}</b><i aria-hidden="true" class="ti ti-chevron-down"></i>
-      </button>`
-        : `<span class="hd-gap"></span>`}
+      <!-- 자녀칩(프로필)은 뺐다(2026-08-07 대표님 지시) — 드로어 맨 위(hv3-drwho)에 이미 있다.
+           같은 입구를 두 곳에 두지 않는다. 빈 알약도 안 그린다(«내 아이가 사라졌나»로 읽힌다). -->
+      <span class="hd-gap"></span>
       <!-- 서랍은 저빈도지만 «이 앱이 뭐 하는 앱인가»를 말하는 자리다 — 항상 보이게 둔다(§1) -->
       <button class="hd-box" onclick="location.hash='#timeline'" aria-label="서랍">
         <i aria-hidden="true" class="ti ti-archive"></i>

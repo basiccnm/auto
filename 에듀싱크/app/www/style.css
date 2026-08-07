@@ -5384,3 +5384,70 @@ body:has(#tabbar.hidden) #screen:has(.ib),
       같은 회백색 #E8E4DC 였다 → 「테마를 바꿔도 안 바뀐다」로 읽힌다.
    ⚠ 홈은 `#screen:has(.hv3-art)` 가 위에서 그라데이션으로 덮으므로 영향을 안 받는다. */
 #screen { background: var(--surf); }
+
+/* ═══ 홈 마감 6건 (2026-08-07 대표님 검수) ═══════════════════════════════
+   ①시계 가독성 ②☰ 시인성(테마 적응) ③우상단·달력 칩 일체감 ④하단 3버튼 통일
+   ⑤바탕 그라데이션. (⑥자녀칩 제거는 app.js — 드로어에 이미 있어 입구 중복이었다) */
+
+/* ── ① 시계 — 반투명 받침을 «켠다» (블러는 안 쓴다 — §6 backdrop-filter 0개 규칙)
+   날짜가 그림의 어두운 그늘 경계에 걸쳐 묻히고, 콜론이 회색 덩어리로 떠 보였다.
+   art-1(그림 하단 색)을 비치게 깔면 일러와 한 몸으로 보이면서 글씨가 선다.
+   ⚠ 흰색·회색 받침은 안 된다 — 8월 4일의 «회색 스티커» 가 그거였다. 받침은 그 테마의 색이어야 한다. */
+.bd-time { padding: 9px 15px 11px; border-radius: 18px; width: fit-content;
+  background: color-mix(in srgb, var(--art-1) 78%, transparent); text-shadow: none; }
+:root[data-theme="dark"] .bd-time { background: color-mix(in srgb, #0E1218 58%, transparent); }
+.bd-time .dt { opacity: 1; }                     /* 받침이 생겼으니 날짜를 눌러 둘 이유가 없다 */
+.bd-time .tm i { opacity: .55; text-shadow: none; }   /* 콜론 — 그림자·반투명이 겹쳐 «회색 사각형»으로 보였다 */
+
+/* ── ② ☰ — 어두운 그림 위에서 안 보였다. 테마(라이트/다크)에 따라 색이 갈리고,
+   그림 위에서는 옅은 받침 하나를 깐다(우상단 칩과 같은 문법 = 겉돌지 않는다) */
+#screen:has(.hv3-art) .hv3-ham {
+  color: var(--art-ink); border-radius: 13px; padding: 6px 10px;
+  background: color-mix(in srgb, var(--art-1) 60%, transparent); }
+:root[data-theme="dark"] #screen:has(.hv3-art) .hv3-ham {
+  color: #EEF1F5; background: color-mix(in srgb, #0E1218 55%, transparent); }
+:root[data-theme="dark"] #screen:has(.hv3-art) .hv3-ham i { text-shadow: none; }
+
+/* ── ③ 우상단 서랍·종 + 좌하단 달력 — «카드색에서 2톤 내린 칩» (대표님 지시)
+   회색 알약(--card-a)이 뜬금없이 떠 보이던 원인: 카드는 테마색인데 칩만 무채색이었다.
+   카드(accent 80%)와 같은 핏줄에서 두 단 여리게 — accent 40% + 바탕. */
+#screen:has(.hv3-art) .hd-bell,
+#screen:has(.hv3-art) .hd-box,
+:root[data-theme="dark"] #screen:has(.hv3-art) .hd-bell,
+:root[data-theme="dark"] #screen:has(.hv3-art) .hd-box {
+  background: color-mix(in srgb, var(--accent) 40%, var(--surf));
+  color: var(--oncard); box-shadow: none; }
+:root[data-theme="dark"] #screen:has(.hv3-art) .hd-bell,
+:root[data-theme="dark"] #screen:has(.hv3-art) .hd-box {
+  background: color-mix(in srgb, var(--drawer-a) 62%, var(--surf)); }
+:root[data-theme="dark"] #screen:has(.hv3-art) .hd-bell i,
+:root[data-theme="dark"] #screen:has(.hv3-art) .hd-box i { text-shadow: none; }
+
+/* ── ④ 하단 3버튼 — 크기·그림자·질감이 제각각이라 어수선했다.
+   달력 = ③과 같은 칩 / ＋ = 카드와 같은 accent(주 버튼이라 제일 진하게) /
+   ★ = 브랜드 금색은 지키되 **광을 죽인다**(3D 하이라이트·쨍한 노랑 → 낮춘 금색, 그림자 통일) */
+.hv3-cal { background: color-mix(in srgb, var(--accent) 40%, var(--surf));
+  color: var(--oncard); box-shadow: 0 8px 20px rgba(0,0,0,.16); }
+:root[data-theme="dark"] .hv3-cal { background: color-mix(in srgb, var(--drawer-a) 62%, var(--surf)); }
+.hv3-star { background: linear-gradient(165deg, #F2C63C 0%, #E3AC1E 58%, #CE9410 100%);
+  box-shadow: 0 8px 20px rgba(0,0,0,.16); }
+.hv3-fab { box-shadow: 0 8px 20px rgba(0,0,0,.20); }
+
+/* ── ⑤ 바탕 그라데이션 — 판판한 단색이 심심하다는 지시.
+   홈: 그림 → art-1 → surf → (아래로 갈수록 accent 를 살짝 머금은 깊은 톤).
+   하위 화면도 같은 세로 흐름을 은은하게. ⚠ 아래쪽이 진해져도 카드 대비는 안 깨진다 —
+   카드가 배경보다 훨씬 진해서(80% 농도) 면 구분이 유지된다. */
+#screen { background: linear-gradient(180deg,
+  var(--surf) 0%, color-mix(in srgb, var(--surf) 86%, var(--accent)) 100%); }
+#screen:has(.hv3-art) { background-image: linear-gradient(180deg,
+  var(--art-1) 0 196px,
+  color-mix(in srgb, var(--art-1) 55%, var(--surf)) 224px,
+  var(--surf) 330px,
+  color-mix(in srgb, var(--surf) 84%, var(--accent)) 100%); }
+:root[data-theme="dark"] #screen { background: linear-gradient(180deg,
+  var(--surf) 0%, color-mix(in srgb, var(--surf) 88%, var(--drawer-a)) 100%); }
+:root[data-theme="dark"] #screen:has(.hv3-art) { background-image: linear-gradient(180deg,
+  var(--art-1) 0 196px,
+  color-mix(in srgb, var(--art-1) 55%, var(--surf)) 224px,
+  var(--surf) 330px,
+  color-mix(in srgb, var(--surf) 86%, var(--drawer-a)) 100%); }
