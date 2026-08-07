@@ -2199,7 +2199,13 @@ const Screens = {
   tickets: () => {
     const c = cur();
     const kid = isChildToken() || S.childView || S.kidMode;
-    if (!c) return `${subHeader("내 티켓")}<p class="sub">아이를 등록하면 열려요.</p>`;
+    // 빈 상태는 상점과 **같은 문법**으로 — 한쪽만 맨 글씨면 덜 만든 화면으로 읽힌다
+    if (!c) return `${subHeader("내 티켓")}
+      <div class="ms-empty">
+        <b>아이를 등록하면 열려요</b>
+        <em>별도장으로 바꾼 것들이 여기에 티켓으로 쌓여요.</em>
+        <button class="btn-primary" onclick="location.hash='#register'">아이 등록하기</button>
+      </div>`;
     if (S.rewards === null) return `${subHeader("내 티켓")}<p class="sub">불러오는 중…</p>`;
     if (!S.rewards.length) return `${subHeader("내 티켓")}
       <div class="ms-empty">
@@ -2235,6 +2241,16 @@ const Screens = {
   /* ── 아이 모드 + 4자리 PIN (§0-6 · §5④) ─────────────────────────
      부모 폰을 같이 쓰는 저학년용. **들어갈 땐 안 묻고 나올 때만 묻는다.** */
   childmode: () => {
+    /* ⚠ 로그인 전에는 서버에 물어볼 수 없다 → `pinHas` 가 null 로 남는다.
+       그대로 두면 「확인하는 중…」이 **영영** 떠 있다(2026-08-07 에뮬 실기에서 잡음).
+       미션 화면에서 겪은 그 함정과 같다 — **안 오는 것과 없는 것은 다르다.**
+       없는 쪽을 정직하게 말하고 길을 준다. */
+    if (!S.loggedIn) return `${subHeader("아이 모드")}
+      <div class="ms-empty">
+        <b>가입하면 쓸 수 있어요</b>
+        <em>아이에게 폰을 넘길 때 서랍·설정을 숨기고, 돌아올 때만 네 자리 번호를 물어요.</em>
+        <button class="btn-primary" onclick="location.hash='#register'">가입하기</button>
+      </div>`;
     const has = S.pinHas;
     return `
     ${subHeader("아이 모드")}
@@ -2598,9 +2614,12 @@ const Screens = {
            눌러도 아무 일이 없는 버튼을 두면 그게 고장으로 읽힌다(§4 «안 되는 스위치 금지»). -->
     ${(() => {
       const list = S.missions;
-      if (list === null) return "";
-      const done = list.filter((x) => x.status === "done").length;
-      if (!list.length) {
+      /* ⚠ 아직 안 받아온 상태(null)라고 카드를 **지우면 안 된다.**
+         비회원(구경)은 `loadMissions` 가 아예 안 돌아 null 로 영영 남는다 →
+         2026-08-07 에뮬 실기에서 **비회원 홈 아래가 그대로 비어 있었다**(§6.4 가 지적한 그 모습).
+         «회원이 보는 진짜 홈 그대로»가 원칙이므로 빈 상태 카드를 그대로 보여 준다. */
+      const done = (list || []).filter((x) => x.status === "done").length;
+      if (!list || !list.length) {
         return `<button class="hv3-card" onclick="location.hash='#mission'">
           <div class="hv3-hdrow">
             <span class="ic"><i aria-hidden="true" class="ti ti-target"></i></span>
@@ -2623,15 +2642,15 @@ const Screens = {
 
     <!-- ⑦ 별도장 상점 진열대 — 모은 도장이 «무엇이 되는지»가 보여야 모을 이유가 생긴다 (§5③) -->
     ${(() => {
-      if (S.store === null) return "";
-      const can = S.store.filter((x) => x.can_buy).length;
+      // 미션 카드와 같은 이유로 null 이어도 그린다(비회원 홈이 비지 않게)
+      const can = (S.store || []).filter((x) => x.can_buy).length;
       return `<button class="hv3-card" onclick="location.hash='#store'">
         <div class="hv3-hdrow">
           <span class="ic"><i aria-hidden="true">★</i></span>
           <b>별도장 상점</b><em class="val">★${S.missionStars || 0}</em>
           <i aria-hidden="true" class="ti ti-chevron-right go"></i>
         </div>
-        ${!S.store.length
+        ${!(S.store || []).length
           ? `<p class="hv3-morep">무엇과 바꿀 수 있는지 정해 주세요</p>`
           : can
             ? `<p class="hv3-morep">지금 바꿀 수 있는 게 <b>${can}개</b> 있어요</p>`
