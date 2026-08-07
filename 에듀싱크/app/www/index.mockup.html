@@ -1,0 +1,61 @@
+<!doctype html>
+<!-- ═══════════════════════════════════════════════════════════════
+     🔴 목업 전용 진입점 — **실제 앱의 index.html 이 아니다.**
+
+     왜 있나: 루트 `.gitignore:76` 의 `*.html` 이 `app/www/index.html` 을 통째로 막고 있어
+     **앱 진입점이 git 에 한 번도 들어온 적이 없다.** 워커 소스와 같은 사고다(2026-08-07).
+     클론만으로는 앱을 띄울 수조차 없어서, 목업 검수용으로 최소 뼈대를 다시 세운 것이다.
+
+     ⚠ **PC 의 진짜 `index.html` 을 이걸로 덮지 말 것.** 저쪽에는 캐패시터 스크립트·
+        캐시버스터·스플래시 같은 것이 더 들어 있다. 진짜 파일을 git 에 넣기로 하면
+        그때 이 파일은 지운다.
+     ═══════════════════════════════════════════════════════════════ -->
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>아이서랍</title>
+<link rel="stylesheet" href="fonts/tabler-subset.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- 화면 본체 — App.render() 가 innerHTML 을 통째로 갈아끼운다.
+     ⚠ 아래 세 칸(#tabbar·#homefab·#biolock)은 **이 바깥**에 있어야 한다.
+       render() 가 매번 getElementById 로 잡아 classList 를 건드리는데,
+       #screen 안에 두면 다시 그릴 때마다 사라져 «null 의 classList» 로 죽는다. -->
+<div id="screen"></div>
+
+<!-- 하단 탭바 — 2026-08-03 홈 v3 에서 폐기됐다(showTabs = false && …).
+     마크업을 지우지 않고 남겨 둔 것은 되살릴 때 한 줄만 고치면 되게 하려던 것이다.
+     ⚠ render() 가 무조건 잡으므로 **지우면 앱이 안 뜬다.** -->
+<nav id="tabbar" class="tabbar hidden" aria-label="주요 메뉴">
+  <a href="#home"     data-tab="home"><i aria-hidden="true" class="ti ti-home"></i><span>오늘</span></a>
+  <a href="#calendar" data-tab="calendar"><i aria-hidden="true" class="ti ti-calendar"></i><span>달력</span></a>
+  <a href="#timeline" data-tab="timeline"><i aria-hidden="true" class="ti ti-archive"></i><span>서랍</span></a>
+  <a href="#mission"  data-tab="mission"><i aria-hidden="true" class="ti ti-target"></i><span>미션</span></a>
+  <a href="#mypage"   data-tab="mypage"><i aria-hidden="true" class="ti ti-user"></i><span>내정보</span></a>
+</nav>
+
+<!-- 상단 가운데 집버튼 — 탭바가 돌아온 뒤로 항상 숨김이다(render 가 매번 hidden 을 건다) -->
+<button id="homefab" class="hidden" onclick="App.goHome()" aria-label="오늘 화면으로">
+  <i aria-hidden="true" class="ti ti-home"></i>
+</button>
+
+<!-- 잠금 판 — 앱 잠금(전체) · 기록 잠금(서랍·업로드) 둘이 같은 판을 쓴다.
+     ⚠ `overlay` 클래스가 있어야 한다. `.hidden` 은 전역 규칙이 아니라
+       `#tabbar.hidden`·`#homefab.hidden`·`.overlay.hidden` 처럼 **짝이 있는 곳에만** 있다.
+       클래스를 빠뜨리면 render() 가 hidden 을 걸어도 안 숨어서 잠금판이 화면 아래 계속 남는다. -->
+<div id="biolock" class="overlay hidden">
+  <div class="lock-card">
+    <i aria-hidden="true" class="ti ti-lock lock-icon"></i>
+    <h2 id="biolock-t">앱 잠금</h2>
+    <p id="biolock-p">잠금을 풀어야 앱을 볼 수 있어요.</p>
+    <button class="btn-primary" onclick="App.bioUnlock()">잠금 풀기</button>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

@@ -72,3 +72,8 @@ d1_sync2.sql
 .DS_Store
 Thumbs.db
 *.apk
+
+# ── 목업 진입점 (2026-08-07) ───────────────────────────────
+# 루트 .gitignore 의 `*.html` 이 app/www/index.html 을 막고 있어 앱 진입점이 git 에 없다.
+# 목업 검수용으로 다시 세운 뼈대만 예외로 들인다. 진짜 index.html 은 아직 git 밖이다.
+!app/www/index.mockup.html
