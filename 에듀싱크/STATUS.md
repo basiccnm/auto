@@ -5,7 +5,7 @@
 > - **08-03 이전 상세**(테마 색 4차·홈 v4·§1~§7 개편 함정 기록)는
 >   `docs/_archive/STATUS-20260803.md` 로 넘겼다. 「왜 코드가 이렇게 생겼나」가 궁금할 때만 연다.
 >
-> 최종 갱신 **2026-08-07 (§6.1 카드 80% · §6.2 시계 개편 반영)**
+> 최종 갱신 **2026-08-07 밤 (배포 스크립트 결함 3건 수정 · 검증 4종 재현)**
 
 ## ① 지금 상태
 
@@ -82,7 +82,7 @@
 ### PC 에서 세 줄
 ```powershell
 cd C:\Users\hardb\Desktop\블로그수입관련
-git pull origin claude/status-md-reading-gkoeee
+git pull origin claude/deploy-validation-complete-h7ea4s
 cd 에듀싱크
 
 powershell -ExecutionPolicy Bypass -File scripts\deploy-0807.ps1          # 미리보기
@@ -90,6 +90,41 @@ powershell -ExecutionPolicy Bypass -File scripts\deploy-0807.ps1 -Apply   # A(DB
 powershell -ExecutionPolicy Bypass -File scripts\apk-emul.ps1             # C(APK+에뮬)
 ```
 자세한 건 `docs/배포점검-0807-보상시스템.md`.
+
+> 🔴 **받을 브랜치가 바뀌었다** — `claude/status-md-reading-gkoeee` 가 아니라
+> **`claude/deploy-validation-complete-h7ea4s`** 다(옛 브랜치 23커밋을 여기로 합쳤다).
+> 옛 브랜치에는 아래 스크립트 수정 3건이 없다.
+
+### 배포 스크립트 재검증 (2026-08-07 밤) — **결함 3건 고침**
+
+돌리기 전에 «시키는 대로 했을 때 사고가 나는 자리»부터 봤다. 세 개 나왔다.
+
+- 🐞 **A(DB)가 실패해도 B(워커)가 그대로 나갔다.** `$ErrorActionPreference="Stop"` 은
+  **외부 프로그램(npx·wrangler)의 종료코드를 안 본다.** 스크립트가 맨 위에 «순서 바꾸지 말 것 ·
+  워커가 먼저 나가면 500» 이라 적어 두고 정작 그 사고를 못 막고 있었다
+  → `MustSucceed` + **표 개수(6)를 스크립트가 직접 세서** 아니면 B 로 안 간다
+- 🐞 **`adb devices` 를 CRLF 로 못 읽었다.** 윈도우 adb 는 줄끝이 `\r\n` 인데 `` "`n" `` 으로만
+  잘라 각 줄에 `\r` 이 남고 정규식 `\tdevice$` 가 안 맞는다 → **에뮬이 붙어 있어도 «기기 없음»**.
+  에뮬 설정을 한참 뒤지게 되는 자리다 → `\r?\n` + TrimEnd
+- 🐞 **`adb install` 실패를 안 보고 앱을 띄웠다** → 옛 화면이 뜨는데 그걸 새 화면으로 알고
+  8항목을 점검하게 된다. 서명충돌·다운그레이드 안내와 함께 여기서 끊는다
+- ＋ **재실행용 `-Force`** — ALTER 에는 `IF NOT EXISTS` 가 없어 두 번째 실행은 반드시
+  «duplicate column» 으로 멈춘다. 그건 실패가 아니라 «이미 됐다» 는 뜻이라 B 로 넘어가야 한다
+- ＋ 미리보기에서 «표가 없다» 와 «DB 에 못 물어봤다» 를 갈랐다(둘 다 화면엔 아무것도 안 나온다)
+
+### 다시 돌려 확인한 것 (재현 절차 포함)
+
+- **마이그레이션 2개** — 임시 SQLite 1회차 **실패 0** · 표 6/6 · 인덱스 7 ·
+  `orders` +2컬럼 · `child_mode_config` +2컬럼. **2회차 실패 4건은 전부 ALTER**(예상대로).
+  **롤백 2개 통과 → 보상 표 0개**로 되돌아감
+- **배선·e2e 4종 전부 재현** — reward 8/8 · pin 8/8 · reroll+react 7/7 · **e2e 8항목 14/14**
+  ```bash
+  cd 에듀싱크 && PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm i --no-save playwright
+  (cd app/www && python3 -m http.server 8789 --bind 127.0.0.1 &)   # 하네스가 여기를 본다
+  node scripts/qa/reward-wire-test.mjs      # pin- / reroll-react- / e2e-8check 도 같은 식
+  ```
+  ⚠ 정적 서버만 띄우면 콘솔에 `favicon.ico 404` 가 하나 뜬다 — **앱 결함이 아니다**
+  (`app/www` 에 favicon 이 없어서다. 다른 3종은 404 를 걸러 내고 reward 판만 그대로 보여 준다)
 
 ### 에뮬에서 볼 것 — «되는지»가 아니라 «막히는지»
 1 진열대 · 2 올리기(껐다 켜도 남나) · 3 ★부족 흐림 · 4 바꾸기 · 5 바꿔줬어요 ·

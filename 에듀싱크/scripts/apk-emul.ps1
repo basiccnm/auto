@@ -52,7 +52,11 @@ Write-Host "  빌드 시각 $($apk.LastWriteTime)  크기 $([math]::Round($apk.L
 
 # ── 3. 에뮬 ──
 Say "3. 에뮬 확인"
-$devs = (adb devices) -split "`n" | Where-Object { $_ -match "\tdevice$" }
+# ⚠ 윈도우 adb.exe 는 줄끝이 CRLF 다. "`n" 으로만 자르면 각 줄 끝에 `r 이 남고,
+#   정규식의 $ 는 `r 앞에서 안 맞는다 → 에뮬이 붙어 있어도 «기기 없음» 으로 읽힌다.
+#   실제로 여기서 막히면 «에뮬 설정이 잘못됐나» 를 한참 뒤진다. 줄끝부터 털고 본다.
+$devs = (adb devices) -split "\r?\n" | ForEach-Object { $_.TrimEnd() } |
+        Where-Object { $_ -match "\tdevice$" }
 if (-not $devs) {
   Write-Host @"
   기기가 안 보입니다. LDPlayer 에서:
@@ -66,6 +70,17 @@ Write-Host "  $($devs -join ', ')"
 
 Say "4. 설치"
 adb install -r $apk.FullName
+# 설치가 실패했는데 앱을 띄우면 «옛 화면» 이 그대로 뜬다 - 그걸 새 화면으로 착각하면
+# 8항목 점검이 통째로 헛것이 된다. 여기서 끊는다.
+if ($LASTEXITCODE -ne 0) {
+  Write-Host @"
+  설치 실패입니다. 흔한 원인:
+    INSTALL_FAILED_UPDATE_INCOMPATIBLE  = 서명이 다른 판이 이미 깔려 있다
+        adb uninstall com.eduthink.app   후 다시 실행 (⚠ 앱 데이터가 지워집니다)
+    INSTALL_FAILED_VERSION_DOWNGRADE    = 기기에 더 새 판이 깔려 있다
+"@ -ForegroundColor Yellow
+  Die "설치가 안 됐으니 8항목 점검은 옛 화면을 보게 됩니다. 위를 먼저 해결하세요."
+}
 adb shell monkey -p com.eduthink.app -c android.intent.category.LAUNCHER 1 | Out-Null
 
 Write-Host @"
