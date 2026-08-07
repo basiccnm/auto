@@ -56,6 +56,11 @@
   </div>
 </div>
 
+<!-- 토스트 — `toast()` 가 매번 getElementById("toast") 로 잡는다(§10-2: alert 금지의 대체물).
+     ⚠ 이 칸이 없으면 toast() 가 «null 의 textContent» 로 죽고, **그걸 부른 동작까지 통째로 실패**한다.
+       2026-08-07 배선 검증에서 보너스 주기가 그렇게 멈췄다(앱 버그가 아니라 이 파일의 누락이었다). -->
+<div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
 <script src="app.js"></script>
 </body>
 </html>

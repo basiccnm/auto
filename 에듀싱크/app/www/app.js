@@ -1776,7 +1776,10 @@ const REWARD_STUB = {
     { verify_id: "v2", title: "책 20분 읽기", step1: "20분 채움", photo: true, bonus: 2 },
   ],
 };
-/* 목업 데이터를 처음 한 번만 붓는다. 배선할 땐 이 함수를 API 호출로 바꾸면 된다 */
+/* 🔴 **목업 서버(index.mockup.html) 전용.** 화면은 이걸 부르지 않는다 —
+   실제 데이터는 `App.loadReward()` 가 서버에서 받아온다(2026-08-07 배선 완료).
+   ⚠ 화면 안에서 부르면 서버가 못 왔을 때 **있지도 않은 상품**이 실사용자에게 보인다.
+     그건 빈 상태보다 나쁘다. 검수용으로 손수 부를 때만 쓴다. */
 function rewardSeed() {
   if (S.storeItems === null) S.storeItems = REWARD_STUB.store.map((x) => ({ ...x }));
   if (S.tickets === null)    S.tickets    = REWARD_STUB.tickets.map((x) => ({ ...x }));
@@ -2097,7 +2100,6 @@ const Screens = {
          여기서 보는 건 **질**이다 — 채점 상태·독서록을 보고 보너스를 얹는다.
          ⚠ 승인과 티켓을 **각각 화면으로 파지 않는다.** 따로 만들면 부모가
             «확인할 게 두 군데»가 되고, 하나만 보고 다 봤다고 여긴다. */
-      rewardSeed();
       const ask = S.verifyAsk || [];
       if (!ask.length) return "";
       return `
@@ -2171,8 +2173,10 @@ const Screens = {
         <em>모은 별로 무엇을 바꿀 수 있는지 여기서 정해요.</em>
         <button class="btn-primary" onclick="location.hash='#register'">아이 등록하기</button>
       </div>`;
-    rewardSeed();
-    const list = S.storeItems || [];
+    /* null = 아직 안 받아옴, [] = 서버가 «없다»고 답한 것. 둘을 갈라야
+       «불러오는 중»과 «올린 게 없음»이 안 섞인다(미션 화면과 같은 규칙). */
+    if (S.storeItems === null) return `${subHeader("별도장 상점", esc(c.nickname))}<p class="sub">불러오는 중…</p>`;
+    const list = S.storeItems;
     return `
     ${subHeader("별도장 상점", esc(c.nickname))}
     <p class="sub">모은 별로 <b>무엇을 바꿀 수 있는지</b> 정해요 · 지금 <b class="ms-star">★ ${S.missionStars}</b></p>
@@ -2180,7 +2184,9 @@ const Screens = {
     ${list.map((x) => `
       <div class="st-row">
         <span class="st-star">★${x.stars_required}</span>
-        <span class="st-nm"><b>${esc(x.title)}</b>${x.limit_type ? `<em>${limitText(x)}까지</em>` : `<em>횟수 제한 없음</em>`}</span>
+        <span class="st-nm"><b>${esc(x.title)}</b>${x.limit_type
+          ? `<em>${limitText(x)}까지${x.used ? ` · 이번에 ${x.used}번 썼어요` : ""}</em>`
+          : `<em>횟수 제한 없음</em>`}</span>
         <button class="st-del" onclick="App.storeDel('${x.item_id}')" aria-label="${esc(x.title)} 내리기">
           <i aria-hidden="true" class="ti ti-trash"></i></button>
       </div>`).join("")}
@@ -2220,9 +2226,12 @@ const Screens = {
      ⚠ 못 바꾸는 카드를 **지우지 않는다.** 흐리게 두고 «★n 더 모으면»을 붙인다 —
         목표가 보여야 별을 모을 이유가 생긴다. 지워 버리면 상점이 텅 빈 것처럼 보인다. */
   store: () => {
-    rewardSeed();
     const total = S.missionStars || 0;
-    const list = S.storeItems || [];
+    if (S.storeItems === null) return `
+    <a class="back" href="#childboard" aria-label="뒤로"><i aria-hidden="true" class="ti ti-chevron-left"></i></a>
+    <h1 class="kd2-h1">무엇으로 바꿀까?</h1>
+    <p class="kd2-sub">불러오는 중…</p>`;
+    const list = S.storeItems;
     const mine = (S.tickets || []).filter((t) => t.status === "requested");
     return `
     <a class="back" href="#childboard" aria-label="뒤로"><i aria-hidden="true" class="ti ti-chevron-left"></i></a>
@@ -2243,16 +2252,20 @@ const Screens = {
 
     <div class="sp-grid">
       ${list.map((x) => {
-        const enough = total >= x.stars_required;
-        const left = limitLeft(x);
-        const off = !enough || left <= 0;
+        /* 살 수 있는지는 **서버가 판정해서 내려준다**(can_buy·reason).
+           앱이 다시 계산하면 두 판정이 갈리는 순간부터 어느 쪽이 맞는지 알 수 없다 —
+           잔액·상한을 세는 곳은 서버 하나여야 한다(잔액을 star_ledger 하나로 세는 것과 같은 이유).
+           ⚠ 옛 응답(can_buy 없음)에도 죽지 않게 폴백만 남긴다. */
+        const enough = x.can_buy != null ? x.reason !== "stars" : total >= x.stars_required;
+        const inLimit = x.can_buy != null ? x.reason !== "limit" : limitLeft(x) > 0;
+        const off = x.can_buy != null ? !x.can_buy : (!enough || !inLimit);
         return `
         <button class="sp-card ${off ? "off" : ""}" ${off ? "disabled" : ""}
                 onclick="App.storeBuyOpen('${x.item_id}')">
           <span class="sp-star">★${x.stars_required}</span>
           <b class="sp-nm">${esc(x.title)}</b>
-          ${!enough ? `<em class="sp-need">★${x.stars_required - total} 더 모으면</em>`
-            : left <= 0 ? `<em class="sp-need">${limitText(x)} 다 썼어요</em>`
+          ${!enough ? `<em class="sp-need">★${Math.max(1, x.stars_required - total)} 더 모으면</em>`
+            : !inLimit ? `<em class="sp-need">${limitText(x)} 다 썼어요</em>`
             : `<em class="sp-ok">바꿀 수 있어요!</em>`}
         </button>`;
       }).join("")}
@@ -2265,7 +2278,6 @@ const Screens = {
      ⚠ 한 번 더 묻는다. 별은 모으는 데 며칠 걸리는데 잘못 누르면 그게 날아간다.
         되돌릴 수 없는 것 앞에서는 확인을 넣는다(미션 리롤과 같은 규칙). */
   storebuy: () => {
-    rewardSeed();
     const x = (S.storeItems || []).find((v) => v.item_id === S.storeBuy);
     if (!x) return Screens.store();
     const total = S.missionStars || 0;
@@ -2278,7 +2290,8 @@ const Screens = {
       <div class="bw-calc">
         <span>지금 ★${total}</span><i aria-hidden="true" class="ti ti-chevron-right"></i><span>바꾸면 ★${total - x.stars_required}</span>
       </div>
-      <button class="btn-primary bw-go" onclick="App.storeBuyGo()">★${x.stars_required}로 바꾸기</button>
+      <button class="btn-primary bw-go" onclick="App.storeBuyGo()" ${S._rewardBusy ? "disabled" : ""}>
+        ${S._rewardBusy ? "바꾸는 중…" : `★${x.stars_required}로 바꾸기`}</button>
       <button class="msc-sub" onclick="location.hash='#store'">더 볼래요</button>
     </div>`;
   },
@@ -6692,6 +6705,9 @@ const App = {
     /* 미션은 **홈에서도** 받아온다 — 홈 카드에 「오늘 2/3」이 떠야 부모가 누를 이유가 생긴다.
        미션·자녀 화면에서도 같은 값을 쓴다. 한 번 받아오면 다시 안 부른다(force 로만 갱신). */
     if (["home", "mission", "childview"].includes(name) && S.loggedIn && S.missions === null) this.loadMissions();
+    /* 보상 화면에 들어갈 때 받아온다. 미션 화면도 «확인해 주세요»·«티켓»을 그리므로 포함 */
+    if (["mission", "storeset", "store", "storebuy"].includes(name) && S.loggedIn
+        && (S.storeItems === null || S.tickets === null)) this.loadReward();
     if (name === "report" && S.loggedIn) this.loadReport();
     // 요금은 자녀마다 다르다(둘째부터 싸다) → 이용권 화면에 들어올 때 그 자녀 기준으로 받아온다
     if (name === "pay" && S.loggedIn && this._planFor !== cur()?.server_id) {
@@ -7727,9 +7743,9 @@ const App = {
         앱도 `S.missionStars` 하나만 만진다. */
 
   // ── 부모: 진열대 ──
-  storeAddOpen()  { rewardSeed(); S.storeAdd = true;  this.render(); },
+  storeAddOpen()  { S.storeAdd = true;  this.render(); },
   storeAddClose() { S.storeAdd = false; this.render(); },
-  storeAddSave() {
+  async storeAddSave() {
     const t = (document.getElementById("stTitle")?.value || "").trim();
     const n = parseInt(document.getElementById("stStars")?.value || "0", 10);
     /* ⚠ 빈 이름·0개짜리를 막는다. 서버도 VALIDATION 으로 막지만 화면이 먼저 말해줘야
@@ -7737,57 +7753,72 @@ const App = {
     if (!t)        return toast("무엇을 줄지 적어 주세요");
     if (!(n >= 1)) return toast("필요한 별은 1개부터예요");
     const [lt, lc] = (document.getElementById("stLimit")?.value || "").split(":");
-    // api("POST", `/children/${cur().id}/store`, { title:t, stars_required:n, limit_type:lt, limit_count:+lc })
-    S.storeItems = [...(S.storeItems || []),
-      { item_id: "n" + Date.now(), title: t, stars_required: n,
-        limit_type: lt || null, limit_count: lc ? +lc : null, used: 0 }];
+    const c = cur();
+    if (!c?.server_id) return toast("아이를 먼저 등록해 주세요");
+    if (S._rewardBusy) return;
+    S._rewardBusy = true; this.render();
+    const r = await api(`/children/${c.server_id}/store`, { method: "POST",
+      body: { title: t, stars_required: n, limit_type: lt || null, limit_count: lc ? +lc : null } });
+    S._rewardBusy = false;
+    if (!r?.ok) return this._rewardErr(r, "올리지 못했어요");
     S.storeAdd = false;
-    this.render();
+    await this.loadReward(true);
     toast(`${t} 올렸어요`);
   },
-  storeDel(id) {
-    // api("DELETE", `/store/${id}`)
-    S.storeItems = (S.storeItems || []).filter((x) => x.item_id !== id);
-    this.render();
+  async storeDel(id) {
+    const r = await api(`/store/${encodeURIComponent(id)}`, { method: "DELETE" });
+    if (!r?.ok) return this._rewardErr(r, "내리지 못했어요");
+    await this.loadReward(true);
   },
 
   // ── 아이: 바꾸기 ──
   storeBuyOpen(id) { S.storeBuy = id; location.hash = "#storebuy"; },
-  storeBuyGo() {
+  async storeBuyGo() {
     const x = (S.storeItems || []).find((v) => v.item_id === S.storeBuy);
-    if (!x) return;
+    const c = cur();
+    if (!x || !c?.server_id) return;
+    if (S._rewardBusy) return;
+    S._rewardBusy = true; this.render();
     /* ⚠ 잔액·상한은 **서버가 센다.** 화면에서 버튼을 가리는 것으로 끝내면 우회된다.
-          배선 뒤엔 서버가 돌려주는 LIMIT_EXCEEDED·잔액부족을 사람 말로 보여줄 것. */
-    if ((S.missionStars || 0) < x.stars_required) return toast("별이 모자라요");
-    // api("POST", `/children/${cur().id}/store/${x.item_id}/buy`) → { stars, reward_order_id }
-    S.missionStars = (S.missionStars || 0) - x.stars_required;
-    x.used = (x.used || 0) + 1;
-    S.tickets = [{ reward_order_id: "n" + Date.now(), item_title: x.title,
-                   stars_spent: x.stars_required, status: "requested", created_at: "방금" },
-                 ...(S.tickets || [])];
+          서버가 돌려주는 LIMIT_EXCEEDED·VALIDATION 을 사람 말 그대로 보여준다. */
+    const r = await api(`/children/${c.server_id}/store/${encodeURIComponent(x.item_id)}/buy`,
+      { method: "POST" });
+    S._rewardBusy = false;
+    if (!r?.ok) { this.render(); return this._rewardErr(r, "바꾸지 못했어요"); }
+    if (typeof r.data?.stars_left === "number") S.missionStars = r.data.stars_left;
     S.storeBuy = null;
     location.hash = "#store";
+    await this.loadReward(true);
     toast("🎟️ 티켓으로 바꿨어요!");
   },
 
   // ── 부모: 티켓 바꿔주기 · 2차 보너스 ──
-  ticketGive(id) {
-    // api("POST", `/rewards/${id}/fulfill`)   ← 서버 이름은 fulfill, 화면 말은 «바꿔줬어요»
-    const t = (S.tickets || []).find((v) => v.reward_order_id === id);
-    if (t) t.status = "fulfilled";
-    this.render();
+  async ticketGive(id) {
+    // 서버 이름은 fulfill, 화면 말은 «바꿔줬어요» (말 규칙은 화면의 일이다)
+    const r = await api(`/rewards/${encodeURIComponent(id)}/fulfill`, { method: "POST" });
+    if (!r?.ok) return this._rewardErr(r, "처리하지 못했어요");
+    await this.loadReward(true);
     toast("아이 화면에 «받았어요»로 바뀌었어요");
   },
-  verifyBonus(id, bonus) {
-    // api("POST", `/verify/${id}/bonus`, { bonus })   ← 두 번째 승인은 DUPLICATE 로 막힌다
-    S.verifyAsk = (S.verifyAsk || []).filter((v) => v.verify_id !== id);
-    S.missionStars = (S.missionStars || 0) + bonus;
-    this.render();
+  async verifyBonus(id, bonus) {
+    const r = await api(`/verify/${encodeURIComponent(id)}/bonus`, { method: "POST", body: { bonus } });
+    if (!r?.ok) return this._rewardErr(r, "보너스를 주지 못했어요");   // 두 번째 승인은 DUPLICATE 로 막힌다
+    if (typeof r.data?.stars === "number") S.missionStars = r.data.stars;
+    await this.loadReward(true);
     toast(`보너스 ★${bonus} 줬어요`);
   },
+  /* «이번엔 그냥» — 서버에 지우는 길이 없다(검증 로그는 이력이라 남긴다).
+     화면에서만 접어 둔다. 다시 받아오면 도로 보이는 게 맞다 — 부모가 아직 «안 준» 것이니. */
   verifySkip(id) {
     S.verifyAsk = (S.verifyAsk || []).filter((v) => v.verify_id !== id);
     this.render();
+  },
+  /* 보상 API 오류를 사람 말로. 서버가 준 message 가 있으면 그걸 그대로 쓴다 —
+     «도장이 3개 더 필요해요» 처럼 서버가 이미 아이 눈높이로 써 두었다. */
+  _rewardErr(r, fallback) {
+    const e = r?.error;
+    if (e?.code === "NETWORK") return toast("인터넷 연결을 확인해 주세요");
+    toast(e?.message || fallback);
   },
 
   // ── 아이 모드 + PIN (§4④) ──
@@ -8319,6 +8350,41 @@ const App = {
   /* ⚠ 앱이 켜지는 순간엔 아직 자녀를 못 받아왔다. 그때 «미션 없음»으로 못 박으면
      다음에 다시 안 부른다 — 홈 카드가 영영 「오늘 미션 없음」으로 남는다(2026-08-01 실측).
      **못 묻는 상태와 물어봤는데 없는 상태는 다르다.** 못 묻겠으면 null 로 두고 그냥 돌아간다. */
+  /* ═══ 보상(상점·티켓·확인해주세요) 로딩 ═══════════════════════════════
+     loadMissions 와 같은 문법이다 — 토큰·server_id 없으면 조용히 넘어가고,
+     통신이 끊기면 null 로 두어 다음 그리기에서 다시 묻는다.
+     ⚠ 셋을 한 함수로 묶었다. 화면 하나가 세 값을 같이 쓰는데 따로 부르면
+       «상점은 왔고 티켓은 안 온» 중간 상태가 화면에 그대로 보인다.
+     ⚠ 서버가 못 오면 REWARD_STUB 를 붓지 않는다 — 목업 데이터가 실사용자에게
+       «있지도 않은 상품»으로 보이면 그게 더 나쁘다. 빈 상태가 정직하다. */
+  async loadReward(force) {
+    const c = cur();
+    if (!TOKENS.access || !c?.server_id) return;
+    if (!force && S.storeItems !== null && S.tickets !== null) return;
+    if (S._rewardBusy) return;
+    S._rewardBusy = true;
+    const kid = isChildToken();
+    try {
+      /* 아이는 «확인해 주세요»를 볼 일이 없다(부모 전용). 안 부르면 403 도 안 난다 */
+      const reqs = [
+        api(`/children/${c.server_id}/store`),
+        api(`/children/${c.server_id}/rewards`),
+        kid ? null : api(`/children/${c.server_id}/verify?pending=1`),
+      ];
+      const [rs, rt, rv] = await Promise.all(reqs.map((x) => x || Promise.resolve(null)));
+      if (rs?.ok) { S.storeItems = rs.data.items || []; if (typeof rs.data.stars === "number") S.missionStars = rs.data.stars; }
+      else if (S.storeItems === null) S.storeItems = [];
+      if (rt?.ok) { S.tickets = rt.data.items || []; if (typeof rt.data.stars === "number") S.missionStars = rt.data.stars; }
+      else if (S.tickets === null) S.tickets = [];
+      if (!kid) {
+        if (rv?.ok) S.verifyAsk = rv.data.items || [];
+        else if (S.verifyAsk === null) S.verifyAsk = [];
+      } else if (S.verifyAsk === null) S.verifyAsk = [];
+    } catch (_) { /* 끊긴 것뿐 — null 로 두고 다음에 다시 */ }
+    S._rewardBusy = false;
+    this.render();
+  },
+
   async loadMissions(force) {
     const c = cur();
     if (!TOKENS.access || !c?.server_id) return;        // 아직 못 묻는다 → 다음 그리기에서 다시
