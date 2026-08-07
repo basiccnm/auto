@@ -5451,3 +5451,141 @@ body:has(#tabbar.hidden) #screen:has(.ib),
   color-mix(in srgb, var(--art-1) 55%, var(--surf)) 224px,
   var(--surf) 330px,
   color-mix(in srgb, var(--surf) 86%, var(--drawer-a)) 100%); }
+
+/* ═══ 파랑 고정·흰 카드 잔재 청산 (2026-08-07 대표님 지시) ═══════════════════
+   «파란색 카드나 버튼은 없애, 흰색 카드도» — 범인은 셋이었다:
+   ① .btn-primary(3816) — 파랑 «고정» 그라데이션(#2A5FA8→#1B4B8F). 테마가 뭐든 파랬다
+   ② .msc.ms-wait — 파랑 고정(#2F66B5→#1B4B8F)
+   ③ .msc·.ms-mkbtn — var(--card) = 순백
+   전부 그 테마의 accent 계열로 바꾼다. ⚠ 색을 새로 만들지 않는다 — accent 에서 파생만. */
+
+/* ① 주 버튼 — 파랑 대신 그 테마의 accent 로 같은 입체감을 만든다 */
+.btn-primary {
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--accent) 84%, #FFFFFF) 0%,
+    var(--accent) 55%,
+    color-mix(in srgb, var(--accent) 84%, #000000) 100%);
+  color: var(--on-accent);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.24), 0 2px 6px rgba(0,0,0,.16),
+              0 12px 24px -10px rgba(0,0,0,.28);
+}
+/* 카드(accent 80%) «안»의 주 버튼 — 같은 핏줄이라 묻힐 수 있어 흰 윤곽 한 겹으로 갈라 준다 */
+.st-new .btn-primary, .rw-btns .btn-primary, .st-btns .btn-primary {
+  box-shadow: inset 0 0 0 1.5px rgba(255,255,255,.30), 0 2px 6px rgba(0,0,0,.16); }
+
+/* ② ③ 미션 카드 — 흰 카드를 버리고 확정된 카드 문법(§6.1 accent 80%)을 그대로 입는다 */
+.msc { background: color-mix(in srgb, var(--accent) 80%, #43464C); color: var(--oncard); }
+:root[data-theme="dark"] .msc { background: color-mix(in srgb, var(--drawer-a) 80%, #43464C); }
+.msc .msc-no { background: rgba(255,255,255,.16); color: var(--oncard); }
+.msc .msc-tag { color: var(--oncard-3); }
+/* 확인 기다림 — 파랑 대신 **원색 accent** 로 한 단 더 진하게(대기 = 제일 눈에 띄어야 할 줄) */
+.msc.ms-wait { background: var(--accent); }
+:root[data-theme="dark"] .msc.ms-wait { background: var(--drawer-a); }
+.msc.ms-wait > b { color: var(--oncard); }
+.msc.ms-wait .msc-tag { background: rgba(255,255,255,.92); color: #6B4A00; }
+/* 완료 — 눅인 톤 + 초록 체크는 유지(뜻이 있는 색이다) */
+.msc.ms-done { background: color-mix(in srgb, var(--accent) 34%, var(--surf)); box-shadow: none; }
+:root[data-theme="dark"] .msc.ms-done { background: color-mix(in srgb, var(--drawer-a) 40%, var(--surf)); }
+.msc.ms-done > b { color: color-mix(in srgb, var(--ink) 55%, transparent); }
+
+/* «만들기» 점선 버튼 — 흰 카드 대신 카드 톤 + 흰 점선 */
+.ms-mkbtn { background: color-mix(in srgb, var(--accent) 80%, #43464C);
+  border-color: rgba(255,255,255,.34); color: var(--oncard); }
+:root[data-theme="dark"] .ms-mkbtn { background: color-mix(in srgb, var(--drawer-a) 80%, #43464C); }
+.ms-mkbtn i { color: var(--oncard-2); }
+.ms-mkbtn b { color: var(--oncard); }
+.ms-mkbtn em { color: var(--oncard-3); }
+
+/* 사진 자리 — 흰 판 대신 배경 톤(사진이 오면 사진이 덮는다) */
+.msc-photo { background: color-mix(in srgb, var(--surf) 72%, #FFFFFF); }
+:root[data-theme="dark"] .msc-photo { background: color-mix(in srgb, var(--surf) 80%, #000000); }
+
+/* ═══ 아이 화면(키드 테마) 갈래 (2026-08-07) ═══════════════════════════════
+   🔴 applyKidTheme 이 --accent 를 --k(밝은 파스텔)로 바꿔 끼운다 — 다크와 «같은 함정»이
+   아이 쪽에서 또 뒤집혔다. 어두운 카드 공식(accent 80% + 미색 글씨)이 밝은 파스텔 카드가
+   되어 미색 글씨가 1.7~2.4:1 로 무너졌다(감사에서 잡음).
+   아이 화면은 **기존 아이 문법**대로 간다 — 밝은 파스텔 카드 + 진한 글씨(kd3 카드와 같은 생각). */
+:root[data-kid-theme] .sp-card, :root[data-kid-theme] .tk-mine,
+:root[data-kid-theme] .kb-shop, :root[data-kid-theme] .pin-box,
+:root[data-kid-theme] .st-none, :root[data-kid-theme] .bw-calc {
+  background: color-mix(in srgb, var(--k) 24%, var(--surf)); }
+:root[data-kid-theme] .sp-card.off { background: color-mix(in srgb, var(--k) 10%, var(--surf)); }
+:root[data-kid-theme] .sp-nm, :root[data-kid-theme] .tk-h, :root[data-kid-theme] .tk-row b,
+:root[data-kid-theme] .kb-shopt b, :root[data-kid-theme] .pin-h,
+:root[data-kid-theme] .bw-h, :root[data-kid-theme] .bw-calc, :root[data-kid-theme] .st-none {
+  color: var(--ink); }
+:root[data-kid-theme] .sp-need, :root[data-kid-theme] .tk-hint,
+:root[data-kid-theme] .kb-shopt em, :root[data-kid-theme] .pin-p,
+:root[data-kid-theme] .bw-p, :root[data-kid-theme] .st-none em,
+:root[data-kid-theme] .kb-shop > .ti, :root[data-kid-theme] .bw-calc .ti,
+:root[data-kid-theme] .sp-card.off .sp-nm { color: var(--sub-ink, var(--muted)); }
+/* 포인트는 k 계열 유지 — 단 «글씨»는 진한 k-ink 로 (밝은 k 원색은 면에만) */
+:root[data-kid-theme] .sp-ok { color: var(--k-ink, var(--k)); }
+:root[data-kid-theme] .bw-big { background: var(--k-soft); color: var(--k-ink, var(--k)); }
+:root[data-kid-theme] .pin-k { background: rgba(0,0,0,.06); color: var(--ink); }
+:root[data-kid-theme] .pin-k.ghost { background: transparent; color: var(--sub-ink, var(--muted)); }
+:root[data-kid-theme] .pin-dots i { background: rgba(0,0,0,.14); }
+:root[data-kid-theme] .pin-dots i.on { background: var(--k-ink, var(--k)); }
+/* 오류 글씨 — 키드 테마가 --danger 를 --k 로 바꿔 파스텔이 된다(자녀 화면엔 삭제가 없다는 전제).
+   PIN 오류는 진짜 오류라 원래 danger 값을 박아 쓴다 */
+:root[data-kid-theme] .pin-err { color: #A8322F; }
+
+/* ── 감사로 잡은 진짜 결함 2건 + k 변수 폴백 (2026-08-07) ─────────────────
+   ① sp-card.off — 중간 톤(accent 44%) 위 미색 글씨가 2.4:1. 면을 옅게 내리고 글씨는 진하게
+   ② pin-err — 어두운 카드 위 진빨강(#A8322F)이 1.5:1. 흰빛을 섞어 밝은 경고색으로
+   ③ 자녀 화면인데 키드 테마를 아직 안 골랐으면 --k 가 «빈 값»이라 별 알약이 투명해진다
+      → 부모 테마에서 파생한 폴백을 깔아 둔다(키드 테마를 고르면 그쪽이 이긴다) */
+:root { --k: var(--accent); --k-soft: color-mix(in srgb, var(--accent) 14%, var(--surf));
+        --k-ink: var(--accent-ink); }
+.sp-card.off { background: color-mix(in srgb, var(--accent) 16%, var(--surf)); }
+:root[data-theme="dark"] .sp-card.off { background: color-mix(in srgb, var(--drawer-a) 30%, var(--surf)); }
+.sp-card.off .sp-nm  { color: var(--sub-ink, var(--ink)); }
+.sp-card.off .sp-need { color: var(--sub-ink, var(--ink)); }
+.sp-card.off .sp-star { background: transparent; border: 1px solid color-mix(in srgb, var(--ink) 25%, transparent);
+  color: var(--sub-ink, var(--ink)); }
+:root[data-theme="dark"] .sp-card.off .sp-nm,
+:root[data-theme="dark"] .sp-card.off .sp-need { color: rgba(255,255,255,.80); }
+.pin-err { color: color-mix(in srgb, #FFFFFF 72%, var(--danger)); }
+:root[data-kid-theme] .pin-err { color: #A8322F; }   /* 키드 카드(밝은 파스텔)에선 도로 진하게 */
+
+/* 감사 마감 조임 (2026-08-07) — 경계값 5건 */
+:root { --k-ink: color-mix(in srgb, var(--accent) 70%, #000000); }  /* accent-ink 는 accent 와 같은 값이라 «잉크» 구실을 못 한다 */
+.sp-card.off .sp-need { color: var(--ink); }
+.bw-p { color: var(--sub-ink, var(--ink)); }
+/* bw-calc — 카드 목록에서 빠져 옛 --card-a(중간 톤)가 남아 있었다. 같은 카드 문법으로 */
+.bw-calc { background: color-mix(in srgb, var(--accent) 80%, #43464C); }
+:root[data-theme="dark"] .bw-calc { background: color-mix(in srgb, var(--drawer-a) 80%, #43464C); }
+.tk-st { color: var(--k-ink); }
+.pin-err { color: color-mix(in srgb, #FFFFFF 80%, var(--danger)); }
+/* 마감 조임 2차 — 남은 4건 전부 «옅은 면 위 중간 글씨» 계열 */
+.sp-card.off .sp-nm { color: var(--ink); }
+.sp-card.off .sp-star { color: var(--ink); border-color: color-mix(in srgb, var(--ink) 35%, transparent); }
+.sp-star { color: var(--k-ink); }
+.bw-p { color: var(--ink); }
+:root[data-theme="dark"] .tk-st { background: rgba(255,255,255,.15); color: rgba(255,255,255,.88); }
+:root[data-theme="dark"] .sp-star { background: rgba(255,255,255,.15); color: rgba(255,255,255,.88); }
+:root[data-theme="dark"] .sp-ok { color: rgba(255,255,255,.88); }
+/* 마감 조임 3차 — 미션 카드 상태별 글씨 (완료 카드는 «옅은 면»이라 미색 규칙이 뒤집힌다) */
+.msc.ms-done > b { color: color-mix(in srgb, var(--ink) 72%, transparent); }
+.msc.ms-done .msc-tag { color: #1E6B49; }        /* 초록 «완료»는 뜻 있는 색 — 옅은 면용으로 진하게 */
+.msc.ms-skip .msc-tag { color: var(--sub-ink, var(--ink)); }
+.rw-sub { color: var(--sub-ink, var(--ink)); }
+/* sp-ok — k 폴백이 accent 라 카드(accent80)와 «같은 색»이 되어 1.0:1 로 사라졌다 */
+.sp-ok { color: var(--oncard); }
+:root[data-kid-theme] .sp-ok { color: var(--k-ink); }
+/* 마감 조임 4차 — 완료 카드는 «중간 톤»이 함정이었다. 글씨를 더 조이는 대신 면을 옅게 */
+.msc.ms-done { background: color-mix(in srgb, var(--accent) 13%, var(--surf)); }
+:root[data-theme="dark"] .msc.ms-done { background: color-mix(in srgb, var(--drawer-a) 22%, var(--surf)); }
+.msc.ms-done > b { color: var(--sub-ink, var(--ink)); }
+.msc.ms-done .msc-no { background: #2F9E6E; color: #FFF; }
+:root[data-theme="dark"] .msc.ms-done > b { color: rgba(255,255,255,.78); }
+:root[data-theme="dark"] .msc.ms-done .msc-tag { color: #6FD3A8; }
+.rw-sub { color: var(--ink); }
+/* 마감 조임 5차(끝) — 완료 카드는 거의 배경까지 내리고 글씨는 잉크로 통일 */
+.msc.ms-done { background: color-mix(in srgb, var(--accent) 6%, var(--surf)); color: var(--sub-ink, var(--ink)); }
+.msc.ms-done > b { color: var(--sub-ink, var(--ink)); }
+.msc.ms-done .msc-tag { color: #17583C; }
+:root[data-theme="dark"] .msc.ms-done { background: color-mix(in srgb, var(--drawer-a) 14%, var(--surf)); color: rgba(255,255,255,.80); }
+/* 마감 조임 6차 — 마지막 2건 */
+.st-cancel { background: rgba(255,255,255,.14); color: var(--oncard); }   /* card-b(밝음)가 남아 미색 글씨를 지웠다 */
+.msc.ms-wait .msc-tag { background: #FFF6DF; color: #6B4A00; }            /* 반투명(.92)이라 감사가 못 재던 것 — 불투명으로 */
