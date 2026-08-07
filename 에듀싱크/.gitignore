@@ -72,3 +72,6 @@ d1_sync2.sql
 .DS_Store
 Thumbs.db
 *.apk
+
+# 색상 파생 데이터(진짜 인증 토큰 아님) — *token*.json 규칙에 이름만 우연히 걸린다
+!scripts/theme/theme_tokens.json
