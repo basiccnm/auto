@@ -72,13 +72,32 @@
   투명이라 엉뚱한 면과 비교(색 스톱 중간값을 읽어야 한다) ③알파 .92 면은 «불투명»으로 안 잡힌다
 - 검증: **상점 흐름 288조합 + 홈 36조합 위반 0건**
 
-## ② 진행 중
+## ② 진행 중 — 🔴 PC 세션에서 이어받을 것 (2026-08-07)
 
-- **🔴 실서버 적용은 대표님 PC 에서 해야 한다.** 코드탭 컨테이너에 Cloudflare 자격증명이 없다
-  (확인함 — `CLOUDFLARE_API_TOKEN` 없음 · `~/.wrangler/config` 없음 · Cloudflare MCP 401).
-  순서·명령·점검표는 **`docs/배포점검-0807-보상시스템.md`** 에 그대로 적어 뒀다.
-  A(DB 마이그레이션 2개) → B(워커) → C(앱) 순. 되돌리기도 같이 있다.
-- 그 전까지 실기기에서는 보상·PIN·리롤이 안 돈다(표가 없어 서버가 500 을 낸다)
+**코드·서버 작업은 전부 끝났고 푸시됐다.** 남은 건 «실서버 적용 + 에뮬 확인» 셋뿐이고,
+그건 PC 에서만 된다. 클라우드 코드탭은 Cloudflare 자격증명도 없고 에뮬에도 못 닿는다
+(실측: `CLOUDFLARE_API_TOKEN` 없음 · Cloudflare MCP 401 · adb 설치해도 5555 직결 막힘 ·
+ 안드로이드 SDK 는 프록시가 dl.google.com 을 403 으로 막는다).
+
+### PC 에서 세 줄
+```powershell
+cd C:\Users\hardb\Desktop\블로그수입관련
+git pull origin claude/status-md-reading-gkoeee
+cd 에듀싱크
+
+powershell -ExecutionPolicy Bypass -File scripts\deploy-0807.ps1          # 미리보기
+powershell -ExecutionPolicy Bypass -File scripts\deploy-0807.ps1 -Apply   # A(DB)+B(워커)
+powershell -ExecutionPolicy Bypass -File scripts\apk-emul.ps1             # C(APK+에뮬)
+```
+자세한 건 `docs/배포점검-0807-보상시스템.md`.
+
+### 에뮬에서 볼 것 — «되는지»가 아니라 «막히는지»
+1 진열대 · 2 올리기(껐다 켜도 남나) · 3 ★부족 흐림 · 4 바꾸기 · 5 바꿔줬어요 ·
+**6 리롤 2회차 차단** · **7 PIN 5회 잠금** · 8 칭찬
+→ 이 8항목은 헤드리스로 **14/14 통과**시켜 뒀다(`scripts/qa/e2e-8check.mjs`).
+   에뮬에선 «진짜 기기에서도 같은가»만 보면 된다.
+
+⚠ 에뮬 웹뷰 DOM 을 읽어야 하면 `공통모듈/webview_dom.py` (예전 세션들이 쓰던 것).
 
 ## ③ 다음 할 일
 
