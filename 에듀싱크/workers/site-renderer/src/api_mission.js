@@ -13,6 +13,8 @@
 
 import { apiOk, apiList, apiErr, readJson } from "./api_core.js";
 import { resolveAuth } from "./auth_core.js";
+// 스타코인은 star_core 한 곳에서만 다룬다 — 리밋을 여기저기서 세면 반드시 어긋난다(2026-08-08)
+import { grantStars, spendStars, starsOf as coinBalance, coinState, BONUS } from "./star_core.js";
 
 const DAY_PICK = 3;              // 하루에 주는 개수
 const PHOTO_KEEP_DAYS = 7;       // 미션 사진 보관 기간. 서랍(기록)과 **별개**다
@@ -116,14 +118,6 @@ async function ensureToday(db, child) {
   return todayRows(db, child.id, ymd);
 }
 
-async function starsOf(db, childId) {
-  const r = await db.prepare("SELECT COALESCE(SUM(delta),0) n FROM star_ledger WHERE child_id = ?").bind(childId).first();
-  return (r && r.n) || 0;
-}
-async function addStars(db, childId, delta, reason) {
-  await db.prepare("INSERT INTO star_ledger (child_id, delta, reason, created_at) VALUES (?, ?, ?, ?)")
-    .bind(childId, delta, reason, nowIso()).run();
-}
 
 // ── GET /api/v1/children/{id}/missions ──────────────────────
 async function getToday(request, db, env, childId) {
@@ -134,7 +128,7 @@ async function getToday(request, db, env, childId) {
   const waiting = rows.filter((r) => r.status === "waiting").length;
   return apiList(rows.map(shape), {
     ymd: ymdKst(), band: bandOf(child.grade), season: seasonOf(),
-    done, waiting, total: rows.length, stars: await starsOf(db, child.id), viewer: isChild ? "child" : "parent",
+    done, waiting, total: rows.length, stars: await coinBalance(db, child.id), viewer: isChild ? "child" : "parent",
   });
 }
 
@@ -203,7 +197,7 @@ async function reroll(request, db, env, childId) {
   }
   const fresh = await todayRows(db, child.id, ymd);
   return apiList(fresh.map(shape), {
-    ymd, rerolled: 1, stars: await starsOf(db, child.id),
+    ymd, rerolled: 1, stars: await coinBalance(db, child.id),
     done: fresh.filter((r) => r.status === "done").length,
     waiting: fresh.filter((r) => r.status === "waiting").length,
   });
@@ -389,8 +383,8 @@ export async function mealRate(request, db, auth) {
   }
 
   // 즉시판정 — 사진도 기다림도 없다. 별은 원장에 적어야 집계(starsOf)에 잡힌다.
-  await addStars(db, auth.childId, 1, "meal-rate");
-  return apiOk({ got: 1, total_stars: await starsOf(db, auth.childId), ymd });
+  await grantStars(db, auth.childId, 1, "meal-rate");
+  return apiOk({ got: 1, total_stars: await coinBalance(db, auth.childId), ymd });
 }
 
 /* ── POST /api/v1/missions/play-log — 오늘 누구랑 놀았어(2026-08-02) ──
@@ -423,8 +417,8 @@ export async function playLog(request, db, auth) {
       .bind(auth.childId, ymd, name.slice(0, 10), now).run();
   }
 
-  await addStars(db, auth.childId, 1, "play-log");
-  return apiOk({ got: 1, total_stars: await starsOf(db, auth.childId), ymd });
+  await grantStars(db, auth.childId, 1, "play-log");
+  return apiOk({ got: 1, total_stars: await coinBalance(db, auth.childId), ymd });
 }
 
 /* ── POST /api/v1/missions/subject-log — 오늘 재밌었던 과목(2026-08-02) ──
@@ -446,8 +440,8 @@ export async function subjectLog(request, db, auth) {
     .bind(auth.childId, ymd, subject, now).run();
   if (!ins.meta.changes) return apiErr("VALIDATION", { ymd: "오늘은 이미 골랐어요" });
 
-  await addStars(db, auth.childId, 1, "subject-log");
-  return apiOk({ got: 1, total_stars: await starsOf(db, auth.childId), ymd });
+  await grantStars(db, auth.childId, 1, "subject-log");
+  return apiOk({ got: 1, total_stars: await coinBalance(db, auth.childId), ymd });
 }
 
 // ── POST /api/v1/missions/{id}/photo — 사진 제출 → 대기 ─────
@@ -514,8 +508,8 @@ async function approve(request, db, env, id) {
   if (a.status !== "waiting") return apiErr("VALIDATION", { status: a.status }, "확인할 수 없는 상태예요.");
   await db.prepare("UPDATE mission_assign SET status='done', decided_at=?, stars=? WHERE id=?")
     .bind(nowIso(), a.mstars, id).run();
-  await addStars(db, a.child_id, a.mstars, "mission:" + a.mission_code);
-  return apiOk({ status: "done", got: a.mstars, stars: await starsOf(db, a.child_id) });
+  await grantStars(db, a.child_id, a.mstars, "mission:" + a.mission_code);
+  return apiOk({ status: "done", got: a.mstars, stars: await coinBalance(db, a.child_id) });
 }
 
 /* ── POST /api/v1/missions/{id}/revert — 부모가 되돌린다 ──
@@ -533,7 +527,7 @@ async function revert(request, db, env, id) {
   if (a.status !== "done" && a.status !== "waiting" && a.status !== "skipped") {
     return apiErr("VALIDATION", { status: a.status }, "되돌릴 수 없는 상태예요.");
   }
-  if (a.stars) await addStars(db, a.child_id, -a.stars, "revert:" + a.mission_code);
+  if (a.stars) await spendStars(db, a.child_id, a.stars, "revert:" + a.mission_code);
   /* 되돌리면 **사진도 같이 지운다** (2026-08-02 폰 실측으로 잡음).
      decided_at 을 NULL 로 미는 순간 아래 7일 정리 크론의 조건(decided_at IS NOT NULL)에서 빠져
      그 사진은 **아무도 안 지우는 상태로 R2에 영원히 남았다.** 아이 사진이라 더 그러면 안 된다.
@@ -541,7 +535,7 @@ async function revert(request, db, env, id) {
   if (a.photo_key) { try { await env.RECORDS.delete(a.photo_key); } catch (_) {} }
   await db.prepare("UPDATE mission_assign SET status='open', claimed_at=NULL, decided_at=NULL, auto_at=NULL, stars=0, photo_key=NULL WHERE id=?")
     .bind(id).run();
-  return apiOk({ status: "open", stars: await starsOf(db, a.child_id) });
+  return apiOk({ status: "open", stars: await coinBalance(db, a.child_id) });
 }
 
 /* ── 크론이 부른다 ──────────────────────────────────────────
@@ -557,7 +551,7 @@ export async function missionCron(db, env) {
     const m = await db.prepare("SELECT stars FROM missions WHERE code = ?").bind(d.mission_code).first();
     const s = (m && m.stars) || 1;
     await db.prepare("UPDATE mission_assign SET status='done', decided_at=?, stars=? WHERE id=?").bind(now, s, d.id).run();
-    await addStars(db, d.child_id, s, "mission:" + d.mission_code);
+    await grantStars(db, d.child_id, s, "mission:" + d.mission_code);
   }
   const cut = new Date(Date.now() - PHOTO_KEEP_DAYS * 86400000).toISOString();
   const { results: old } = await db.prepare(

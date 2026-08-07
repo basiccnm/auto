@@ -13,6 +13,7 @@
 
 import { apiOk, apiList, apiErr, readJson } from "./api_core.js";
 import { resolveAuth, hashPassword, verifyPassword } from "./auth_core.js";
+import { grantStars, spendStars, starsOf as coinBalance } from "./star_core.js";
 
 const nowIso = () => new Date().toISOString();
 const KST = 9 * 3600 * 1000;
@@ -60,15 +61,6 @@ async function gate(request, db, env, childId) {
 }
 
 // 잔액 — api_mission.js 와 **같은 원장**을 본다
-async function starsOf(db, childId) {
-  const r = await db.prepare("SELECT COALESCE(SUM(delta),0) n FROM star_ledger WHERE child_id = ?")
-    .bind(childId).first();
-  return (r && r.n) || 0;
-}
-async function addStars(db, childId, delta, reason) {
-  await db.prepare("INSERT INTO star_ledger (child_id, delta, reason, created_at) VALUES (?, ?, ?, ?)")
-    .bind(childId, delta, reason, nowIso()).run();
-}
 
 const rid = (p) => p + "-" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36).slice(-4);
 
@@ -86,7 +78,7 @@ async function listStore(request, db, env, childId) {
 
   /* 아이 화면에는 «지금 살 수 있는지»가 같이 와야 한다.
      이걸 안 주면 아이가 눌러 보고서야 «한도 초과»를 알게 된다 — 그건 벌처럼 읽힌다. */
-  const stars = await starsOf(db, child.id);
+  const stars = await coinBalance(db, child.id);
   const items = [];
   for (const r of rows) {
     let used = 0;
@@ -167,7 +159,7 @@ async function buy(request, db, env, childId, itemId) {
   }
 
   // 잔액 — 서버가 막는다(②)
-  const stars = await starsOf(db, child.id);
+  const stars = await coinBalance(db, child.id);
   if (stars < item.stars_required) {
     return apiErr("VALIDATION", { stars, need: item.stars_required },
       `도장이 ${item.stars_required - stars}개 더 필요해요.`);
@@ -175,7 +167,7 @@ async function buy(request, db, env, childId, itemId) {
 
   /* ⚠ 원장에 먼저 적고 영수증을 만든다. 반대로 하면 «영수증은 있는데 도장은 그대로»가 된다.
      D1 은 트랜잭션이 제한적이라 순서로 방어한다 — 둘 중 하나가 실패해도 «덜 준 쪽»으로 남게. */
-  await addStars(db, child.id, -item.stars_required, `store:${itemId}`);
+  await spendStars(db, child.id, item.stars_required, `store:${itemId}`);
   const oid = rid("ro");
   await db.prepare(
     "INSERT INTO reward_orders (reward_order_id, child_id, item_id, item_title, stars_spent, status, created_at) VALUES (?,?,?,?,?,?,?)"
@@ -194,7 +186,7 @@ async function listOrders(request, db, env, childId) {
   const rows = (await db.prepare(
     "SELECT reward_order_id, item_title, stars_spent, status, created_at FROM reward_orders WHERE child_id = ? ORDER BY created_at DESC LIMIT 50"
   ).bind(child.id).all()).results || [];
-  return apiList(rows, { stars: await starsOf(db, child.id) });
+  return apiList(rows, { stars: await coinBalance(db, child.id) });
 }
 
 // POST /api/v1/rewards/{orderId}/fulfill — 「줬어요」 (부모만)
@@ -233,7 +225,7 @@ async function step1(request, db, env, childId) {
     "SELECT verify_id FROM mission_verifications WHERE child_id = ? AND mission_code = ? " +
     "AND date(created_at, '+9 hours') = date(?, '+9 hours')"
   ).bind(child.id, code, nowIso()).first();
-  if (dup) return apiOk({ verify_id: dup.verify_id, already: 1, stars: await starsOf(db, child.id) });
+  if (dup) return apiOk({ verify_id: dup.verify_id, already: 1, stars: await coinBalance(db, child.id) });
 
   const vid = rid("mv");
   const now = nowIso();
@@ -241,8 +233,8 @@ async function step1(request, db, env, childId) {
     "INSERT INTO mission_verifications (verify_id, child_id, mission_code, step1_data, step1_granted_at, step2_approved_at, step2_bonus_stars, created_at) " +
     "VALUES (?,?,?,?,?,NULL,0,?)"
   ).bind(vid, child.id, code, data, now, now).run();
-  await addStars(db, child.id, 1, `verify1:${code}`);      // 1차 보상은 항상 1개
-  return apiOk({ verify_id: vid, stars: await starsOf(db, child.id) }, 201);
+  await grantStars(db, child.id, 1, `verify1:${code}`);   // 1차는 소액 — 진짜는 부모의 2차 보너스
+  return apiOk({ verify_id: vid, stars: await coinBalance(db, child.id) }, 201);
 }
 
 // GET /api/v1/children/{id}/verify?pending=1 — 부모의 «확인해 주세요» 목록
@@ -277,14 +269,14 @@ async function step2(request, db, env, verifyId) {
   await db.prepare(
     "UPDATE mission_verifications SET step2_approved_at = ?, step2_bonus_stars = ? WHERE verify_id = ? AND step2_approved_at IS NULL"
   ).bind(nowIso(), bonus, verifyId).run();
-  if (bonus > 0) await addStars(db, row.child_id, bonus, `verify2:${verifyId}`);
+  if (bonus > 0) await grantStars(db, row.child_id, bonus, `verify2:${verifyId}`);
 
   // 칭찬 기록도 같이 남긴다 — 아이 화면의 «스티커»가 이걸 읽는다
   await db.prepare(
     "INSERT INTO reactions (reaction_id, child_id, sticker_type, bonus_stars, created_at) VALUES (?,?,?,?,?)"
   ).bind(rid("rc"), row.child_id, "bonus_approved", bonus, nowIso()).run();
 
-  return apiOk({ bonus_stars: bonus, stars: await starsOf(db, row.child_id) });
+  return apiOk({ bonus_stars: bonus, stars: await coinBalance(db, row.child_id) });
 }
 
 // ════════════════════════════════════════════════════════════

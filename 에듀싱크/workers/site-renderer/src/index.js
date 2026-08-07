@@ -39,7 +39,8 @@ import { handleAuthApi, linkSocialAccount } from "./api_auth.js";
 import { handleOrdersApi, confirmOrderByAdmin, cancelOrderByAdmin } from "./api_orders.js";
 import { handleSupportApi, answerInquiry, closeInquiry } from "./api_support.js";
 import { handleMissionApi, missionCron } from "./api_mission.js";
-import { handleRewardApi } from "./api_reward.js";   // 별도장 상점·2단계 보상 (2026-08-07)
+import { handleRewardApi } from "./api_reward.js";
+import { handleQuizApi } from "./api_quiz.js";       // 데일리 퀴즈 (2026-08-08)   // 별도장 상점·2단계 보상 (2026-08-07)
 import { deleteChildCascade, deleteRecordAssets } from "./data_children.js";
 import { withdrawAccount } from "./data_accounts.js";
 import { findAccountByToken } from "./auth_core.js";
@@ -2614,6 +2615,8 @@ export default {
         res = await handleMissionApi(request, db, env, url);
         // 상점·검증·칭찬·템플릿 (2026-08-07) — 역시 /children/{id}/* 를 나눠 쓴다
         if (!res) res = await handleRewardApi(request, db, env, url);
+        // 데일리 퀴즈도 /children/{id}/* 를 나눠 쓴다 (2026-08-08)
+        if (!res) res = await handleQuizApi(request, db, env, url);
         // 서류·대화·커뮤니티가 그다음(자녀 하위 경로를 공유). 자기 것이 아니면 null을 주고 넘긴다.
         if (!res) res = await handleLifeApi(request, db, env, url, a);
         if (!res) res = await handleRecordsApi(request, db, env, url);
