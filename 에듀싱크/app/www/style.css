@@ -5311,8 +5311,10 @@ body:has(#tabbar.hidden) #screen:has(.ib),
      ⚠ 회색(#EEE)으로 죽이면 안 된다. 채도가 빠져 18종이 전부 같은 톤으로 수렴한다. */
 :root[data-art], html[data-art] {
   --oncard:   color-mix(in srgb, #FFFFFF 90%, var(--accent));   /* 제목  — 살짝 미색 */
-  --oncard-2: color-mix(in srgb, #FFFFFF 82%, var(--accent));   /* 본문 */
-  --oncard-3: color-mix(in srgb, #FFFFFF 68%, var(--accent)); } /* 보조·아이콘 */
+  --oncard-2: color-mix(in srgb, #FFFFFF 84%, var(--accent));   /* 본문 */
+  --oncard-3: color-mix(in srgb, #FFFFFF 82%, var(--accent)); } /* 보조·아이콘
+     ⚠ 보조를 68% 로 뒀더니 accent 가 밝은 4종(은행나무길·숲속·노을·강가)에서 4.0~4.15 로
+       기준(4.5)을 못 넘었다. 82% 로 올려 18/18 실측 통과(최소 4.5 · 최대 9.2). */
 /* 테마를 안 고른 상태(기본)도 같은 생각으로 */
 :root:not([data-art]) { --oncard: rgba(255,255,255,.90); --oncard-2: rgba(255,255,255,.82); --oncard-3: rgba(255,255,255,.68); }
 
@@ -5328,6 +5330,16 @@ body:has(#tabbar.hidden) #screen:has(.ib),
 /* 아이콘도 같이 올린다 — 글씨만 밝히면 아이콘이 혼자 탁하게 남아 더 눈에 띈다 */
 .hv3-hdrow .ic, .hv3-hdrow .go, .st-del, .kb-shop > .ti, .bw-calc .ti { color: var(--oncard-3); }
 .hv3-card .ti, .hv3-hdrow i { color: var(--oncard-2); }
+
+/* ── 안2 확정(2026-08-07 대표님) — 카드 면 = 그 테마의 «짙은 색» ─────────────
+   `--drawer-a` 가 아니라 **`--accent`** 다. drawer-a 는 테마마다 밝기가 제각각이라
+   라벤더에서 1.5:1 까지 떨어졌지만, accent 는 4차 정리 때 **L 22~32% 상한**을 걸어 둬서
+   18종이 같은 밝기 대역이다 — 그 위 미색 글씨가 18/18 전부 4.5 를 넘는다(실측).
+   ⚠ 자녀 화면은 applyKidTheme 이 --accent 를 --k 로 바꿔 끼우므로 같은 규칙이 그대로 산다. */
+.hv3-card { background: var(--accent); }
+.st-row, .st-new, .rw-card, .tk-give, .tk-mine, .kb-shop, .sp-card, .st-none, .pin-box {
+  background: var(--accent); }
+.sp-card.off { background: color-mix(in srgb, var(--accent) 55%, var(--surf)); box-shadow: none; }
 
 /* 카드 «안»에 한 겹 더 들어가는 것(입력칸·키패드)도 같은 생각으로 — 흰색을 옅게 얹는다 */
 .st-in, .st-num, .st-sel, .pin-k { background: rgba(255,255,255,.14); color: var(--oncard); border: none; }
