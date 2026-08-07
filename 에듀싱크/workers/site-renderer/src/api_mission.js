@@ -138,6 +138,86 @@ async function getToday(request, db, env, childId) {
   });
 }
 
+/* ── POST /api/v1/children/{id}/missions/reroll — 🎲 리롤 (지시서 §5②) ──
+   «오늘 이거 말고 다른 거» 를 아이가 스스로 한 번 바꾼다. 자율성이 이 기능의 전부다.
+
+   ⚠ **하루 한 번을 화면이 세지 않는다.** 앱을 껐다 켜면 화면 계산은 초기화된다
+     (상점 상한·PIN 과 같은 이유). 서버가 막되, 세는 로직을 또 쓰지 않는다 —
+     `mission_reroll` 의 PRIMARY KEY(child_id, ymd) 가 «하루 한 번»을 자연히 강제한다.
+     INSERT 가 먹으면 오늘 처음이고, 안 먹으면 이미 쓴 것이다.
+   ⚠ **이미 손댄 미션은 안 건드린다.** status='open' 인 것만 바꾼다 —
+     아이가 해낸 것(waiting/done)을 리롤로 날리면 그건 벌이다.
+   ⚠ 방금 있던 코드는 **빼고 뽑는다.** 안 그러면 눌러도 같은 게 나와 «고장»으로 읽힌다. */
+async function reroll(request, db, env, childId) {
+  const { child, err } = await gate(request, db, env, childId);
+  if (err) return err;
+  const ymd = ymdKst();
+
+  const ins = await db.prepare(
+    "INSERT OR IGNORE INTO mission_reroll (child_id, ymd, created_at) VALUES (?, ?, ?)"
+  ).bind(child.id, ymd, nowIso()).run();
+  if (!ins.meta.changes) {
+    return apiErr("LIMIT_EXCEEDED", null, "오늘은 이미 한 번 바꿨어요. 내일 다시 할 수 있어요.");
+  }
+
+  const rows = await todayRows(db, child.id, ymd);
+  const open = rows.filter((r) => r.status === "open");
+  if (!open.length) {
+    return apiErr("VALIDATION", null, "바꿀 수 있는 미션이 없어요.");
+  }
+  const keep = rows.filter((r) => r.status !== "open").map((r) => r.mission_code);
+  const oldCodes = open.map((r) => r.mission_code);
+
+  await db.prepare("DELETE FROM mission_assign WHERE child_id = ? AND ymd = ? AND status = 'open'")
+    .bind(child.id, ymd).run();
+
+  // 방금 것 + 남아 있는 것을 빼고 새로 뽑는다
+  const exclude = [...new Set([...oldCodes, ...keep])];
+  const band = bandOf(child.grade), season = seasonOf();
+  const holes = exclude.map(() => "?").join(",") || "''";
+  const { results } = await db.prepare(
+    `SELECT code FROM missions
+      WHERE band = ? AND season = ? AND active = 1 AND code NOT IN (${holes})
+      ORDER BY (id * 13 + ?) % 89 LIMIT ?`
+  ).bind(band, season, ...exclude, parseInt(ymd, 10) % 89, open.length).all();
+  let codes = (results || []).map((x) => x.code);
+
+  /* 뽑을 게 모자라면(카탈로그가 얕은 학년대) **되돌린다.**
+     빈 하루를 만드느니 바꾸지 않는 편이 낫다 — 리롤 기록도 지워 다시 쓸 수 있게 한다. */
+  if (!codes.length) {
+    const now0 = nowIso();
+    for (const c of oldCodes) {
+      await db.prepare(
+        "INSERT OR IGNORE INTO mission_assign (child_id, mission_code, ymd, status, created_at) VALUES (?, ?, ?, 'open', ?)"
+      ).bind(child.id, c, ymd, now0).run();
+    }
+    await db.prepare("DELETE FROM mission_reroll WHERE child_id = ? AND ymd = ?").bind(child.id, ymd).run();
+    return apiErr("VALIDATION", null, "바꿀 만한 다른 미션이 없어요.");
+  }
+
+  const now = nowIso();
+  for (const c of codes) {
+    await db.prepare(
+      "INSERT OR IGNORE INTO mission_assign (child_id, mission_code, ymd, status, created_at) VALUES (?, ?, ?, 'open', ?)"
+    ).bind(child.id, c, ymd, now).run();
+  }
+  const fresh = await todayRows(db, child.id, ymd);
+  return apiList(fresh.map(shape), {
+    ymd, rerolled: 1, stars: await starsOf(db, child.id),
+    done: fresh.filter((r) => r.status === "done").length,
+    waiting: fresh.filter((r) => r.status === "waiting").length,
+  });
+}
+
+// GET /api/v1/children/{id}/missions/reroll — 오늘 쓸 수 있나(버튼 상태용)
+async function rerollState(request, db, env, childId) {
+  const { child, err } = await gate(request, db, env, childId);
+  if (err) return err;
+  const r = await db.prepare("SELECT 1 AS x FROM mission_reroll WHERE child_id = ? AND ymd = ?")
+    .bind(child.id, ymdKst()).first();
+  return apiOk({ can_reroll: r ? 0 : 1 });
+}
+
 /* ── GET /api/v1/missions — 부모가 고를 목록 ─────────────────
    공용 목록(owner_token IS NULL) + **우리 집 것**을 함께 준다.
    우리 집 것이 위로 온다 — 자기가 만든 것을 목록 바닥에서 찾게 하면 안 쓴다. */
@@ -609,6 +689,14 @@ export async function handleMissionApi(request, db, env, url) {
 
   x = p.match(/^\/api\/v1\/children\/(\d+)\/marks\/?$/);
   if (x && m === "GET") return marks(request, db, env, x[1]);
+
+  // 🎲 리롤 — ⚠ 아래 `/missions/?$` 보다 **먼저** 잡아야 한다(더 긴 경로가 앞)
+  x = p.match(/^\/api\/v1\/children\/(\d+)\/missions\/reroll$/);
+  if (x) {
+    if (m === "POST") return reroll(request, db, env, x[1]);
+    if (m === "GET") return rerollState(request, db, env, x[1]);
+    return apiErr("VALIDATION", null, "지원하지 않는 요청 방식이에요.");
+  }
 
   x = p.match(/^\/api\/v1\/children\/(\d+)\/missions\/?$/);
   if (x) {

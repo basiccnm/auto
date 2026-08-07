@@ -29,6 +29,34 @@
 - 자가검수: 6화면 넘침 0 · 죽은 아이콘 0 · 라이트/다크 몽타주 → 검수폴더 `20260807-1845-*` + `보고-0807-2.md`
 - 🛠 `/watch` 스킬 설치(`~/.claude/skills/watch`) — ⚠ 한글 경로에서 cp949 로 깨짐. ASCII 경로 복사 + `PYTHONUTF8=1`
 
+### ⓪-F 출시 준비 작업 (2026-08-08, 진행 중)
+
+- ✅ **계정 삭제 안내 웹페이지** — 커밋 `1eb88ff`. `/account-delete` · `/delete-account`
+  구글 플레이 필수. 스토어 「앱 콘텐츠 → 데이터 보안」 양식에 **이 URL 을 적어야 한다**
+  (`https://eduthink-site-renderer.dndmotor1.workers.dev/account-delete`)
+  ⚠ 문안이 «3개월 유예 뒤 파기»라고 말한다 — 코드(`withdrawMe`)와 일치해야 하므로 한쪽만 고치지 말 것
+  ⚠ **아직 배포 안 됨.** 다음 워커 배포 때 같이 나간다
+
+- 🟡 **🎲 리롤 (지시서 §5②)** — 서버 코드 작성됨, **커밋·마이그레이션·배포 전**
+  - `scripts/migrate_reroll_2026-08-08.sql` — 표 `mission_reroll(child_id, ymd)` **PK 가 «하루 한 번»을 강제**한다
+    (세는 로직을 안 쓴다 — INSERT 가 먹으면 오늘 처음, 안 먹으면 이미 쓴 것)
+  - `api_mission.js` — `POST/GET /children/{id}/missions/reroll`.
+    `status='open'` 인 것만 바꾸고(해낸 것은 안 건드림), 방금 코드는 빼고 뽑는다.
+    뽑을 게 없으면 **되돌리고 리롤 기록도 지운다**(빈 하루를 만들지 않는다)
+  - ⚠ 라우터에서 `/missions/reroll` 이 `/missions/?$` 보다 **먼저** 와야 한다
+  - 🔴 **대표님 확인 대기 2건**:
+    ① 미션 카탈로그를 «많이 바꿨다» 하심 — 원격 155개인데 **저장소 시드는 08-01 판뿐**이라
+       원격에만 있는 변경은 git 에 없다. 시드를 다시 뽑아 넣을지 판단 필요
+    ② `patience` season 은 재고가 **5개뿐** — 3개 빼면 2개라 리롤하면 미션이 3→2 로 준다.
+       그 season 을 리롤 대상에서 뺄지, season 무시하고 채울지 판단 필요
+
+**원격 미션 재고 (2026-08-08 실측)** — band × season
+| band | weekday | weekend | vacation | patience |
+|---|---|---|---|---|
+| low | 20 | 15 | 10 | 5 |
+| mid | 21 | 15 | 11 | 5 |
+| high | 20 | 16 | 12 | 5 |
+
 ⚠⚠ **다음 세션 절대 규칙**
 - **카드색(`--card-a/--card-b`)·카드 글씨(`--card-ink/--card-sub`)를 덮어쓰지 말 것.**
   정본은 `build_themes.py` 생성 블록(테마 18종)이다. 오늘 이걸 «배경+검정 혼합»으로 덮었다가
