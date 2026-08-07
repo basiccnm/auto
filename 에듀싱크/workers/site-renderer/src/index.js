@@ -2596,7 +2596,10 @@ export default {
       else if (path.startsWith("/api/v1/schools")) res = await handleSchoolsApi(request, db, env, url);
       // 별도장 상점·2단계 보상 (2026-08-07) — /children/* 밖에 있는 것들
       else if (path.startsWith("/api/v1/store/") || path.startsWith("/api/v1/rewards/") ||
-               path.startsWith("/api/v1/verify/") || path.startsWith("/api/v1/templates/")) {
+               path.startsWith("/api/v1/verify/") || path.startsWith("/api/v1/templates/") ||
+               // 아이 모드 PIN (2026-08-07) — ⚠ 위 `/api/v1/child/` 접두어와는 **다른 경로**다.
+               //   하이픈이라 `child/` 에 안 걸린다. 여기 안 적으면 HTML 404 로 샌다.
+               path === "/api/v1/child-mode" || path.startsWith("/api/v1/child-mode/")) {
         res = await handleRewardApi(request, db, env, url);
       }
       else if (path.startsWith("/api/v1/children") || path.startsWith("/api/v1/child/") || path.startsWith("/api/v1/records") ||
