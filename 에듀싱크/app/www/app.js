@@ -5014,6 +5014,8 @@ function boardView() {
   return `
   <div class="bd" id="board" aria-live="polite">
     <!-- 시계 — «날짜 · 요일» 위, «시각» 아래. 한 줄에 몰면 날짜가 시각에 묻힌다(2026-08-04) -->
+    <!-- §6.2 (2026-08-07) — 회색 스티커 박스 폐지. 날짜는 시계 «위» 독립 줄, 시계는 크게.
+         날짜가 시계 옆에 끼어 있으면 찌그러져 읽힌다 — 위계는 «작은 날짜 → 큰 시계 → 전광판» 순. -->
     <div class="bd-time">
       <span class="dt">${fmtD(+TODAY.slice(4, 6), +TODAY.slice(6))} ${["일", "월", "화", "수", "목", "금", "토"][d.getDay()]}요일</span>
       <span class="tm">${hh}<i>:</i>${mm}</span>

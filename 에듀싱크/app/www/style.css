@@ -5091,15 +5091,25 @@ body:has(#tabbar.hidden) #screen:has(.ib),
 
 /* ── 시계 C안 + 반투명 바탕 패널 ────────────────────────────────────
    ⚠ 그늘만으로 버티던 것을 패널로 바꾼다 — 그림 위 글씨는 «바탕이 있어야» 대비가 한 값이 된다. */
+/* ═══ §6.2 시계 위젯 전면 개편 (지시서 0807 · 2026-08-07) ═══════════════
+   회색 알약 박스(rgba 255,255,255,.34)가 테마 일러스트와 겉돌고,
+   날짜가 시계 옆에 끼어 13px 로 찌그러져 있었다 — 둘 다 §6.2 진단 그대로.
+   ① 박스 **완전 제거.** 지시서는 «제거 또는 글래스모피즘» 둘을 허용하는데,
+      글래스모피즘(blur)은 §6(08-03) «backdrop-filter 0개» 확정 규칙과 충돌한다 → 제거를 택했다.
+   ② 대신 기존 그늘(.bd::before — 그림에서 배경색으로 «녹아드는» 그라데이션)을 되살린다.
+      박스와 달리 일러스트와 이어져 보이고, 글씨 밑만 받쳐 준다.
+   ③ 날짜는 시계 **위** 독립 줄(14px 정갈하게) · 시계는 46px 로 시원하게.
+      위계: 작은 날짜 → 큰 시계 → 전광판(.bd-now) 순으로 흘러내린다. */
 .bd { margin-top: -52px; padding: 0; }
-.bd::before { display: none; }
-.bd-time { display: flex; align-items: flex-end; gap: 9px;
-  padding: 9px 14px 10px; border-radius: 16px; text-shadow: none;
-  background: rgba(255, 255, 255, .34); width: fit-content; }
-:root[data-theme="dark"] .bd-time { background: rgba(255, 255, 255, .14); }
-.bd-time .dt { padding-bottom: 7px; font-size: 13px; }
-.bd-time .tm { font-size: 38px; letter-spacing: -1.6px; }
-.bd-time .tm i { font-size: 28px; }
+.bd::before { display: block; }
+.bd-time { display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
+  padding: 0; border-radius: 0; background: none; width: fit-content;
+  text-shadow: 0 1px 2px color-mix(in srgb, var(--art-1) 65%, transparent); }
+.bd-time .dt { padding: 0; font-size: 14px; font-weight: 800; letter-spacing: .01em;
+  color: var(--art-ink); opacity: .85; }
+.bd-time .tm { font-size: 46px; letter-spacing: -1.8px; font-weight: 900; }
+.bd-time .tm i { font-size: 34px; }
+:root[data-theme="dark"] .bd-time { background: none; }
 /* 시각이 바뀔 때 툭 튀지 않게 (2026-08-04 지시) */
 .bd-time .tm { transition: opacity .18s ease; }
 
@@ -5114,8 +5124,9 @@ body:has(#tabbar.hidden) #screen:has(.ib),
 :root[data-theme="dark"] #screen:has(.hv3-art) .hd-bell,
 :root[data-theme="dark"] #screen:has(.hv3-art) .hd-box {
   background: var(--card-a); box-shadow: 0 2px 8px rgba(0,0,0,.12); }
-/* 시계 패널도 같은 면색으로 통일 */
-.bd-time, :root[data-theme="dark"] .bd-time { background: var(--card-a); }
+/* 시계 패널 면색은 §6.2(2026-08-07)로 폐지 — 박스 없이 그늘(.bd::before)만 받친다.
+   ⚠ 이 줄이 §6.2 블록 «뒤»라 background:none 을 이기고 있었다(패치 박스가 안 사라진 원인).
+     같은 클래스의 규칙이 파일 곳곳에 겹겹이면 마지막 것이 이긴다 — 지울 땐 grep 으로 전부 찾을 것. */
 
 /* ── 카드 글씨 = 회색 두 벌 (2026-08-04 지시) ────────────────────────
    «글씨는 밝은 회색 / 어두운 회색을, 밝은 테마 / 어두운 테마에 골라 쓰면 된다»
@@ -5336,10 +5347,30 @@ body:has(#tabbar.hidden) #screen:has(.ib),
    라벤더에서 1.5:1 까지 떨어졌지만, accent 는 4차 정리 때 **L 22~32% 상한**을 걸어 둬서
    18종이 같은 밝기 대역이다 — 그 위 미색 글씨가 18/18 전부 4.5 를 넘는다(실측).
    ⚠ 자녀 화면은 applyKidTheme 이 --accent 를 --k 로 바꿔 끼우므로 같은 규칙이 그대로 산다. */
-.hv3-card { background: var(--accent); }
+/* §6.1·§11-2 확정(2026-08-07): **80% 농도 고정.**
+   원색 100%는 쨍하고 붕 뜨며, 65%/50%는 물빠진 느낌 — 80%가 정본이다.
+   ⚠ 섞는 상대는 배경(--surf)이 아니라 **같은 밝기의 무채색**이다.
+     surf(밝음)를 섞으면 카드가 밝아져 미색 글씨가 4.5 를 못 넘는다(85%에서 이미 5종 미달).
+     무채색 #43464C(accent 와 같은 L 대역)를 섞으면 어둡기가 유지돼 색만 눅는다 —
+     18/18 실측 통과, 대비는 오히려 4.5→5.0 으로 오른다. */
+.hv3-card { background: color-mix(in srgb, var(--accent) 80%, #43464C); }
 .st-row, .st-new, .rw-card, .tk-give, .tk-mine, .kb-shop, .sp-card, .st-none, .pin-box {
-  background: var(--accent); }
-.sp-card.off { background: color-mix(in srgb, var(--accent) 55%, var(--surf)); box-shadow: none; }
+  background: color-mix(in srgb, var(--accent) 80%, #43464C); }
+.sp-card.off { background: color-mix(in srgb, var(--accent) 44%, var(--surf)); box-shadow: none; }
+/* 🔴 다크는 accent 를 그대로 못 쓴다 — **다크의 accent 는 밝은 파스텔이다**(STATUS 함정 그대로).
+   accent 80% 로 두면 카드가 «밝은» 하늘색이 되고 그 위 미색 글씨가 통째로 죽는다(실측으로 잡음).
+   다크의 어두운 테마 파생은 --drawer-a(= art-1 20% + #14293F)다 — 어둡기가 고정돼 있고
+   테마 색조만 남는다. 80% 농도 규칙은 같은 무채색으로 동일하게 건다. */
+:root[data-theme="dark"] .hv3-card,
+:root[data-theme="dark"] .st-row,  :root[data-theme="dark"] .st-new,
+:root[data-theme="dark"] .rw-card, :root[data-theme="dark"] .tk-give,
+:root[data-theme="dark"] .tk-mine, :root[data-theme="dark"] .kb-shop,
+:root[data-theme="dark"] .sp-card, :root[data-theme="dark"] .st-none,
+:root[data-theme="dark"] .pin-box {
+  background: color-mix(in srgb, var(--drawer-a) 80%, #43464C); }
+:root[data-theme="dark"] .sp-card.off {
+  background: color-mix(in srgb, var(--drawer-a) 44%, var(--surf)); }
+/* 글씨의 미색도 다크에선 accent(밝은 파스텔)를 섞는다 — 어두운 카드 위라 그대로 잘 산다 */
 
 /* 카드 «안»에 한 겹 더 들어가는 것(입력칸·키패드)도 같은 생각으로 — 흰색을 옅게 얹는다 */
 .st-in, .st-num, .st-sel, .pin-k { background: rgba(255,255,255,.14); color: var(--oncard); border: none; }
