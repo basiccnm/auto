@@ -5376,3 +5376,126 @@ body:has(#tabbar.hidden) #screen:has(.ib),
 .dy-big span { display: flex; flex-direction: column; gap: 1px; }
 .dy-big em { font-style: normal; font-size: 14.5px; font-weight: 800; color: var(--ink); }
 .dy-big i { font-style: normal; font-size: 12px; font-weight: 700; color: var(--muted); }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   🎮 미션 게임 — 아이의 세계 (2026-08-08, 기획서 §01·§04·§08)
+
+   부모 앱 위에 얹힌 화면이 아니라 **다른 세계**로 읽혀야 한다.
+   그래서 홈의 카드 문법(hv3-card)을 쓰지 않고 상태창으로 시작한다.
+   ⚠ 색은 테마 토큰을 그대로 쓴다 — 테마를 바꾸면 게임도 같이 바뀌어야 한 앱으로 읽힌다.
+   ⚠ 연출은 **퀴즈에만** 몰아준다. 습관 미션까지 화려하면 매일 보기 피곤해진다(기획서 §08).
+   ⚠ 이 블록이 그대로 모듈 B(글로벌 단독 앱)의 스타일이 된다.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+.gm { min-height: 100vh; margin: calc(env(safe-area-inset-top) * -1 - 18px) -20px -24px;
+  padding: calc(env(safe-area-inset-top) + 10px) 18px calc(env(safe-area-inset-bottom) + 24px);
+  background: var(--surf); }
+
+/* ── 상태창 ── */
+.gm-top { display: flex; align-items: center; gap: 10px; }
+.gm-out { width: 44px; height: 44px; flex: none; display: grid; place-items: center;
+  border: none; border-radius: 50%; background: var(--card-a); color: var(--card-ink); font-size: 20px; }
+.gm-who { flex: 1; min-width: 0; }
+.gm-who b { display: block; font-size: 17px; font-weight: 900; color: var(--ink); }
+.gm-who em { font-style: normal; font-size: 12.5px; font-weight: 800; color: var(--accent-ink); }
+.gm-purse { flex: none; display: flex; align-items: center; gap: 5px;
+  padding: 8px 14px; border-radius: 999px; background: var(--card-a); }
+.gm-purse i { font-style: normal; font-size: 15px; color: var(--card-ink); }
+.gm-purse b { font-size: 19px; font-weight: 900; color: var(--card-ink);
+  font-variant-numeric: tabular-nums; }
+
+/* ── 오늘 리밋 게이지 — 이게 게임의 시계다(기획서 §02) ── */
+.gm-lim { margin-top: 14px; }
+.gm-limbar { height: 10px; border-radius: 999px; overflow: hidden;
+  background: color-mix(in srgb, var(--ink) 12%, transparent); }
+.gm-limbar span { display: block; height: 100%; border-radius: 999px;
+  background: var(--accent); transition: width .35s ease; }
+.gm-limtx { display: flex; align-items: baseline; gap: 8px; margin-top: 6px;
+  font-size: 12.5px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
+.gm-limtx b { font-size: 14px; color: var(--ink); }
+.gm-limtx em { font-style: normal; margin-left: auto; }
+.gm-limtx em.full { color: var(--accent-ink); font-weight: 800; }
+
+/* ── 탭 ── */
+.gm-tabs { display: flex; gap: 8px; margin-top: 16px; }
+.gm-tabs button { flex: 1; min-height: 44px; border: none; border-radius: 14px;
+  background: var(--card-a); color: var(--card-sub);
+  font-family: inherit; font-size: 14.5px; font-weight: 800; }
+.gm-tabs button.on { background: var(--accent); color: var(--on-accent); }
+
+.gm-body { margin-top: 14px; }
+.gm-empty { margin: 40px 0; text-align: center; font-size: 14px;
+  font-weight: 700; color: var(--muted); line-height: 1.7; }
+.gm-sec { display: flex; align-items: baseline; gap: 8px; margin: 18px 0 8px; }
+.gm-sec b { font-size: 14.5px; font-weight: 900; color: var(--ink); }
+.gm-sec em { font-style: normal; margin-left: auto; font-size: 12.5px;
+  font-weight: 700; color: var(--muted); }
+.gm-sec.later b { color: var(--muted); }
+
+/* ── 미션 줄 ── */
+.gm-ms { display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 9px;
+  padding: 14px 16px; border: none; border-radius: 16px; background: var(--card-a);
+  text-align: left; font-family: inherit; }
+.gm-msk { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid;
+  place-items: center; font-size: 14px; font-weight: 900;
+  background: color-mix(in srgb, var(--card-ink) 12%, transparent); color: var(--card-ink); }
+.gm-msb { flex: 1; min-width: 0; }
+.gm-msb b { display: block; font-size: 15px; font-weight: 800; color: var(--card-ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gm-msb em { font-style: normal; font-size: 12px; font-weight: 700; color: var(--card-sub); }
+.gm-msc { flex: none; font-size: 14px; font-weight: 900; color: var(--card-ink); }
+.gm-ms.done { opacity: .55; }
+.gm-ms.done .gm-msb b { text-decoration: line-through; }
+
+/* ── 퀴즈: 유일하게 «게임처럼» 연출하는 곳 ── */
+.qz-intro { margin-top: 34px; text-align: center; }
+.qz-intro b { display: block; font-size: 21px; font-weight: 900; color: var(--ink); }
+.qz-intro p { margin: 6px 0 0; font-size: 14px; font-weight: 700; color: var(--muted); }
+.qz-intro .quiet { font-size: 12.5px; }
+.gm-go { width: 100%; min-height: 52px; margin-top: 22px; border: none; border-radius: 16px;
+  background: var(--accent); color: var(--on-accent);
+  font-family: inherit; font-size: 16px; font-weight: 900; }
+.gm-go.ghost { background: var(--card-a); color: var(--card-ink); }
+
+.qz-hd { display: flex; align-items: baseline; gap: 10px; }
+.qz-no { font-size: 13px; font-weight: 900; color: var(--accent-ink);
+  font-variant-numeric: tabular-nums; }
+.qz-field { margin-left: auto; font-size: 12px; font-weight: 800; color: var(--muted); }
+/* 남은 시간 — 줄어드는 막대 하나면 충분하다. 숫자를 같이 두면 초조함만 커진다 */
+.qz-timer { height: 6px; margin-top: 8px; border-radius: 999px; overflow: hidden;
+  background: color-mix(in srgb, var(--ink) 12%, transparent); }
+.qz-timer span { display: block; height: 100%; background: var(--accent); }
+.qz-q { margin: 22px 0 18px; font-size: 20px; font-weight: 900; line-height: 1.45;
+  color: var(--ink); text-wrap: balance; }
+.qz-opts { display: grid; gap: 10px; }
+.qz-op { min-height: 58px; padding: 0 18px; border: none; border-radius: 16px;
+  background: var(--card-a); color: var(--card-ink); text-align: left;
+  font-family: inherit; font-size: 16px; font-weight: 800; }
+.qz-op:active { transform: scale(.98); }
+
+.qz-done { margin-top: 26px; padding: 24px; border-radius: 20px;
+  background: var(--card-a); text-align: center; }
+.qz-score { display: flex; align-items: baseline; justify-content: center; gap: 4px;
+  font-variant-numeric: tabular-nums; }
+.qz-score b { font-size: 52px; font-weight: 900; color: var(--card-ink); line-height: 1; }
+.qz-score span { font-size: 20px; font-weight: 800; color: var(--card-sub); }
+.qz-perfect { margin-top: 8px; font-size: 15px; font-weight: 900; color: var(--accent-ink); }
+.qz-coin { margin-top: 6px; font-size: 17px; font-weight: 900; color: var(--card-ink); }
+.qz-cap { margin: 8px 0 0; font-size: 12.5px; font-weight: 700; color: var(--card-sub); }
+.qz-rv { margin-top: 9px; padding: 13px 16px; border-radius: 14px; background: var(--card-a); }
+.qz-rv b { display: block; font-size: 15px; font-weight: 800; color: var(--card-ink); }
+.qz-rv em { font-style: normal; font-size: 12.5px; font-weight: 700; color: var(--card-sub); }
+
+/* ── 상점 줄 ── */
+.gm-item { display: flex; align-items: center; gap: 12px; margin-top: 9px;
+  padding: 14px 16px; border-radius: 16px; background: var(--card-a); }
+.gm-itb { flex: 1; min-width: 0; }
+.gm-itb b { display: block; font-size: 15px; font-weight: 800; color: var(--card-ink); }
+.gm-itb em { font-style: normal; display: block; font-size: 12px; font-weight: 700;
+  color: var(--card-sub); }
+.gm-itb em.no { color: var(--card-sub); }
+.gm-buy { flex: none; min-height: 44px; padding: 0 18px; border: none; border-radius: 999px;
+  background: var(--accent); color: var(--on-accent);
+  font-family: inherit; font-size: 15px; font-weight: 900; }
+.gm-buy[disabled] { background: color-mix(in srgb, var(--card-ink) 14%, var(--card-a));
+  color: var(--card-ink); }

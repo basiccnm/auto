@@ -517,7 +517,8 @@ FIELDS = {
 
 print("-- 데일리 퀴즈 문제 시드 (2026-08-08) — gen_quiz_seed.py 생성물, 손으로 고치지 말 것")
 print("-- 8분야 × 60문제. 정답 위치는 code 해시로 섞어 1~4 에 고루 퍼뜨린다.")
-print("BEGIN TRANSACTION;")
+# ⚠ 원격 D1 은 BEGIN TRANSACTION 을 거부한다(Durable Objects 규칙) — 트랜잭션을 쓰지 않는다.
+#   INSERT OR REPLACE 라 여러 번 부어도 안전하므로 트랜잭션이 필요 없다(2026-08-08 실측).
 NOW = "2026-08-08T00:00:00Z"
 def esc(t): return t.replace("'", "''")
 total = 0
@@ -540,5 +541,5 @@ for fi, (field, (label, rows)) in enumerate(FIELDS.items()):
               "('%s','%s','all','%s','%s','%s','%s','%s',%d,%s,1,'%s');"
               % (code, field, esc(q), esc(arr[0]), esc(arr[1]), esc(arr[2]), esc(arr[3]), pos, h, NOW))
         total += 1
-print("COMMIT;")
+
 print("-- 총 %d 문제" % total)

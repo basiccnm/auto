@@ -1,6 +1,5 @@
 -- 데일리 퀴즈 문제 시드 (2026-08-08) — gen_quiz_seed.py 생성물, 손으로 고치지 말 것
 -- 8분야 × 60문제. 정답 위치는 code 해시로 섞어 1~4 에 고루 퍼뜨린다.
-BEGIN TRANSACTION;
 INSERT OR REPLACE INTO quiz_questions (code, field, band, q, a1, a2, a3, a4, answer, hint, active, created_at) VALUES ('Q-KOR-001','kor','all','''하늘''의 반대말은?','땅','별','산','강',1,NULL,1,'2026-08-08T00:00:00Z');
 INSERT OR REPLACE INTO quiz_questions (code, field, band, q, a1, a2, a3, a4, answer, hint, active, created_at) VALUES ('Q-KOR-002','kor','all','''예쁘다''와 비슷한 말은?','밉다','크다','춥다','곱다',4,NULL,1,'2026-08-08T00:00:00Z');
 INSERT OR REPLACE INTO quiz_questions (code, field, band, q, a1, a2, a3, a4, answer, hint, active, created_at) VALUES ('Q-KOR-003','kor','all','''책을 읽다''에서 목적어는?','읽다','을','책을','책읽다',3,NULL,1,'2026-08-08T00:00:00Z');
@@ -481,5 +480,4 @@ INSERT OR REPLACE INTO quiz_questions (code, field, band, q, a1, a2, a3, a4, ans
 INSERT OR REPLACE INTO quiz_questions (code, field, band, q, a1, a2, a3, a4, answer, hint, active, created_at) VALUES ('Q-ENT-058','ent','all','저작권은 누구의 권리?','만든 사람','보는 사람','파는 사람','모두',1,NULL,1,'2026-08-08T00:00:00Z');
 INSERT OR REPLACE INTO quiz_questions (code, field, band, q, a1, a2, a3, a4, answer, hint, active, created_at) VALUES ('Q-ENT-059','ent','all','남의 창작물을 함부로 쓰면?','칭찬','도움','협력','저작권 침해',4,NULL,1,'2026-08-08T00:00:00Z');
 INSERT OR REPLACE INTO quiz_questions (code, field, band, q, a1, a2, a3, a4, answer, hint, active, created_at) VALUES ('Q-ENT-060','ent','all','어린이가 볼 수 있는 등급은?','청소년관람불가','19금','전체관람가','제한',3,NULL,1,'2026-08-08T00:00:00Z');
-COMMIT;
 -- 총 480 문제

@@ -807,6 +807,17 @@ const S = {
   storeBusy: null,        // 지금 바꾸는 중인 item_id — 두 번 눌림 방지
   storeEdit: false,       // 부모 «진열대 고치기» 모드
   storeAdd: null,         // 올리기 시트 {title, need, limitType, limitCount}
+  /* ── 🎮 미션 게임 (2026-08-08 기획서 §01·§04·§08) ──────────────────
+     하단 ★ 를 누르면 부모 앱이 아니라 **아이의 세계**로 들어간다.
+     이 묶음이 그대로 모듈 B(글로벌 단독 앱)의 얼굴이 된다 — 부모 화면 상태와 섞지 말 것. */
+  coin: null,             // {stars, earned_today, limit, room} — 서버가 계산한다. 화면이 세지 않는다
+  quiz: null,             // 오늘 세트 {items, done, correct, ...}
+  quizIdx: 0,             // 몇 번째 문제
+  quizPick: {},           // {code: 1~4}
+  quizLeft: 0,            // 남은 초
+  quizResult: null,       // 채점 결과 {correct, coins, review, ...}
+  quizStats: null,        // 분야별 정답률 (박사 뱃지)
+  gameTab: "today",       // today | quiz | shop
   verifyPending: null,    // 부모가 볼 «확인해 주세요» [{verify_id,mission_code,step1_data,...}]
   verifyBusy: null,
   step1For: null,         // 1차 제출 시트를 띄운 미션 code (아이 화면)
@@ -2127,6 +2138,51 @@ const Screens = {
 `;
   },
 
+  /* ═══ 🎮 미션 게임 — 아이의 세계 (2026-08-08 기획서 §01·§08) ═══════════
+     하단 ★ 로 들어온다. 부모 앱 위에 얹힌 화면이 아니라 **다른 세계**로 보여야 한다:
+     머리띠·카드 문법을 그대로 쓰지 않고, 상태창 하나로 시작한다.
+     ⚠ 이 화면 묶음이 그대로 모듈 B(글로벌 단독 앱)가 된다 — 학교 데이터 참조는
+       「학교 미션」 한 줄로만 두어 나중에 끊기 쉽게 한다.
+     ⚠ 코인·리밋은 **서버가 준 값만** 쓴다. 화면이 더하거나 세지 않는다. */
+  game: () => {
+    const c = curView();
+    const coin = S.coin || { stars: 0, earned_today: 0, limit: 30, room: 30 };
+    const pct = coin.limit ? Math.min(100, Math.round((coin.earned_today / coin.limit) * 100)) : 0;
+
+    /* 칭호 — 누적이 아니라 «지금 가진 것»으로 매긴다(쓰면 내려간다면 모으는 재미가 죽는다).
+       ⚠ 서버가 누적을 따로 주기 전까지는 잔액으로 대신한다. 구간은 기획서 확정 대기. */
+    const RANK = [[0,"새싹"],[50,"견습"],[200,"일꾼"],[500,"장인"],[1500,"달인"],[5000,"마스터"]];
+    const rank = RANK.filter(([n]) => coin.stars >= n).pop()[1];
+
+    const TABS = [["today","오늘"],["quiz","퀴즈"],["shop","상점"]];
+
+    return `
+    <div class="gm">
+      <!-- 상태창 — 아바타가 없다. 아이 본인이 캐릭터다(기획서 §08) -->
+      <div class="gm-top">
+        <button class="gm-out" onclick="location.hash='#home'" aria-label="나가기">
+          <i aria-hidden="true" class="ti ti-chevron-left"></i></button>
+        <div class="gm-who"><b>${esc(c.nickname || "나")}</b><em>${rank}</em></div>
+        <div class="gm-purse"><i aria-hidden="true">★</i><b>${coin.stars}</b></div>
+      </div>
+
+      <!-- 오늘 얼마나 벌었나 — 리밋이 게임의 시계다(기획서 §02) -->
+      <div class="gm-lim">
+        <div class="gm-limbar"><span style="width:${pct}%"></span></div>
+        <div class="gm-limtx">오늘 <b>${coin.earned_today}</b> / ${coin.limit}
+          ${coin.room > 0 ? `<em>${coin.room}개 더 벌 수 있어요</em>` : `<em class="full">오늘은 여기까지예요</em>`}</div>
+      </div>
+
+      <div class="gm-tabs">
+        ${TABS.map(([k, n]) => `
+          <button class="${S.gameTab === k ? "on" : ""}" onclick="App.gameTab('${k}')">${n}</button>`).join("")}
+      </div>
+
+      ${S.gameTab === "quiz" ? gameQuiz() : S.gameTab === "shop" ? gameShop() : gameToday()}
+    </div>
+    ${stickerView()}`;
+  },
+
   /* ── 별도장 상점 (2026-08-07 지시서 §5③) ────────────────────────────
      아이는 «사는 것»만, 부모는 «진열대 고치기»까지. 같은 화면 안에서 갈린다.
      ⚠ 말은 게이밍 언어다 — 「바꾸기」「🎟 티켓」. 구매·결제·주문이라고 쓰지 않는다(§1.1).
@@ -2649,7 +2705,9 @@ const Screens = {
     ${(() => {
       const wait = (S.missions || []).filter((x) => x.status === "waiting").length;
       const done = (S.missions || []).filter((x) => x.status === "done").length;
-      return `<button class="hv3-star" onclick="location.hash='#mission'" aria-label="미션">
+      /* ⚠ ★ 는 부모의 미션 관리(#mission)가 아니라 **아이의 게임 세계**(#game)로 간다(2026-08-08 지시).
+           부모가 미션을 관리하는 길은 드로어와 게임 안 «부모» 버튼에 있다. */
+      return `<button class="hv3-star" onclick="location.hash='#game'" aria-label="미션 게임">
         <span class="st">★</span>${wait ? `<em class="bdg">${wait}</em>` : ""}</button>`;
     })()}
 
@@ -5070,6 +5128,7 @@ function boardView() {
 /* 분이 바뀔 때만 전광판을 갈아끼운다.
    ⚠ 화면 전체를 다시 그리면 안 된다 — 입력 중이던 칸이 날아가고(한글 조합 깨짐),
      스크롤도 튄다. 전광판 마크업만 바꿔 끼운다. */
+let QUIZ_TIMER = null;   // 퀴즈 문제당 카운트다운(전체 렌더와 분리)
 let BOARD_TIMER = null;
 function startBoard() {
   clearInterval(BOARD_TIMER);
@@ -5153,6 +5212,149 @@ function noteToday() {
      · 하단 3버튼은 여기 없다(홈에만 그린다) — 돌아가는 길은 ← 하나뿐이다.
    ⚠ 이 머리를 쓰는 화면에는 `.subtabs` 를 넣지 않는다. 탭 줄이 있으면 «여긴 학교 탭 안»이 되고,
      그러면 또 어느 탭에서 어디로 나가는지가 생긴다. 화면 하나 = 할 일 하나. */
+/* ═══ 🎮 미션 게임 탭 세 개 (2026-08-08) ═══════════════════════════════
+   ⚠ 전부 `function` 선언이다 — Screens 가 파일 위쪽이라 const 면 그릴 때 죽는다. */
+
+/* 지금이 어느 시간대인가 — 기획서 §01 «한 번에 다 안 보여준다».
+   ⚠ 미션의 `slot` 값(morning/after/evening/any)과 같은 말을 써야 한다. */
+function nowSlot() {
+  const h = new Date().getHours();
+  if (h < 12) return "morning";
+  if (h < 18) return "after";
+  return "evening";
+}
+const SLOT_KO = { morning: "아침", after: "방과후", evening: "저녁", any: "아무 때나" };
+
+// ── 오늘 탭 ────────────────────────────────────────────────
+function gameToday() {
+  const slot = nowSlot();
+  const list = S.missions;
+  if (list === null) return `<p class="gm-empty">불러오는 중…</p>`;
+
+  /* 지금 시간대 것을 위로, 나머지는 접어 둔다.
+     ⚠ 아예 숨기지 않는다 — 아침에 못 한 걸 저녁에 하려는 아이를 막으면 그건 벌이다. */
+  const now = list.filter((x) => (x.slot || "any") === slot || (x.slot || "any") === "any");
+  const later = list.filter((x) => !now.includes(x));
+  const done = list.filter((x) => x.status === "done").length;
+
+  const card = (x) => {
+    const busy = S.missionBusy === x.id;
+    const st = x.status;
+    return `
+    <button class="gm-ms ${st}" ${st === "open" && !busy ? `onclick="App.missionDone(${x.id})"` : ""}>
+      <span class="gm-msk">${st === "done" ? "✓" : st === "waiting" ? "…" : ""}</span>
+      <span class="gm-msb"><b>${esc(x.title)}</b>
+        ${x.minutes ? `<em>${x.minutes}분</em>` : ""}</span>
+      <span class="gm-msc">★${x.stars}</span>
+    </button>`;
+  };
+
+  return `
+    <div class="gm-body">
+      <div class="gm-sec"><b>${SLOT_KO[slot]} 미션</b><em>${done}/${list.length} 끝냄</em></div>
+      ${!now.length ? `<p class="gm-empty">지금 할 미션이 없어요</p>` : now.map(card).join("")}
+      ${!later.length ? "" : `
+        <div class="gm-sec later"><b>다른 시간 미션</b></div>
+        ${later.map(card).join("")}`}
+    </div>`;
+}
+
+// ── 퀴즈 탭 ────────────────────────────────────────────────
+function gameQuiz() {
+  const q = S.quiz;
+  if (q === null) return `<p class="gm-empty">불러오는 중…</p>`;
+
+  // ① 채점 결과 화면
+  if (S.quizResult) {
+    const r = S.quizResult;
+    return `
+    <div class="gm-body">
+      <div class="qz-done">
+        <div class="qz-score"><b>${r.correct}</b><span>/ ${r.total}</span></div>
+        ${r.perfect ? `<div class="qz-perfect">만점! 보너스 ★${r.perfect_bonus}</div>` : ""}
+        <div class="qz-coin">★ ${r.coins} 받았어요</div>
+        ${r.capped ? `<p class="qz-cap">오늘 벌 수 있는 만큼 다 벌었어요</p>` : ""}
+      </div>
+      ${!r.review?.length ? `<p class="gm-empty">다 맞혔어요!</p>` : `
+        <div class="gm-sec"><b>틀린 문제</b><em>답을 보고 가요</em></div>
+        ${r.review.map((v) => `
+          <div class="qz-rv"><b>${esc(v.answer_text)}</b>${v.hint ? `<em>${esc(v.hint)}</em>` : ""}</div>`).join("")}`}
+      <button class="gm-go" onclick="App.gameTab('today')">오늘 미션 보러 가기</button>
+    </div>`;
+  }
+
+  // ② 이미 오늘 푼 경우
+  if (q.done) {
+    return `
+    <div class="gm-body">
+      <div class="qz-done">
+        <div class="qz-score"><b>${q.correct}</b><span>/ ${q.total}</span></div>
+        <div class="qz-coin">★ ${q.coins} 받았어요</div>
+      </div>
+      <p class="gm-empty">오늘 퀴즈는 끝! 내일 또 만나요</p>
+    </div>`;
+  }
+
+  // ③ 시작 전
+  if (!q.items?.length) return `<p class="gm-empty">문제를 준비하지 못했어요</p>`;
+  if (S.quizIdx < 0) {
+    return `
+    <div class="gm-body">
+      <div class="qz-intro">
+        <b>오늘의 퀴즈</b>
+        <p>${q.total}문제 · 한 문제에 ${q.sec_per_q}초</p>
+        <p class="quiet">맞힌 만큼 ★ · 다 맞히면 보너스 ★${q.perfect_bonus}</p>
+        <button class="gm-go" onclick="App.quizStart()">시작하기</button>
+      </div>
+    </div>`;
+  }
+
+  // ④ 푸는 중
+  const item = q.items[S.quizIdx];
+  if (!item) return `<p class="gm-empty">…</p>`;
+  const ratio = Math.max(0, Math.min(100, (S.quizLeft / q.sec_per_q) * 100));
+  return `
+    <div class="gm-body qz-play">
+      <div class="qz-hd">
+        <span class="qz-no">${S.quizIdx + 1} / ${q.total}</span>
+        <span class="qz-field">${esc(QUIZ_FIELD_KO[item.field] || "")}</span>
+      </div>
+      <div class="qz-timer"><span style="width:${ratio}%"></span></div>
+      <p class="qz-q">${esc(item.q)}</p>
+      <div class="qz-opts">
+        ${item.options.map((o, i) => `
+          <button class="qz-op" onclick="App.quizPick(${i + 1})">${esc(o)}</button>`).join("")}
+      </div>
+    </div>`;
+}
+const QUIZ_FIELD_KO = { kor: "국어", math: "수학", sci: "과학", world: "나라",
+  proverb: "속담", life: "상식", sports: "스포츠", ent: "연예" };
+
+// ── 상점 탭 ────────────────────────────────────────────────
+function gameShop() {
+  const list = S.store;
+  if (list === null) return `<p class="gm-empty">불러오는 중…</p>`;
+  if (!list.length) return `
+    <div class="gm-body"><p class="gm-empty">엄마아빠가 무엇과 바꿀 수 있는지<br>정해 주면 여기에 나와요</p></div>`;
+
+  const why = { limit: "이번엔 다 바꿨어요", stars: "★이 모자라요" };
+  return `
+    <div class="gm-body">
+      ${list.map((it) => {
+        const busy = S.storeBusy === it.item_id;
+        return `
+        <div class="gm-item ${it.can_buy ? "" : "off"}">
+          <div class="gm-itb"><b>${esc(it.title)}</b>
+            ${it.limit_type ? `<em>${it.limit_type === "weekly" ? "주" : "달"} ${it.limit_count}번 중 ${it.used}번</em>` : ""}
+            ${it.can_buy ? "" : `<em class="no">${why[it.reason] || ""}</em>`}</div>
+          <button class="gm-buy" ${it.can_buy && !busy ? "" : "disabled"}
+            onclick="App.storeBuy('${it.item_id}')">★${it.stars_required}</button>
+        </div>`;
+      }).join("")}
+      <button class="gm-go ghost" onclick="location.hash='#tickets'">내 티켓 보기</button>
+    </div>`;
+}
+
 /* ═══ 별도장 상점 · 칭찬 · PIN 의 보조 뷰 (2026-08-07) ═══════════════════
    ⚠ 전부 `function` 선언이다 — Screens 객체가 파일 위쪽에 있어 `const` 로 두면
      화면을 그릴 때 «아직 정의 안 됨»으로 죽는다. 끌어올려지는 형태여야 한다. */
@@ -6686,7 +6888,7 @@ const isGuest = () => !S.loggedIn && !isChildToken() && !!localStorage.getItem("
 const CHILD_SCREENS = ["childview", "childlink", "login", "terms", "policy",
   "childtheme", "childboard", "childshoot", "childexpired", "childtt", "childmealrate", "childfriend", "childsubject", "childlocked",
   // 상점·티켓은 아이가 직접 쓴다(§5③). ⚠ childmode 는 넣지 않는다 — 자녀폰에서 열리면 아이가 제 잠금을 푼다
-  "store", "tickets"];
+  "store", "tickets", "game"];
 /* §4.5 열람 잠금 — **비웠다**(2026-07-31 «기록 누르면 바로 기록잠금 나오게 하지마»).
    기록을 볼 때마다 지문을 묻는 건 제 폰에서 제 아이 기록을 보는 흐름을 막는다.
    보호는 **앱 잠금**(내정보 → 앱 잠금)이 대신한다 — 그쪽은 앱 전체를 한 번만 막는다.
@@ -6810,7 +7012,8 @@ const App = {
        미션·자녀 화면에서도 같은 값을 쓴다. 한 번 받아오면 다시 안 부른다(force 로만 갱신). */
     if (["home", "mission", "childview"].includes(name) && S.loggedIn && S.missions === null) this.loadMissions();
     // 보상 화면 로더 (2026-08-07) — 필요한 화면에서만(첫 화면을 늦추지 않게)
-    if (["store", "home", "childview"].includes(name) && S.loggedIn && S.store === null) this.loadStore();
+    if (["game"].includes(name) && S.loggedIn) { this.loadCoin(); if (S.missions === null) this.loadMissions(); }
+    if (["store", "home", "game", "childview"].includes(name) && S.loggedIn && S.store === null) this.loadStore();
     if (["tickets", "store"].includes(name) && S.loggedIn && S.rewards === null) this.loadRewards();
     if (["mission", "home"].includes(name) && S.loggedIn && S.verifyPending === null) this.loadVerify();
     if (name === "childmode" && S.loggedIn && S.pinHas === null) this.loadPinState();
@@ -8839,6 +9042,105 @@ const App = {
     toast("아이 모드예요. 나갈 땐 번호를 눌러요");
   },
   kidModeOff() { this.pinOpen("unlock"); },
+
+  /* ═══ 🎮 미션 게임 동작 (2026-08-08) ═══════════════════════════════
+     ⚠ 코인·채점은 전부 서버가 한다. 여기서는 «받은 값을 보여주는 것»만 한다. */
+
+  gameTab(k) {
+    S.gameTab = k;
+    if (k === "quiz" && S.quiz === null) this.loadQuiz();
+    if (k === "shop" && S.store === null) this.loadStore();
+    this.render();
+  },
+
+  async loadCoin(force) {
+    const c = cur();
+    if (!TOKENS.access || !c?.server_id) return;
+    if (S.coin && !force) return;
+    try {
+      // 코인 상태는 퀴즈 응답이 같이 준다 — 따로 부르는 길이 없으므로 상점 응답으로 대신한다
+      const r = await api(`/children/${c.server_id}/store`);
+      if (r?.ok && typeof r.data.stars === "number") {
+        S.coin = { stars: r.data.stars, earned_today: S.coin?.earned_today || 0,
+                   limit: S.coin?.limit || 30, room: S.coin?.room ?? 30 };
+      }
+    } catch (_) {}
+    this.render();
+  },
+
+  async loadQuiz(force) {
+    const c = cur();
+    if (!TOKENS.access || !c?.server_id) return;
+    if (S.quiz !== null && !force) return;
+    if (S._quizBusy) return;
+    S._quizBusy = true;
+    try {
+      const r = await api(`/children/${c.server_id}/quiz`);
+      if (r?.ok) {
+        S.quiz = r.data;
+        S.quizIdx = -1;            // -1 = 시작 전 화면
+        S.quizPick = {};
+        if (r.data.coin) S.coin = r.data.coin;
+      }
+    } catch (_) { /* 실패면 null 로 두어 다시 묻는다 */ }
+    S._quizBusy = false;
+    this.render();
+  },
+
+  quizStart() {
+    if (!S.quiz?.items?.length) return;
+    S.quizIdx = 0; S.quizPick = {};
+    this.quizTick();
+    this.render();
+  },
+
+  /* 문제당 제한 시간. **시간이 다 되면 그 문제는 못 푼 것으로 넘어간다**(기획서 §04).
+     ⚠ 타이머는 화면을 통째로 다시 그리지 않는다 — 막대만 갈아끼운다.
+       전체 렌더를 1초마다 돌리면 누르는 순간 버튼이 갈려 오답이 찍힌다. */
+  quizTick() {
+    clearInterval(QUIZ_TIMER);
+    const per = S.quiz?.sec_per_q || 5;
+    S.quizLeft = per;
+    const started = Date.now();
+    QUIZ_TIMER = setInterval(() => {
+      const left = per - (Date.now() - started) / 1000;
+      S.quizLeft = Math.max(0, left);
+      const bar = document.querySelector(".qz-timer span");
+      if (bar) bar.style.width = Math.max(0, (S.quizLeft / per) * 100) + "%";
+      if (S.quizLeft <= 0) { clearInterval(QUIZ_TIMER); App.quizPick(null); }
+    }, 100);
+  },
+
+  quizPick(n) {
+    const q = S.quiz;
+    if (!q?.items?.length || S.quizIdx < 0) return;
+    const item = q.items[S.quizIdx];
+    if (!item) return;
+    S.quizPick[item.code] = n;          // null 이면 «시간초과 = 못 풀었다»
+    if (S.quizIdx + 1 >= q.items.length) {
+      clearInterval(QUIZ_TIMER);
+      this.quizSubmit();
+      return;
+    }
+    S.quizIdx += 1;
+    this.quizTick();
+    this.render();
+  },
+
+  async quizSubmit() {
+    const c = cur();
+    if (!c?.server_id) return;
+    const answers = (S.quiz?.items || []).map((it) => ({ code: it.code, picked: S.quizPick[it.code] ?? null }));
+    try {
+      const r = await api(`/children/${c.server_id}/quiz`, { method: "POST", body: { answers } });
+      if (!r?.ok) { toast(r?.error?.message || "채점이 안 됐어요"); this.render(); return; }
+      S.quizResult = r.data;
+      if (r.data.coin) S.coin = r.data.coin;
+      S.quizIdx = -1;
+      S.missionStars = r.data.coin?.stars ?? S.missionStars;
+    } catch (_) { toast("채점이 안 됐어요"); }
+    this.render();
+  },
 
   async loadReport(force) {
     const c = cur();
