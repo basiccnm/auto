@@ -5297,3 +5297,38 @@ body:has(#tabbar.hidden) #screen:has(.ib),
 .pin-k { height: 56px; border: none; border-radius: 18px;
   background: var(--card-b); color: var(--ink); font-size: 21px; font-weight: 700; font-family: inherit; }
 .pin-k.ghost { background: transparent; color: var(--muted-card); font-size: 15px; font-weight: 700; }
+
+/* ═══ §6 텍스트·아이콘 색상 개선 (지시서 0807 §6 · 대표님 지시 2026-08-07) ═══════
+   🔴 **카드 색은 건드리지 않는다.** `--card-a` 는 이미 배경(`--surf`)보다 진하다.
+      더 진하게 만들지 말고 **그 위 글자와 아이콘을 밝게** 올린다.
+      (내가 카드를 어둡게도 해보고 흰색으로도 덮어봤는데 둘 다 틀렸다 —
+       고칠 것은 «면»이 아니라 «글씨»다.)
+   ⚠ 완전 흰색은 안 쓴다 — 제목 94% · 본문 86% · 보조 74%로 낮춰 회색으로 떨어뜨린다. */
+
+:root { --oncard: rgba(255,255,255,.94); --oncard-2: rgba(255,255,255,.86); --oncard-3: rgba(255,255,255,.74); }
+
+/* 카드 «안»의 글씨·아이콘만. 배경 위 글씨는 그대로 둔다 */
+.hv3-card, .hv3-card b, .hv3-card .tx, .hv3-hdrow b,
+.st-nm b, .tk-nm b, .rw-top b, .sp-nm, .tk-h, .tk-row b, .kb-shopt b, .pin-h, .st-none {
+  color: var(--oncard); }
+.hv3-evs li .tx, .bw-calc { color: var(--oncard-2); }
+/* §6.1 ②가 짚은 자리 — 「일정이 없어요 ›」 「완료 ›」 가 카드와 명도 차가 없어 안 읽혔다 */
+.hv3-hdrow .val, .hv3-morep, .hv3-evs li .at,
+.st-nm em, .tk-nm em, .rw-top em, .sp-need, .tk-hint, .kb-shopt em, .st-lb,
+.st-none em, .pin-p, .st-cancel, .pin-k.ghost { color: var(--oncard-3); }
+/* 아이콘도 같이 올린다 — 글씨만 밝히면 아이콘이 혼자 탁하게 남아 더 눈에 띈다 */
+.hv3-hdrow .ic, .hv3-hdrow .go, .st-del, .kb-shop > .ti, .bw-calc .ti { color: var(--oncard-3); }
+.hv3-card .ti, .hv3-hdrow i { color: var(--oncard-2); }
+
+/* 카드 «안»에 한 겹 더 들어가는 것(입력칸·키패드)도 같은 생각으로 — 흰색을 옅게 얹는다 */
+.st-in, .st-num, .st-sel, .pin-k { background: rgba(255,255,255,.14); color: var(--oncard); border: none; }
+.st-in::placeholder { color: var(--oncard-3); }
+.pin-dots i { background: rgba(255,255,255,.24); }
+.st-row, .st-new, .rw-card, .tk-give, .tk-mine, .kb-shop, .sp-card, .st-none { border: none; }
+
+/* ── 하위 화면도 테마 면을 입는다 ──────────────────────────────────────
+   🔴 `body { background: var(--outer) }` 인데 `--outer` 는 **테마별 정의가 없다**
+      (라이트/다크 두 값뿐). 그래서 홈만 테마색이고 미션·준비물·서랍·상점은 18종 전부
+      같은 회백색 #E8E4DC 였다 → 「테마를 바꿔도 안 바뀐다」로 읽힌다.
+   ⚠ 홈은 `#screen:has(.hv3-art)` 가 위에서 그라데이션으로 덮으므로 영향을 안 받는다. */
+#screen { background: var(--surf); }
