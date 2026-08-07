@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 위젯 등록 정보.
+     updatePeriodMillis 는 안드로이드가 **최소 30분**으로 묶는다 — 더 짧게 적어도 30분이다.
+     그래서 «앱에서 값이 바뀌면 즉시» 는 이 주기가 아니라 WidgetPlugin 의 강제 갱신으로 한다.
+     여기 주기는 «앱을 며칠 안 열어도 날짜는 넘어가게» 하는 보험이다. -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="250dp"
+    android:minHeight="110dp"
+    android:maxResizeWidth="640dp"
+    android:maxResizeHeight="740dp"
+    android:targetCellWidth="4"
+    android:targetCellHeight="5"
+    android:updatePeriodMillis="1800000"
+    android:initialLayout="@layout/widget_school"
+    android:previewLayout="@layout/widget_school"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen"
+    android:description="@string/widget_desc" />

@@ -127,3 +127,19 @@ _preview/
 # 스키마가 언제 왜 바뀌었는지 git 에 없으면 서버를 되돌릴 방법이 없다.
 !**/scripts/migrate_*.sql
 !**/scripts/rollback_*.sql
+
+# ─── 2026-08-07 추가 — 인증정보 ───
+*.pickle
+*.pem
+*.p12
+*.key
+credentials.json
+client_secret*.json
+
+# ─── 2026-08-07 추가 — 인증정보 ───
+*.pickle
+*.pem
+*.p12
+*.key
+credentials.json
+client_secret*.json

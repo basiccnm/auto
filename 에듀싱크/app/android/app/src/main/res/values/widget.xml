@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 위젯 색 — 앱의 기본 테마(웜그레이)를 그대로 옮긴다.
+     위젯은 웹뷰 밖이라 style.css의 CSS 변수를 못 쓴다. 값이 갈라지지 않게 여기 한 곳에만 적는다. -->
+<resources>
+    <color name="w_card">#FFFFFFFF</color>
+    <color name="w_ink">#FF2E2C29</color>
+    <color name="w_muted">#FF8A8781</color>
+    <color name="w_accent">#FFC0552F</color>
+    <color name="w_line">#FFE3E1DB</color>
+    <dimen name="w_radius">18dp</dimen>
+</resources>

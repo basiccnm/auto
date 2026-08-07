@@ -1,0 +1,74 @@
+# ═══════════════════════════════════════════════════════════
+#  우리아이학교정보 — .gitignore
+#  이 앱은 아이 이름·학교·상장 사진을 다룬다.
+#  «커밋해도 되나?» 싶으면 넣지 않는다. 지우기보다 안 넣는 게 싸다.
+# ═══════════════════════════════════════════════════════════
+
+# ── 비밀 (절대 커밋 금지) ──────────────────────────────────
+.dev.vars
+.dev.vars.*
+.env
+.env.*
+ADMIN_CREDENTIALS.txt
+google-services.json
+# NEIS·유치원·학교알리미 API 키 3개가 평문으로 들어 있다 (2026-08-02 확인)
+eduthink_config.json
+*.keystore
+*.jks
+*.p8
+*.p12
+*token*.json
+*_token.txt
+# wrangler.toml 은 커밋한다 — 시크릿은 `wrangler secret put` 으로 빠져 있다.
+# 평문 키를 [vars] 에 되돌려 넣지 말 것.
+
+# ── 데이터베이스 · 실사용자 데이터 ────────────────────────
+*.db
+*.sqlite
+*.sqlite3
+eduthink.db
+.wrangler/
+**/.wrangler/
+.backup/
+.qa/
+.tmp/
+
+# ── 업로드 이미지 · 실화면 캡처 (아이 이름·학교가 찍혀 있다) ──
+docs/화면캡처-*/
+uploads/
+records/
+*.heic
+_screens/
+screenshots/
+
+# ── 빌드 산출물 ───────────────────────────────────────────
+node_modules/
+dist/
+build/
+app/android/build/
+app/android/app/build/
+app/android/.gradle/
+app/android/.kotlin/
+app/android/local.properties
+app/android/capacitor-cordova-android-plugins/build/
+.gradle/
+__pycache__/
+*.pyc
+
+# ── 무거운 것 (저장소에 영구히 남는다) ─────────────────────
+# 학교 데이터 덤프 75MB. 공개 데이터라 비밀은 아니지만 다시 만들 수 있다.
+scripts/load_seoul.sql
+scripts/load_sejong.sql
+scripts/load_school_details.sql
+scripts/backup_원격_*.sql
+d1_schools.sql
+d1_sync2.sql
+
+# 스킬 번들 — 원본은 `블로그수입관련\skill\skills-library\` 에 있다.
+.claude/skills/
+
+# ── 로그 · 찌꺼기 ─────────────────────────────────────────
+*.log
+.DS_Store
+Thumbs.db
+*.apk

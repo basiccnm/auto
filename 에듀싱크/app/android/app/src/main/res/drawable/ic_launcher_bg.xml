@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 별이 아이콘 배경 — 밤하늘 파랑 (2026-08-03) -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <gradient android:angle="315" android:startColor="#4A7BD4" android:endColor="#1B3F7E" android:type="linear"/>
+</shape>

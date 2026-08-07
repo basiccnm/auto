@@ -1,0 +1,85 @@
+/* 자동 생성 — tools/build-icons.mjs (Tabler 3.24.0 서브셋 69자).
+   손으로 고치지 말 것. 아이콘을 새로 쓰면 스크립트를 다시 돌린다. */
+@font-face {
+  font-family: "tabler-icons";
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url("tabler-subset.woff2?v=69-tazxlz") format("woff2");
+}
+.ti {
+  font-family: "tabler-icons" !important;
+  font-style: normal; font-weight: normal; font-variant: normal;
+  text-transform: none; line-height: 1;
+  -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale;
+  display: inline-block; speak: none;
+}
+.ti-alert-triangle::before { content: "\ea06"; }
+.ti-archive::before { content: "\ea0b"; }
+.ti-arrow-back-up::before { content: "\eb77"; }
+.ti-award::before { content: "\ea2c"; }
+.ti-backpack::before { content: "\ef47"; }
+.ti-bell::before { content: "\ea35"; }
+.ti-bowl::before { content: "\f4fa"; }
+.ti-bus::before { content: "\ebe4"; }
+.ti-calendar::before { content: "\ea53"; }
+.ti-camera::before { content: "\ea54"; }
+.ti-certificate::before { content: "\ed76"; }
+.ti-chart-bar::before { content: "\ea59"; }
+.ti-check::before { content: "\ea5e"; }
+.ti-checkbox::before { content: "\eba6"; }
+.ti-chevron-down::before { content: "\ea5f"; }
+.ti-chevron-left::before { content: "\ea60"; }
+.ti-chevron-right::before { content: "\ea61"; }
+.ti-chevron-up::before { content: "\ea62"; }
+.ti-circle-check::before { content: "\ea67"; }
+.ti-clock::before { content: "\ea70"; }
+.ti-confetti::before { content: "\ee46"; }
+.ti-discount::before { content: "\ebbd"; }
+.ti-external-link::before { content: "\ea99"; }
+.ti-eye::before { content: "\ea9a"; }
+.ti-eye-off::before { content: "\ecf0"; }
+.ti-file-text::before { content: "\eaa2"; }
+.ti-fingerprint::before { content: "\ebd1"; }
+.ti-flag::before { content: "\eaa6"; }
+.ti-flask::before { content: "\ebd2"; }
+.ti-grip-vertical::before { content: "\ec01"; }
+.ti-hand-stop::before { content: "\ec2e"; }
+.ti-home::before { content: "\eac1"; }
+.ti-info-circle::before { content: "\eac5"; }
+.ti-link::before { content: "\eade"; }
+.ti-lock::before { content: "\eae2"; }
+.ti-menu-2::before { content: "\ec42"; }
+.ti-message-circle::before { content: "\eaed"; }
+.ti-messages::before { content: "\eb6c"; }
+.ti-mood-sick::before { content: "\f2e5"; }
+.ti-notebook::before { content: "\eb96"; }
+.ti-palette::before { content: "\eb01"; }
+.ti-paperclip::before { content: "\eb02"; }
+.ti-pencil::before { content: "\eb04"; }
+.ti-phone::before { content: "\eb09"; }
+.ti-photo::before { content: "\eb0a"; }
+.ti-pin::before { content: "\ec9c"; }
+.ti-plane::before { content: "\eb6f"; }
+.ti-plus::before { content: "\eb0b"; }
+.ti-printer::before { content: "\eb0e"; }
+.ti-receipt::before { content: "\edfd"; }
+.ti-run::before { content: "\ec82"; }
+.ti-school::before { content: "\ecf7"; }
+.ti-scissors::before { content: "\eb1b"; }
+.ti-search::before { content: "\eb1c"; }
+.ti-send::before { content: "\eb1e"; }
+.ti-settings::before { content: "\eb20"; }
+.ti-share-2::before { content: "\f799"; }
+.ti-square::before { content: "\eb2c"; }
+.ti-square-check::before { content: "\eb28"; }
+.ti-star::before { content: "\eb2e"; }
+.ti-table::before { content: "\eba1"; }
+.ti-target::before { content: "\eb35"; }
+.ti-tools-kitchen-2::before { content: "\eeff"; }
+.ti-trash::before { content: "\eb41"; }
+.ti-umbrella::before { content: "\ebf1"; }
+.ti-user::before { content: "\eb4d"; }
+.ti-x::before { content: "\eb55"; }
+.ti-zoom-in::before { content: "\eb56"; }
+.ti-zoom-out::before { content: "\eb57"; }

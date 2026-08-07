@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 바탕화면 위젯 (2026-07-27)
+     ⚠ RemoteViews 는 **허용된 뷰만** 펼친다. `<View>` 를 구분선으로 썼다가
+        「위젯을 추가할 수 없습니다」로 통째로 죽었다 — 선은 높이 1dp 짜리 TextView 로 긋는다.
+     ⚠ 웹뷰가 아니라 CSS·아이콘 폰트가 없다. 아이콘 자리는 이모지 한 글자다.
+
+     줄은 **여섯 칸 고정**이고 내용은 사용자가 고른다(#homeedit → 바탕화면 위젯).
+     안 고른 줄은 SchoolWidget.java 가 GONE 으로 감춘다 — 레이아웃을 종류별로 만들지 않는다.
+     여섯 칸인 이유: 「전체 정보를 한눈에」(2026-07-27 지시). 급식·시간표·학교일정·내일정·준비물·D-day 를
+     한 화면에 다 펼칠 수 있어야 한다. 크기를 줄이면 사용자가 줄을 꺼서 맞춘다. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/w_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/widget_bg"
+    android:padding="14dp">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingBottom="8dp">
+
+        <TextView
+            android:id="@+id/w_child"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:textColor="@color/w_ink"
+            android:maxLines="1"
+            android:ellipsize="end"
+            android:text="아이서랍" />
+
+        <TextView
+            android:id="@+id/w_date"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="12sp"
+            android:textColor="@color/w_muted"
+            android:text="" />
+    </LinearLayout>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/w_line"
+        android:text="" />
+
+    <!-- 1번 줄 -->
+    <LinearLayout
+        android:id="@+id/w_row1"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:minHeight="30dp">
+        <TextView android:id="@+id/w_ico1" android:layout_width="24dp"
+            android:layout_height="wrap_content" android:textSize="14sp" android:text="" />
+        <TextView android:id="@+id/w_txt1" android:layout_width="0dp"
+            android:layout_height="wrap_content" android:layout_weight="1"
+            android:textSize="13sp" android:textColor="@color/w_ink"
+            android:maxLines="3" android:ellipsize="end" android:text="" />
+    </LinearLayout>
+
+    <!-- 2번 줄 -->
+    <LinearLayout
+        android:id="@+id/w_row2"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:minHeight="30dp">
+        <TextView android:id="@+id/w_ico2" android:layout_width="24dp"
+            android:layout_height="wrap_content" android:textSize="14sp" android:text="" />
+        <TextView android:id="@+id/w_txt2" android:layout_width="0dp"
+            android:layout_height="wrap_content" android:layout_weight="1"
+            android:textSize="13sp" android:textColor="@color/w_ink"
+            android:maxLines="3" android:ellipsize="end" android:text="" />
+    </LinearLayout>
+
+    <!-- 3번 줄 -->
+    <LinearLayout
+        android:id="@+id/w_row3"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:minHeight="30dp">
+        <TextView android:id="@+id/w_ico3" android:layout_width="24dp"
+            android:layout_height="wrap_content" android:textSize="14sp" android:text="" />
+        <TextView android:id="@+id/w_txt3" android:layout_width="0dp"
+            android:layout_height="wrap_content" android:layout_weight="1"
+            android:textSize="13sp" android:textColor="@color/w_ink"
+            android:maxLines="3" android:ellipsize="end" android:text="" />
+    </LinearLayout>
+
+    <!-- 4번 줄 -->
+    <LinearLayout
+        android:id="@+id/w_row4"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:minHeight="30dp">
+        <TextView android:id="@+id/w_ico4" android:layout_width="24dp"
+            android:layout_height="wrap_content" android:textSize="14sp" android:text="" />
+        <TextView android:id="@+id/w_txt4" android:layout_width="0dp"
+            android:layout_height="wrap_content" android:layout_weight="1"
+            android:textSize="13sp" android:textColor="@color/w_ink"
+            android:maxLines="3" android:ellipsize="end" android:text="" />
+    </LinearLayout>
+
+    <!-- 5번 줄 -->
+    <LinearLayout
+        android:id="@+id/w_row5"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:minHeight="30dp">
+        <TextView android:id="@+id/w_ico5" android:layout_width="24dp"
+            android:layout_height="wrap_content" android:textSize="14sp" android:text="" />
+        <TextView android:id="@+id/w_txt5" android:layout_width="0dp"
+            android:layout_height="wrap_content" android:layout_weight="1"
+            android:textSize="13sp" android:textColor="@color/w_ink"
+            android:maxLines="3" android:ellipsize="end" android:text="" />
+    </LinearLayout>
+
+    <!-- 6번 줄 -->
+    <LinearLayout
+        android:id="@+id/w_row6"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:minHeight="30dp">
+        <TextView android:id="@+id/w_ico6" android:layout_width="24dp"
+            android:layout_height="wrap_content" android:textSize="14sp" android:text="" />
+        <TextView android:id="@+id/w_txt6" android:layout_width="0dp"
+            android:layout_height="wrap_content" android:layout_weight="1"
+            android:textSize="13sp" android:textColor="@color/w_ink"
+            android:maxLines="3" android:ellipsize="end" android:text="" />
+    </LinearLayout>
+</LinearLayout>

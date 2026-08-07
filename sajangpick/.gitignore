@@ -1,0 +1,14 @@
+node_modules/
+outbox/*.mp4
+STATE.md
+# 업로더 — 프로필은 로그인 쿠키(=계정 그 자체)라 절대 저장소에 넣지 않는다
+uploader/uploader_profile/
+uploader/log/
+uploader/__pycache__/
+public/bgm.wav
+.build/
+public/audio/
+.env
+*.log
+out/
+__pycache__/

@@ -1,0 +1,195 @@
+/* auth.css — 회원가입/로그인 위젯. 360px 최소폭 우선 설계.
+   색상은 CSS 변수로 노출 → 다른 프로젝트에서 브랜드 색만 덮어쓰면 됨. */
+
+.auth-widget {
+  --aw-bg: #f4f5f7;
+  --aw-card: #ffffff;
+  --aw-text: #1a1c1f;
+  --aw-muted: #8a9099;
+  --aw-line: #e5e7eb;
+  --aw-primary: #2b6ef2;
+  --aw-primary-press: #1f57c9;
+  --aw-danger: #e5484d;
+  --aw-ok: #2ba875;
+  --aw-radius: 12px;
+
+  box-sizing: border-box;
+  width: 100%;                 /* flex 아이템이 내용물 크기로 줄지 않도록 */
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo",
+               "Malgun Gothic", sans-serif;
+  color: var(--aw-text);
+}
+.auth-widget *, .auth-widget *::before, .auth-widget *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--aw-bg);
+  padding: 16px;
+}
+
+.aw-card {
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;              /* 넓은 화면에서 카드 가로 중앙정렬 */
+  background: var(--aw-card);
+  border-radius: 16px;
+  padding: clamp(20px, 6vw, 32px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, .08);
+}
+
+.aw-brand {
+  margin: 0 0 20px;
+  text-align: center;
+  font-size: clamp(20px, 6vw, 26px);
+  font-weight: 700;
+}
+
+/* 탭 */
+.aw-tabs {
+  display: flex;
+  gap: 4px;
+  background: #eef0f3;
+  border-radius: 10px;
+  padding: 4px;
+  margin-bottom: 20px;
+}
+.aw-tab {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  padding: 10px 0;
+  border-radius: 8px;
+  font-size: clamp(14px, 3.8vw, 15px);
+  font-weight: 600;
+  color: var(--aw-muted);
+  cursor: pointer;
+  transition: background .15s, color .15s;
+}
+.aw-tab.is-active {
+  background: var(--aw-card);
+  color: var(--aw-text);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .1);
+}
+
+/* 소셜 버튼 */
+.aw-social { display: flex; flex-direction: column; gap: 8px; }
+.aw-social-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid var(--aw-line);
+  border-radius: var(--aw-radius);
+  font-size: clamp(14px, 3.8vw, 15px);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  color: #1a1c1f;
+  background: #fff;
+}
+.aw-social-btn .aw-ico { width: 18px; height: 18px; display: inline-block; }
+.aw-social-btn[data-p="kakao"]  { background: #fee500; border-color: #fee500; }
+.aw-social-btn[data-p="google"] { background: #fff; }
+.aw-social-btn[data-p="naver"]  { background: #03c75a; border-color: #03c75a; color: #fff; }
+.aw-social-btn[data-p="apple"]  { background: #000; border-color: #000; color: #fff; }
+.aw-social-btn:active { filter: brightness(.96); }
+
+/* 구분선 */
+.aw-divider {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0;
+  color: var(--aw-muted);
+  font-size: 12px;
+}
+.aw-divider::before, .aw-divider::after {
+  content: ""; flex: 1; height: 1px; background: var(--aw-line);
+}
+
+/* 폼 */
+.aw-form { display: flex; flex-direction: column; gap: 14px; }
+.aw-form.is-hidden { display: none; }
+.aw-field { display: flex; flex-direction: column; gap: 6px; }
+.aw-field > span, .aw-field-label {
+  font-size: 13px; font-weight: 600; color: #4b5058;
+}
+.aw-field small { color: var(--aw-muted); font-weight: 400; }
+.aw-field input, .aw-phone input {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--aw-line);
+  border-radius: var(--aw-radius);
+  font-size: 16px;              /* iOS 자동 확대 방지 위해 16px 이상 */
+  background: #fff;
+  color: var(--aw-text);
+}
+.aw-field input:focus, .aw-phone input:focus {
+  outline: none;
+  border-color: var(--aw-primary);
+  box-shadow: 0 0 0 3px rgba(43, 110, 242, .15);
+}
+
+/* 버튼 */
+.aw-btn {
+  min-height: 48px;
+  border-radius: var(--aw-radius);
+  font-size: clamp(15px, 4vw, 16px);
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background .15s, opacity .15s;
+}
+.aw-btn-primary { background: var(--aw-primary); color: #fff; }
+.aw-btn-primary:active { background: var(--aw-primary-press); }
+.aw-btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+.aw-btn-ghost {
+  background: #eef2fb;
+  color: var(--aw-primary);
+  padding: 0 14px;
+  white-space: nowrap;
+  min-width: 92px;
+}
+.aw-btn-ghost:disabled { opacity: .5; cursor: not-allowed; }
+
+/* 휴대폰 인증 */
+.aw-phone { display: flex; flex-direction: column; gap: 8px; }
+.aw-phone-row { display: flex; gap: 8px; align-items: center; }
+.aw-phone-row input { flex: 1; }
+.aw-phone-row.is-hidden { display: none; }
+.aw-timer {
+  font-size: 13px; font-weight: 600; color: var(--aw-danger);
+  min-width: 42px; text-align: right;
+}
+.aw-phone-msg { margin: 0; font-size: 13px; min-height: 18px; }
+.aw-phone-msg.ok   { color: var(--aw-ok); }
+.aw-phone-msg.err  { color: var(--aw-danger); }
+.aw-phone-msg.info { color: var(--aw-muted); }
+
+/* 상태 메시지 */
+.aw-status { margin: 14px 0 0; text-align: center; font-size: 14px; min-height: 20px; }
+.aw-status.ok  { color: var(--aw-ok); }
+.aw-status.err { color: var(--aw-danger); }
+
+.is-hidden { display: none !important; }
+
+/* 다크 모드 */
+@media (prefers-color-scheme: dark) {
+  .auth-widget {
+    --aw-bg: #16181c;
+    --aw-card: #1f2228;
+    --aw-text: #eceef1;
+    --aw-muted: #8a9099;
+    --aw-line: #333842;
+  }
+  .aw-tabs { background: #2a2e36; }
+  .aw-btn-ghost { background: #2a3550; }
+  .aw-field input, .aw-phone input { background: #262a31; }
+}
