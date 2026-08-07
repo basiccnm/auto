@@ -23,6 +23,7 @@ import {
   noticePage,
   loginPage,
   feedbackPage,
+  accountDeletePage,
 } from "./templates.js";
 import { sendPush } from "./push.js";
 import { OG_PNG_BASE64 } from "./og_image.js";
@@ -2672,6 +2673,9 @@ export default {
     if (path === "/about") return html(aboutPage());
     if (path === "/terms") return html(termsPage());
     if (path === "/privacy") return html(privacyPage());
+    // 계정 삭제 안내 — **구글 플레이 필수**. 스토어 「데이터 보안」 양식에 이 URL 을 적는다.
+    // 별칭 둘 다 받는다(심사자가 흔히 쓰는 경로라 어느 쪽으로 들어와도 열려야 한다).
+    if (path === "/account-delete" || path === "/delete-account") return html(accountDeletePage());
     // 스토어 등록에 넣을 **공개** 지원 URL. 로그인 뒤에 숨은 화면은 심사에 못 쓴다.
     if (path === "/help" || path === "/support" || path === "/faq") return html(helpPage());
     // 학교 표준 서식(초등) — 학교명(+등록 자녀 학년·반) 채운 인쇄/PDF 서식. 로그인 없이도 열람 가능.
