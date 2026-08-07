@@ -5338,3 +5338,41 @@ body:has(#tabbar.hidden) #screen:has(.ib),
 .ms-empty { margin-top: 0; min-height: calc(100vh - 260px);
   display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .ms-empty .btn-primary { width: auto; min-width: 200px; }
+
+/* ═══ 마이다이어리 벤치마킹 (2026-08-07 저녁, video2 38프레임 분석) ═══════════
+   지시: 드로어 배치·텍스트/화면 색·테마 화면·일러스트 배치를 그 느낌으로.
+   ⚠ 카드색·기존 튜닝(8/4 정본)은 안 건드린다 — 여기는 «추가»만 있다. */
+
+/* 드로어 그룹 캡션 — 학교 / 보상 / 소통 */
+.hv3-drcap { padding: 10px 20px 4px; font-size: 11.5px; font-weight: 800;
+  letter-spacing: .04em; color: var(--dr-sub); }
+
+/* 테마 고르기 = 3열 격자 (캐러셀 → 격자. 미니 실물 목업은 그대로 재사용) */
+.th-car { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+  overflow: visible; scroll-snap-type: none; padding: 2px 0 8px; }
+.th-item { width: auto; }
+.th-item .ph { height: 150px; border-radius: 14px; }
+/* 미리보기 상단 띠 = **그 테마의 실제 일러스트** (그라데이션 대신) */
+.th-item .ph-bar { height: 64px;
+  background-image: var(--art-img); background-size: cover; background-position: center top; }
+.th-item .ph-card { height: 26px; }
+.th-item .ph-card:nth-of-type(2) { top: 72px; }
+.th-item .ph-card:nth-of-type(3) { top: 104px; height: 20px; }
+.th-item .ph-fab { width: 22px; height: 22px; bottom: 8px; }
+.th-item b { font-size: 12px; margin-top: 5px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 고른 칸 — 테두리 + 귀퉁이 체크(격자에선 테두리만으로 안 보인다) */
+.th-item.on .ph::after { content: "✓"; position: absolute; right: 5px; top: 5px;
+  width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center;
+  background: var(--accent); color: #FFF; font-size: 12px; font-weight: 900; }
+
+/* 시계 — 날짜에 테마 포인트색(우리만 있는 부품이라 테마와 «한 벌»로 보이게) */
+.bd-time .dt { color: var(--accent-ink); }
+
+/* 일간 큰 날짜 머리 — 마이다이어리 문법(큰 숫자 + 작은 월·요일) */
+.dy-big { display: flex; align-items: center; gap: 10px; padding: 2px 2px 10px; }
+.dy-big b { font-size: 44px; font-weight: 900; line-height: 1; letter-spacing: -2px;
+  color: var(--accent-ink); }
+.dy-big span { display: flex; flex-direction: column; gap: 1px; }
+.dy-big em { font-style: normal; font-size: 14.5px; font-weight: 800; color: var(--ink); }
+.dy-big i { font-style: normal; font-size: 12px; font-weight: 700; color: var(--muted); }

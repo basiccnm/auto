@@ -2637,20 +2637,8 @@ const Screens = {
         </ul></button>`;
     })()}
 
-    <!-- ⑦ 별도장 상점 진열대 — 모은 도장이 «무엇이 되는지»가 보여야 모을 이유가 생긴다 (§5③) -->
-    ${(() => {
-      // 미션 카드와 같은 이유로 null 이어도 그린다(비회원 홈이 비지 않게)
-      const can = (S.store || []).filter((x) => x.can_buy).length;
-      return `<button class="hv3-card" onclick="location.hash='#store'">
-        <div class="hv3-hdrow">
-          <span class="ic"><i aria-hidden="true">★</i></span>
-          <b>별도장 상점</b><em class="val">★${S.missionStars || 0}</em>
-          <i aria-hidden="true" class="ti ti-chevron-right go"></i>
-        </div>
-      </button>`;
-      /* ⚠ 설명 줄을 안 단다(2026-08-07 지시). 알아야 할 값(★ 잔액)은 이미 오른쪽에 있고,
-         «조금만 더 모으면…» 같은 말은 매번 읽을 것이 아니다. 다른 카드와 같은 한 줄로 둔다. */
-    })()}
+    <!-- 별도장 상점 카드는 홈에서 뺐다(2026-08-07 지시) — 부모의 매일 화면에 매일 볼 것이 아니다.
+         입구는 드로어 «보상» 그룹. 미션·확인해주세요 카드는 부모 일이라 남긴다. -->
 
     <!-- 하단 3버튼 (§1) — 좌 달력 · 가운데 큰 ＋ · 우 미션 -->
     <!-- 달력에만 라벨이 없어 셋이 삐뚤어 보였다(2026-08-04 지적) — 같은 자리에 같은 라벨을 준다 -->
@@ -3273,8 +3261,14 @@ const Screens = {
     };
 
     return `
-    ${subHeader(`${fmtD(mo, d)} <i class="dy-wd">${wdKo}요일</i>`,
-      past ? "지난 날 · 기록" : today ? "오늘" : (ddayLabel(key) || "앞으로"))}
+    ${subHeader(past ? "지난 날 · 기록" : today ? "오늘" : (ddayLabel(key) || "앞으로"))}
+
+    <!-- 큰 날짜 머리 (2026-08-07 마이다이어리 벤치마킹) — 「07 8월 금요일」처럼 날짜 숫자가 주인공.
+         날짜 형식 설정(fmtD)은 여기선 안 탄다 — 숫자 하나라 형식이 갈릴 게 없다. -->
+    <div class="dy-big">
+      <b>${String(d).padStart(2, "0")}</b>
+      <span><em>${mo}월 ${wdKo}요일</em><i>${y}</i></span>
+    </div>
 
     <!-- 좌우로 밀면 날짜가 넘어간다(§7). 버튼도 같이 둔다 — 제스처만 있으면 모르는 사람은 못 쓴다 -->
     <div class="dy-nav">
@@ -5286,17 +5280,25 @@ function drawerView(c) {
   if (!S.drawer) return "";
   const undone = STUB.documents.filter((d) => d.kind === "field" && !d.reported).length;
   const unread = unreadFor("parent");
-  const ITEMS = [
-    // 별도장 상점 — 미션이 쌓은 것을 «쓰는» 자리(§5③). ⚠ 아이콘은 서브셋에 있는 것만
-    ["ti-discount", "별도장 상점", "location.hash='#store'", ""],
-    ["ti-user",  "아이 모드", "location.hash='#childmode'", ""],
-    ["ti-archive",   "서랍",     "location.hash='#timeline'", ""],
-    ["ti-table",     "시간표",   "location.hash='#timetable'", ""],
-    ["ti-tools-kitchen-2", "급식", "location.hash='#meal'", ""],
-    ["ti-school",    "학교정보", "location.hash='#schoolinfo'", ""],
-    ["ti-file-text", "서류",     "location.hash='#docs'", undone ? String(undone) : ""],
-    ["ti-message-circle", "대화", "location.hash='#notify'", unread ? String(unread) : ""],
-    ["ti-messages",     "커뮤니티", "location.hash='#community'", ""],
+  /* 그룹 배치 (2026-08-07 마이다이어리 벤치마킹) — 홈에서 뺀 보상 화면들의 정식 입구가 여기다.
+     학교(매일 보는 것) → 보상(별도장 경제) → 소통(오가는 것) 순. ⚠ 아이콘은 서브셋에 있는 것만 */
+  const GROUPS = [
+    ["학교", [
+      ["ti-archive",   "서랍",     "location.hash='#timeline'", ""],
+      ["ti-table",     "시간표",   "location.hash='#timetable'", ""],
+      ["ti-tools-kitchen-2", "급식", "location.hash='#meal'", ""],
+      ["ti-school",    "학교정보", "location.hash='#schoolinfo'", ""],
+    ]],
+    ["보상", [
+      ["ti-discount",  "별도장 상점", "location.hash='#store'", ""],
+      ["ti-receipt",   "내 티켓",   "location.hash='#tickets'", ""],
+      ["ti-user",      "아이 모드", "location.hash='#childmode'", ""],
+    ]],
+    ["소통", [
+      ["ti-file-text", "서류",     "location.hash='#docs'", undone ? String(undone) : ""],
+      ["ti-message-circle", "대화", "location.hash='#notify'", unread ? String(unread) : ""],
+      ["ti-messages",  "커뮤니티", "location.hash='#community'", ""],
+    ]],
   ];
   /* 사용기한 줄 — 결제를 붙이기 전이라 **자리만** 잡아 둔다(§4).
      ⚠ 없는 기능을 있는 것처럼 눌리게 두지 않는다. 지금은 누를 수 없는 «표시»다. */
@@ -5327,10 +5329,13 @@ function drawerView(c) {
       <div class="hv3-drhr"></div>
 
       <div class="hv3-drscroll">
-        ${ITEMS.map(([ic, nm, go, bd]) => `
+        ${GROUPS.map(([cap, items], gi) => `
+          ${gi ? `<div class="hv3-drhr"></div>` : ""}
+          <div class="hv3-drcap">${cap}</div>
+          ${items.map(([ic, nm, go, bd]) => `
           <button class="hv3-dritem" onclick="App.drawerClose();${go}">
             <i aria-hidden="true" class="ti ${ic}"></i>${nm}
-            ${bd ? `<span class="hd-badge" style="position:static;margin-left:auto">${bd}</span>` : ""}</button>`).join("")}
+            ${bd ? `<span class="hd-badge" style="position:static;margin-left:auto">${bd}</span>` : ""}</button>`).join("")}`).join("")}
       </div>
       <div class="hv3-drfoot">
         <button class="hv3-dritem sub" onclick="App.drawerClose();location.hash='#mypage'">
