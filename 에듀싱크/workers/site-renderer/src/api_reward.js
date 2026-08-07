@@ -12,7 +12,7 @@
 //   ⑥ 아이는 «사는 것»만 할 수 있다. 진열대 편집·보너스 승인은 부모만.
 
 import { apiOk, apiList, apiErr, readJson } from "./api_core.js";
-import { resolveAuth } from "./auth_core.js";
+import { resolveAuth, hashPassword, verifyPassword } from "./auth_core.js";
 
 const nowIso = () => new Date().toISOString();
 const KST = 9 * 3600 * 1000;
@@ -209,6 +209,104 @@ async function fulfill(request, db, env, orderId) {
   ).bind(orderId, auth.ownerToken).run();
   if (!r.meta.changes) return apiErr("NOT_FOUND", null, "이미 처리했거나 없는 주문이에요.");
   return apiOk({ status: "fulfilled" });
+}
+
+
+// ════════════════════════════════════════════════════════════
+//  ⑥ 아이 모드 PIN (child_mode_config) — 지시서 §4④
+//     🔴 **비교는 서버가 한다.** 앱에서 비교하면 저장된 값을 읽어 우회할 수 있고,
+//        그러면 «부모 화면 잠금»이 잠금 구실을 못 한다.
+//     ⚠ PIN 은 4자리뿐이라 무차별 대입이 1만 번이면 끝난다 → **틀린 횟수를 서버가 센다.**
+//        비밀번호와 같은 PBKDF2 로 저장하지만, 진짜 방어선은 시도 제한이다.
+//     ⚠ 이건 자물쇠가 아니라 문턱이다 — 저학년이 실수로 부모 화면에 들어가는 걸 막는 것이지
+//        작정한 사람을 막지 못한다. 데이터 보호는 서버 토큰이 진다.
+// ════════════════════════════════════════════════════════════
+
+const PIN_MAX_TRY = 5;             // 연속 실패 한도
+const PIN_LOCK_MS = 5 * 60 * 1000; // 넘으면 5분 잠금
+
+function pinOwner(auth) {
+  /* 아이 모드는 **부모 폰**에서 쓴다. 자녀 토큰에는 애초에 나갈 문이 없다 */
+  if (auth.error) return { err: apiErr(auth.error) };
+  if (!auth.ownerToken) return { err: apiErr("AUTH_REQUIRED") };
+  if (auth.role === "child") return { err: apiErr("FORBIDDEN", null, "이 기능은 부모님 폰에서만 써요.") };
+  return { ownerToken: auth.ownerToken };
+}
+const isPin4 = (v) => typeof v === "string" && /^\d{4}$/.test(v);
+
+// GET /api/v1/child-mode/pin — 정해 뒀는지만 알려준다(값은 절대 안 내보낸다)
+async function pinStatus(request, db, env) {
+  const { ownerToken, err } = pinOwner(await resolveAuth(request, db, env, readCookie));
+  if (err) return err;
+  const row = await db.prepare(
+    "SELECT updated_at, fail_count, locked_until FROM child_mode_config WHERE owner_token = ?"
+  ).bind(ownerToken).first();
+  const lockedUntil = row?.locked_until || null;
+  return apiOk({
+    is_set: !!row,
+    updated_at: row?.updated_at || null,
+    locked: !!(lockedUntil && Date.parse(lockedUntil) > Date.now()),
+    locked_until: lockedUntil,
+  });
+}
+
+// POST /api/v1/child-mode/pin — 처음 정하기 / 바꾸기
+//   바꿀 때는 **옛 PIN 을 같이 받는다.** 안 그러면 아이가 아이 모드에서 PIN 을 갈아치우고 나갈 수 있다.
+async function pinSet(request, db, env) {
+  const { ownerToken, err } = pinOwner(await resolveAuth(request, db, env, readCookie));
+  if (err) return err;
+  const body = await readJson(request);
+  const pin = body?.pin, oldPin = body?.old_pin;
+  if (!isPin4(pin)) return apiErr("VALIDATION", null, "숫자 4자리로 정해 주세요.");
+  /* ⚠ 0000·1234 처럼 뻔한 것은 막는다. 아이가 제일 먼저 눌러 보는 번호다 */
+  if (/^(\d)\1{3}$/.test(pin) || ["1234", "4321", "0123"].includes(pin))
+    return apiErr("VALIDATION", null, "너무 쉬운 번호예요. 다른 번호로 정해 주세요.");
+
+  const row = await db.prepare("SELECT pin_hash FROM child_mode_config WHERE owner_token = ?")
+    .bind(ownerToken).first();
+  if (row) {
+    if (!isPin4(oldPin)) return apiErr("VALIDATION", null, "지금 쓰는 번호도 넣어 주세요.");
+    if (!(await verifyPassword(oldPin, row.pin_hash)))
+      return apiErr("VALIDATION", null, "지금 쓰는 번호가 달라요.");
+  }
+  const hash = await hashPassword(pin);
+  await db.prepare(
+    "INSERT INTO child_mode_config (owner_token, pin_hash, updated_at, fail_count, locked_until) " +
+    "VALUES (?,?,?,0,NULL) ON CONFLICT(owner_token) DO UPDATE SET " +
+    "pin_hash = excluded.pin_hash, updated_at = excluded.updated_at, fail_count = 0, locked_until = NULL"
+  ).bind(ownerToken, hash, nowIso()).run();
+  return apiOk({ is_set: true, updated_at: nowIso() });
+}
+
+// POST /api/v1/child-mode/unlock — 아이 모드에서 부모로 나가기
+async function pinUnlock(request, db, env) {
+  const { ownerToken, err } = pinOwner(await resolveAuth(request, db, env, readCookie));
+  if (err) return err;
+  const row = await db.prepare(
+    "SELECT pin_hash, fail_count, locked_until FROM child_mode_config WHERE owner_token = ?"
+  ).bind(ownerToken).first();
+  /* PIN 을 안 정했으면 잠금 자체가 없다 — 문을 열어 준다(잠근 적 없는 문을 못 열면 갇힌다) */
+  if (!row) return apiOk({ unlocked: true, is_set: false });
+
+  if (row.locked_until && Date.parse(row.locked_until) > Date.now()) {
+    const left = Math.ceil((Date.parse(row.locked_until) - Date.now()) / 60000);
+    return apiErr("LOCKED", { locked_until: row.locked_until },
+      `여러 번 틀렸어요. ${left}분 뒤에 다시 해 주세요.`);
+  }
+  const pin = (await readJson(request))?.pin;
+  if (!isPin4(pin)) return apiErr("VALIDATION", null, "숫자 4자리를 넣어 주세요.");
+
+  if (await verifyPassword(pin, row.pin_hash)) {
+    await db.prepare("UPDATE child_mode_config SET fail_count = 0, locked_until = NULL WHERE owner_token = ?")
+      .bind(ownerToken).run();
+    return apiOk({ unlocked: true, is_set: true });
+  }
+  const n = (row.fail_count || 0) + 1;
+  const lock = n >= PIN_MAX_TRY ? new Date(Date.now() + PIN_LOCK_MS).toISOString() : null;
+  await db.prepare("UPDATE child_mode_config SET fail_count = ?, locked_until = ? WHERE owner_token = ?")
+    .bind(lock ? 0 : n, lock, ownerToken).run();   // 잠갔으면 카운터는 리셋(잠금이 대신 막는다)
+  if (lock) return apiErr("LOCKED", { locked_until: lock }, "여러 번 틀렸어요. 5분 뒤에 다시 해 주세요.");
+  return apiErr("VALIDATION", { left: PIN_MAX_TRY - n }, `번호가 달라요. ${PIN_MAX_TRY - n}번 남았어요.`);
 }
 
 // ════════════════════════════════════════════════════════════
@@ -411,6 +509,14 @@ export async function handleRewardApi(request, db, env, url) {
   }
   x = p.match(/^\/api\/v1\/templates\/([\w-]+)$/);
   if (x && m === "DELETE") return delTemplate(request, db, env, x[1]);
+
+  // 아이 모드 PIN (§4④) — childId 가 없다. 계정(owner_token) 단위다
+  if (p === "/api/v1/child-mode/pin") {
+    if (m === "GET") return pinStatus(request, db, env);
+    if (m === "POST") return pinSet(request, db, env);
+    return apiErr("VALIDATION", null, "지원하지 않는 요청 방식이에요.");
+  }
+  if (p === "/api/v1/child-mode/unlock" && m === "POST") return pinUnlock(request, db, env);
 
   return null;   // 우리 것이 아니다
 }

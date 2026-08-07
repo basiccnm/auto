@@ -809,7 +809,8 @@ const S = {
   kidMode: false,         // 아이 모드 — 드로어·설정을 숨긴다 (§4④)
   pinAsk: null,           // PIN 키패드 모달: null=닫힘 | "out"=부모로 나가기 | "set"=처음 정하기
   pinBuf: "",             // 지금까지 누른 숫자
-  pinErr: "",             // 틀렸을 때 한 줄
+  pinErr: "",             // 틀렸을 때 한 줄 (서버가 준 문구를 그대로 쓴다)
+  pinBusy: false,         // 서버에 묻는 중 — 키패드 두 번 눌림 방지
   introIdx: 0,            // 온보딩에서 몇 장·몇 번째 질문인지 (2026-08-03)
   introStep: null,        // 첫 실행 단계 — slides | survey | notify (§5)
   drawer: false,          // ☰ 좌측 서랍 (2026-08-03 홈 v3)
@@ -5218,17 +5219,18 @@ function pinView() {
   <div class="modal pin-dim" onclick="App.pinClose()">
     <div class="pin-box" onclick="event.stopPropagation()">
       <h2 class="pin-h">${set ? "비밀번호 4자리를 정해요" : "비밀번호를 넣어 주세요"}</h2>
-      <p class="pin-p">${set ? "아이 모드에서 나올 때 쓰는 번호예요" : "엄마·아빠 화면으로 돌아가요"}</p>
+      <p class="pin-p">${set ? "아이 모드에서 나올 때 쓰는 번호예요 · 0000·1234 는 안 돼요" : "엄마·아빠 화면으로 돌아가요"}</p>
       <div class="pin-dots">
         ${[0, 1, 2, 3].map((i) => `<i class="${i < n ? "on" : ""}"></i>`).join("")}
       </div>
       ${S.pinErr ? `<p class="pin-err">${esc(S.pinErr)}</p>` : ""}
+      ${S.pinBusy ? `<p class="pin-p">확인하는 중…</p>` : ""}
       <div class="pin-pad">
         ${[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) =>
-          `<button class="pin-k" onclick="App.pinPush('${d}')">${d}</button>`).join("")}
+          `<button class="pin-k" onclick="App.pinPush('${d}')" ${S.pinBusy ? "disabled" : ""}>${d}</button>`).join("")}
         <button class="pin-k ghost" onclick="App.pinClose()">취소</button>
-        <button class="pin-k" onclick="App.pinPush('0')">0</button>
-        <button class="pin-k ghost" onclick="App.pinBack()">지우기</button>
+        <button class="pin-k" onclick="App.pinPush('0')" ${S.pinBusy ? "disabled" : ""}>0</button>
+        <button class="pin-k ghost" onclick="App.pinBack()" ${S.pinBusy ? "disabled" : ""}>지우기</button>
       </div>
     </div>
   </div>`;
@@ -7822,24 +7824,52 @@ const App = {
   },
 
   // ── 아이 모드 + PIN (§4④) ──
-  kidModeOn() {
+  /* 🔴 **PIN 비교는 서버가 한다.** 앱에서 비교하면 저장된 값을 읽어 우회할 수 있고,
+        그러면 «부모 화면 잠금»이 잠금 구실을 못 한다.
+     ⚠ 서버가 시도 횟수도 센다(5번 → 5분 잠금). 4자리는 1만 번이면 다 해 보므로
+        해싱만으로는 못 막는다 — 진짜 방어선은 시도 제한이다. */
+  async kidModeOn() {
     S.kidMode = true; S.drawer = false; S.childView = true;
     location.hash = "#childview";
     this.render();
+    /* PIN 을 아직 안 정했으면 그 자리에서 정하게 한다 —
+       안 정한 채 넘기면 «나갈 때 아무 번호나 통하는» 모드가 된다(잠금이 아니다). */
+    const r = await api("/child-mode/pin");
+    if (r?.ok && !r.data.is_set) { S.pinAsk = "set"; S.pinBuf = ""; S.pinErr = ""; this.render(); return; }
     toast("아이 모드예요 · 나올 땐 비밀번호");
   },
   /* 나가기는 **반드시 PIN 을 거친다.** 여기서 바로 풀면 모드가 있으나 마나다 */
   kidModeOut() { S.pinAsk = "out"; S.pinBuf = ""; S.pinErr = ""; this.render(); },
-  pinClose()   { S.pinAsk = null; S.pinBuf = ""; S.pinErr = ""; this.render(); },
-  pinBack()    { S.pinBuf = S.pinBuf.slice(0, -1); S.pinErr = ""; this.render(); },
-  pinPush(d) {
-    if (S.pinBuf.length >= 4) return;
+  /* ⚠ «취소»로 아이 모드를 나갈 수는 없다. PIN 을 정하는 중(set)이면 모드도 같이 접는다 —
+        번호를 안 정하고 아이 모드에 갇히면 그게 더 나쁘다. */
+  pinClose() {
+    if (S.pinAsk === "set") { S.kidMode = false; S.childView = false; location.hash = "#home"; }
+    S.pinAsk = null; S.pinBuf = ""; S.pinErr = ""; this.render();
+  },
+  pinBack()  { if (S.pinBusy) return; S.pinBuf = S.pinBuf.slice(0, -1); S.pinErr = ""; this.render(); },
+  async pinPush(d) {
+    if (S.pinBusy || S.pinBuf.length >= 4) return;
     S.pinBuf += d; S.pinErr = "";
     if (S.pinBuf.length < 4) return this.render();
-    /* 목업 PIN 은 0000 이다. 배선 뒤엔 child_mode_config.pin_hash 와 서버에서 맞춘다 —
-       ⚠ 앱에서 비교하면 저장된 값을 읽어 우회할 수 있다. 비교는 서버가 한다. */
-    const ok = S.pinAsk === "set" || S.pinBuf === "0000";
-    if (!ok) { S.pinBuf = ""; S.pinErr = "번호가 달라요"; return this.render(); }
+
+    const pin = S.pinBuf;
+    S.pinBusy = true; this.render();
+    if (S.pinAsk === "set") {
+      const r = await api("/child-mode/pin", { method: "POST", body: { pin } });
+      S.pinBusy = false;
+      if (!r?.ok) { S.pinBuf = ""; S.pinErr = r?.error?.message || "정하지 못했어요"; return this.render(); }
+      S.pinAsk = null; S.pinBuf = ""; S.pinErr = ""; this.render();
+      toast("번호를 정했어요 · 나올 땐 이 번호예요");
+      return;
+    }
+    const r = await api("/child-mode/unlock", { method: "POST", body: { pin } });
+    S.pinBusy = false;
+    if (!r?.ok) {
+      S.pinBuf = "";
+      /* 서버가 «3번 남았어요»·«5분 뒤에» 까지 써 준다 — 앱이 다시 지어내지 않는다 */
+      S.pinErr = r?.error?.message || "번호가 달라요";
+      return this.render();
+    }
     S.pinAsk = null; S.pinBuf = ""; S.pinErr = "";
     S.kidMode = false; S.childView = false;
     location.hash = "#home";

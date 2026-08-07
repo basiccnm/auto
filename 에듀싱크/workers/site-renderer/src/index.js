@@ -2596,7 +2596,10 @@ export default {
       else if (path.startsWith("/api/v1/schools")) res = await handleSchoolsApi(request, db, env, url);
       // 별도장 상점·2단계 보상 (2026-08-07) — /children/* 밖에 있는 것들
       else if (path.startsWith("/api/v1/store/") || path.startsWith("/api/v1/rewards/") ||
-               path.startsWith("/api/v1/verify/") || path.startsWith("/api/v1/templates/")) {
+               path.startsWith("/api/v1/verify/") || path.startsWith("/api/v1/templates/") ||
+               /* 아이 모드 PIN (§4④) — childId 가 없는 계정 단위 라우트라 위 children/ 규칙에 안 걸린다.
+                  ⚠ 여기 안 넣으면 조용히 HTML 404 로 샌다(07-27 supplies 와 같은 함정). */
+               path.startsWith("/api/v1/child-mode/")) {
         res = await handleRewardApi(request, db, env, url);
       }
       else if (path.startsWith("/api/v1/children") || path.startsWith("/api/v1/child/") || path.startsWith("/api/v1/records") ||
