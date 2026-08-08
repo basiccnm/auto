@@ -823,6 +823,8 @@ const S = {
   quizFeed: null,         // 문제 하나를 답한 «직후» 뜨는 정답 — 다음 문제로 넘어가면 사라진다
   schoolMs: null,         // 학교 «미션» 오늘 상태 — 서버 school_missions.js 가 정본
   msets: null,            // 아침·방과후 «세트 완주» 상태 {morning:{done,all,taken},after:{…}}
+  gamePreview: false,     // 부모가 «아이 화면»을 일부러 들여다보는 중
+  giveBusy: false,        // 스탬프 주기 중복 누름 방지
                           // ⚠ 전역 SCHOOL(급식·시간표)과 다른 것이다. 이름을 섞지 말 것
   verifyPending: null,    // 부모가 볼 «확인해 주세요» [{verify_id,mission_code,step1_data,...}]
   verifyBusy: null,
@@ -2154,6 +2156,13 @@ const Screens = {
     const c = curView();
     const coin = S.coin || { stars: 0, earned_today: 0, limit: COIN_LIMIT, room: COIN_LIMIT, level: 1 };
 
+    /* ⚠⚠ **부모에게 아이 세계를 보여주지 않는다.**
+       ★ 를 누르면 아이 폰에서는 «게임», 부모 폰에서는 «관리 화면»이다.
+       부모 페이지는 관리자 페이지다 — 화려할 필요 없고 알아보기 쉬우면 된다(대표님 지시 08-08).
+       아이 세계를 보고 싶으면 «아이 화면 미리보기»로 일부러 들어간다. */
+    const kid = isChildToken() || S.kidMode;
+    if (!kid && !S.gamePreview) return parentMissionAdmin(c, coin);
+
     /* 안쪽 화면(카드를 열었거나 상점·프로필)이면 그쪽을 그린다.
        ⚠ 탭이 아니다 — 탭은 부모 앱의 문법이고, 아이 화면은 «들어갔다 나오는» 문법이다. */
     const inner = { morning: 1, school: 1, after: 1, today: 1, shop: 1, profile: 1 }[S.gameTab];
@@ -2177,7 +2186,9 @@ const Screens = {
     <div class="gm ${gmTheme()}">
       <!-- 캐릭터 시트 — 아바타 자리는 비워 둔다(캐릭터는 업데이트 분, 기획서 v2 §01.4) -->
       <div class="gm-hero">
-        <button class="gm-ava" onclick="App.gameTab('profile')" aria-label="내 프로필">${gmAvatar(c)}</button>
+        ${(!isChildToken() && !S.kidMode && S.gamePreview)
+          ? `<button class="gm-ava" onclick="App.gamePreviewOff()" aria-label="미리보기 끝내기">‹</button>`
+          : `<button class="gm-ava" onclick="App.gameTab('profile')" aria-label="내 프로필">${gmAvatar(c)}</button>`}
         <div class="gm-me">
           <span class="gm-lv">Lv.${coin.level || 1} ${gmRank(coin.level || 1)}</span>
           <b class="gm-nm">${esc(c.nickname || "나")}</b>
@@ -5245,6 +5256,83 @@ function nowSlot() {
   return "evening";
 }
 const SLOT_KO = { morning: "아침", after: "방과후", evening: "저녁", any: "아무 때나" };
+
+/* ═══ 🧭 부모 관리 화면 (2026-08-08, 대표님 지시) ═══════════════════════
+   「부모페이지는 관리자 페이지야. 화려하진 않아도 알아보기 쉽게」
+   「추가 스탬프를 줄 수 있는 확인하는 곳이 없잖아」
+
+   여기서 하는 일은 넷이다 — **확인 · 스탬프 주기 · 진열대 · 미리보기.**
+   ⚠ 부모 테마 토큰(--card-a/--ink/--accent)을 쓴다. 게임 팔레트는 아이 세계 전용이다.
+   ⚠ 아이 세계를 여기에 섞지 않는다. 보고 싶으면 «아이 화면 미리보기»로 일부러 들어간다. */
+function parentMissionAdmin(c, coin) {
+  const nm = esc(c.nickname || "아이");
+  if (!c.id) return `${subHeader("미션 관리")}
+    <p class="empty-mid">아이를 등록하면 시작해요</p>`;
+
+  // 「확인해 주세요」 — 부모가 손대야 하는 것만 센다
+  const waitMission = (S.missions || []).filter((x) => x.status === "waiting").length;
+  const waitVerify = (S.verifyPending || []).length;
+  const waitTicket = (S.rewards || []).filter((o) => o.status === "requested").length;
+  const todo = waitMission + waitVerify + waitTicket;
+
+  const sets = S.msets || {};
+  const sc = S.schoolMs;
+  const q = S.quiz;
+  const row = (icon, name, done, all, extra) => `
+    <div class="pm-row">
+      <span class="pm-i">${icon}</span>
+      <b>${esc(name)}</b>
+      <span class="pm-n">${all ? `${done} / ${all}` : "오늘 없음"}</span>
+      ${done >= all && all > 0 ? `<span class="pm-ok">완료</span>` : ""}
+      ${extra || ""}
+    </div>`;
+
+  return `
+  ${subHeader(nm + " 미션 관리")}
+
+  <!-- 오늘 한눈에 -->
+  <div class="pm-top">
+    <div class="pm-big"><b>★ ${coin.stars}</b><em>모은 스탬프</em></div>
+    <div class="pm-big"><b>${coin.earned_today} / ${coin.limit}</b><em>오늘 받은 것</em></div>
+    <div class="pm-big"><b>Lv.${coin.level || 1}</b><em>${gmRank(coin.level || 1)}</em></div>
+  </div>
+
+  <!-- ① 확인해 주세요 — 부모가 손대야 하는 것 -->
+  <h3 class="pm-h">확인해 주세요${todo ? ` <em>${todo}</em>` : ""}</h3>
+  ${!todo ? `<p class="pm-none">지금 확인할 게 없어요</p>` : `
+    ${!waitVerify ? "" : `<button class="pm-go" onclick="location.hash='#verify'">
+      <span class="pm-i">📸</span><b>아이가 낸 것</b><span class="pm-cnt">${waitVerify}</span></button>`}
+    ${!waitMission ? "" : `<button class="pm-go" onclick="location.hash='#mission'">
+      <span class="pm-i">✅</span><b>미션 확인 기다림</b><span class="pm-cnt">${waitMission}</span></button>`}
+    ${!waitTicket ? "" : `<button class="pm-go" onclick="location.hash='#tickets'">
+      <span class="pm-i">🎟</span><b>바꿔 달라고 한 것</b><span class="pm-cnt">${waitTicket}</span></button>`}`}
+
+  <!-- ② 스탬프 주기 — 미션 말고 부모가 직접 -->
+  <h3 class="pm-h">스탬프 주기</h3>
+  <div class="pm-give">
+    ${[1, 3, 5].map((n) => `
+      <button class="pm-amt" ${S.giveBusy ? "disabled" : ""} onclick="App.giveStars(${n})">＋${n}</button>`).join("")}
+  </div>
+  <p class="pm-fine">오늘 받은 것이 ${coin.limit}개를 넘으면 넘는 만큼은 안 들어가요</p>
+
+  <!-- ③ 오늘 아이가 한 것 (읽기) -->
+  <h3 class="pm-h">오늘 아이가 한 것</h3>
+  ${row("🌅", "아침 미션", sets.morning?.done || 0, sets.morning?.all || 0)}
+  ${sc && sc.available === false ? "" : row("🏫", "학교 미션", sc?.done || 0, sc?.all || 0)}
+  ${row("📚", "방과후 미션", sets.after?.done || 0, sets.after?.all || 0)}
+  ${row("⚔️", "오늘의 미션", q?.done ? 1 : 0, 1,
+        q?.done ? `<span class="pm-sub">${q.correct} / ${q.total} 맞힘</span>` : "")}
+
+  <!-- ④ 손대는 곳 -->
+  <h3 class="pm-h">바꿔 주기</h3>
+  <button class="pm-go" onclick="location.hash='#store'">
+    <span class="pm-i">🏪</span><b>진열대 꾸미기</b><span class="pm-arw">›</span></button>
+  <button class="pm-go" onclick="location.hash='#mission'">
+    <span class="pm-i">🎯</span><b>미션 고르기</b><span class="pm-arw">›</span></button>
+  <button class="pm-go" onclick="App.gamePreviewOn()">
+    <span class="pm-i">👀</span><b>아이 화면 미리보기</b><span class="pm-arw">›</span></button>
+  `;
+}
 
 /* ═══ 🎮 아이 화면 조각 (2026-08-08, 기획서 v2 §01 · 시안 v4 B안) ═══════
    홈도 카드 안도 **같은 타일**이다. 화면마다 다른 규칙을 배울 필요가 없어야 한다.
@@ -9465,6 +9553,31 @@ const App = {
 
   clearClose() { S.clear = null; this.render(); },
 
+  /* 부모가 «아이 화면»을 일부러 들여다본다. 기본은 관리 화면이다 — 부모에게 아이 세계를
+     기본으로 띄우면 «내 화면이 왜 애들 것이지»가 된다(대표님 지적 08-08). */
+  gamePreviewOn() { S.gamePreview = true; S.gameTab = null; this.gameEnter(); this.render(); },
+  gamePreviewOff() { S.gamePreview = false; S.gameTab = null; this.render(); },
+
+  /* 부모가 스탬프를 직접 준다. ⚠ 몇 개가 실제로 들어갔는지는 **서버가** 말한다 —
+     하루 상한에 걸리면 깎여서 들어가고, 화면이 미리 세어 두면 거짓말이 된다. */
+  async giveStars(n) {
+    const c = cur();
+    if (!c?.server_id || S.giveBusy) return;
+    S.giveBusy = true; this.render();
+    try {
+      const r = await api(`/children/${c.server_id}/stars`, { method: "POST", body: { amount: n } });
+      if (!r?.ok) toast(r?.error?.message || "스탬프를 못 줬어요");
+      else {
+        if (r.data.coin) S.coin = r.data.coin;
+        toast(r.data.capped
+          ? `★${r.data.granted}만 들어갔어요 — 오늘은 여기까지예요`
+          : `★${r.data.granted} 줬어요!`);
+      }
+    } catch (_) { toast("스탬프를 못 줬어요"); }
+    S.giveBusy = false;
+    this.render();
+  },
+
   /* 학교 미션 오늘 상태 — **서버가 정본**이다. 화면이 «했나»를 스스로 세지 않는다.
      ⚠ 실패하면 null 로 두어 다시 묻는다. `[]` 로 굳히면 카드가 영영 안 뜬다(08-07 사고). */
   async loadSchoolMissions(force) {
@@ -9588,6 +9701,8 @@ const App = {
     if (S.msets === null) this.loadMissionSets();
     if (S.store === null) this.loadStore();
     if (S.rewards === null) this.loadRewards();   // 티켓 개수가 «…» 로 남지 않게
+    if (S.quiz === null) this.loadQuiz();         // 관리 화면의 «오늘의 미션» 줄
+    if (S.verifyPending === null) this.loadVerify();
   },
 
   async loadQuiz(force) {

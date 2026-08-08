@@ -5377,6 +5377,53 @@ body:has(#tabbar.hidden) #screen:has(.ib),
 .dy-big em { font-style: normal; font-size: 14.5px; font-weight: 800; color: var(--ink); }
 .dy-big i { font-style: normal; font-size: 12px; font-weight: 700; color: var(--muted); }
 
+/* ═══ 🧭 부모 관리 화면 (2026-08-08) ═══════════════════════════════════
+   ⚠ **부모 테마 토큰을 쓴다**(--card-a/--ink/--accent). 여기는 관리자 화면이고,
+     게임 팔레트(--g-*)는 아이 세계 전용이다. 섞으면 부모 앱이 갑자기 아이 것처럼 보인다.
+   ⚠ 화려할 필요가 없다. **알아보기 쉬우면 된다.** */
+.pm-top { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 4px; }
+.pm-big { padding: 13px 8px; border-radius: 16px; background: var(--card-a); text-align: center; }
+.pm-big b { display: block; font-size: 19px; font-weight: 900; color: var(--card-ink);
+  font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.pm-big em { display: block; margin-top: 3px; font-style: normal; font-size: 11px;
+  font-weight: 800; color: var(--card-sub); }
+
+.pm-h { display: flex; align-items: center; gap: 8px; margin: 22px 0 9px;
+  font-size: 15px; font-weight: 900; color: var(--ink); }
+.pm-h em { font-style: normal; min-width: 22px; padding: 2px 8px; border-radius: 999px;
+  background: var(--accent); color: var(--on-accent); font-size: 12px; font-weight: 900; }
+.pm-none { margin: 0; padding: 16px; border-radius: 14px; background: var(--card-a);
+  font-size: 13.5px; font-weight: 700; color: var(--card-sub); text-align: center; }
+
+.pm-go { display: flex; align-items: center; gap: 11px; width: 100%; margin-top: 8px;
+  min-height: 56px; padding: 0 15px; border: none; border-radius: 16px;
+  background: var(--card-a); color: var(--card-ink); font-family: inherit; text-align: left; }
+.pm-go b { flex: 1; min-width: 0; font-size: 15px; font-weight: 800; }
+.pm-i { flex: none; font-size: 21px; }
+.pm-cnt { flex: none; min-width: 26px; padding: 4px 10px; border-radius: 999px;
+  background: var(--accent); color: var(--on-accent); font-size: 13px; font-weight: 900;
+  font-variant-numeric: tabular-nums; }
+.pm-arw { flex: none; font-size: 19px; font-weight: 900; color: var(--card-sub); }
+
+/* 스탬프 주기 — 숫자 버튼 셋. 「몇 개 들어갔는지」는 서버가 말한다 */
+.pm-give { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
+.pm-amt { min-height: 58px; border: none; border-radius: 16px; font-family: inherit;
+  background: var(--accent); color: var(--on-accent); font-size: 20px; font-weight: 900;
+  font-variant-numeric: tabular-nums; }
+.pm-amt[disabled] { opacity: .5; }
+.pm-fine { margin: 8px 0 0; font-size: 11.5px; font-weight: 700; color: var(--muted);
+  text-align: center; }
+
+/* 오늘 한 것 — 읽기 전용 줄 */
+.pm-row { display: flex; align-items: center; gap: 11px; margin-top: 8px;
+  padding: 13px 15px; border-radius: 15px; background: var(--card-a); }
+.pm-row b { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 800; color: var(--card-ink); }
+.pm-n { flex: none; font-size: 13.5px; font-weight: 900; color: var(--card-sub);
+  font-variant-numeric: tabular-nums; }
+.pm-ok { flex: none; padding: 3px 9px; border-radius: 999px; background: #D6F7E2;
+  color: #1E7B43; font-size: 11px; font-weight: 900; }
+.pm-sub { flex: none; font-size: 11.5px; font-weight: 800; color: var(--card-sub); }
+
 /* ═══════════════════════════════════════════════════════════════════════
    🎮 미션 게임 — 아이의 세계 (2026-08-08, 기획서 v2 §01 · 시안 v4 「B안」)
 

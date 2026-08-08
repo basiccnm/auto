@@ -13,7 +13,7 @@
 
 import { apiOk, apiList, apiErr, readJson } from "./api_core.js";
 import { resolveAuth, hashPassword, verifyPassword } from "./auth_core.js";
-import { grantStars, spendStars, starsOf as coinBalance } from "./star_core.js";
+import { grantStars, spendStars, starsOf as coinBalance, coinState } from "./star_core.js";
 
 const nowIso = () => new Date().toISOString();
 const KST = 9 * 3600 * 1000;
@@ -491,11 +491,46 @@ async function pinClear(request, db, env) {
 //  ⚠ index.js 의 **접두어 화이트리스트**에 경로를 안 넣으면 여기까지 오지도 못하고
 //    HTML 404 로 새어나간다(2026-07-27 supplies 에서 실측). 반드시 같이 등록할 것.
 // ════════════════════════════════════════════════════════════
+/* ══ 부모가 스탬프를 직접 준다 (2026-08-08, 대표님 지시) ══════════════
+   「추가 스탬프를 줄 수 있는 확인하는 곳이 없잖아」 — 관리 화면에서 부르는 자리다.
+   미션·퀴즈 말고도 부모가 «오늘 정말 잘했어»로 얹어 줄 길이 필요하다.
+
+   ⚠ **하루 상한을 탄다.** 상한이 있는 이유가 «부모가 늘려도 코인 가치가 안 무너지게»인데
+     이 길만 무제한이면 그 이유가 통째로 사라진다. 걸리면 깎아서 주고 그렇다고 말해 준다.
+   ⚠ **리그 점수는 안 준다.** 부모가 아이 순위를 사 줄 수 있으면 리그가 성립하지 않는다
+     (같은 이유로 부모 미션 점수도 고정이다 — 기획서 v2 §02.3).
+   ⚠ 사유를 원장에 남긴다. 나중에 «왜 늘었지»를 되짚을 근거가 그것뿐이다. */
+async function giveStars(request, db, env, childId) {
+  const { child, isChild, err } = await gate(request, db, env, childId);
+  if (err) return err;
+  if (isChild) return apiErr("FORBIDDEN", null, "스탬프는 부모님만 줄 수 있어요.");
+
+  const b = await readJson(request);
+  const n = parseInt(b?.amount, 10);
+  if (!(n >= 1 && n <= 20)) {
+    return apiErr("VALIDATION", null, "한 번에 1~20개까지 줄 수 있어요.");
+  }
+  const why = String(b?.reason || "").trim().slice(0, 30);
+
+  const g = await grantStars(db, child.id, n, "parent:" + (why || "칭찬"));
+  return apiOk({
+    granted: g.granted,
+    capped: g.capped,          // 상한에 걸려 깎였으면 화면이 «오늘은 여기까지»를 말한다
+    asked: n,
+    reason: why || "칭찬",
+    coin: await coinState(db, child.id),
+  });
+}
+
 export async function handleRewardApi(request, db, env, url) {
   const p = url.pathname, m = request.method;
   let x;
 
   // 진열대
+  // 부모가 스탬프를 직접 주는 자리 — ⚠ /store 보다 먼저 잡을 필요는 없지만 위쪽에 둔다
+  x = p.match(/^\/api\/v1\/children\/(\d+)\/stars\/?$/);
+  if (x && m === "POST") return giveStars(request, db, env, x[1]);
+
   x = p.match(/^\/api\/v1\/children\/(\d+)\/store\/?$/);
   if (x) {
     if (m === "GET") return listStore(request, db, env, x[1]);
