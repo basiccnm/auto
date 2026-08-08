@@ -4051,8 +4051,8 @@ body::before {
   border-radius: 18px; padding: 18px 16px; margin-bottom: 10px; background: var(--card);
   color: var(--ink); box-shadow: var(--sh1); font-family: inherit; }
 .msc .msc-no { width: 34px; height: 34px; border-radius: 12px; display: grid; place-items: center;
-  font-weight: 900; font-size: 15px; background: color-mix(in srgb, var(--accent) 10%, var(--card));
-  color: var(--accent); flex: none; }
+  font-weight: 900; font-size: 15px; background: color-mix(in srgb, var(--accent) 26%, var(--card));
+  color: var(--ink); flex: none; }   /* ⚠ var(--accent) 였다 → 1.51:1. --ink 는 테마 밝기를 따라간다 */
 .msc > b { flex: 1; font-size: 16.5px; font-weight: 700; }
 .msc .msc-tag { flex: none; font-size: 13px; font-weight: 800; border-radius: 9px; padding: 5px 10px;
   color: #9A6B00; }
@@ -4138,7 +4138,9 @@ body::before {
 .hv3-fab:active { transform: translateX(-50%) scale(.94); }
 .hv3-fab .lb { position: absolute; bottom: -21px; left: 50%; transform: translateX(-50%);
   font-style: normal; font-size: 11.5px; font-weight: 900; color: var(--accent-ink); white-space: nowrap; }
-.hv3-star .st { font-size: 34px; color: #FFF; text-shadow: 0 2px 4px rgba(0,0,0,.2); }
+/* ⚠ 노란 원 위 **흰 별**은 1.58:1 이었다 — 빛나는 원에 흰 것을 얹으면 형태가 안 읽힌다.
+   어둡게 파고 위에 흰 하이라이트를 줘 «동전에 새긴» 것처럼 만든다. */
+.hv3-star .st { font-size: 34px; color: #6E4A00; text-shadow: 0 1px 0 rgba(255,255,255,.5); }
 .hv3-star .bdg { position: absolute; top: 0; right: 0; background: var(--danger); color: var(--on-danger);
   border-radius: 999px; font-size: 11.5px; font-weight: 900; padding: 2px 7px; font-style: normal; }
 .hv3-star .lb { position: absolute; bottom: -21px; left: 50%; transform: translateX(-50%);
@@ -5406,7 +5408,14 @@ body:has(#tabbar.hidden) #screen:has(.ib),
   --card-ink: var(--g-ink); --card-sub: var(--g-sub);
   --ink: var(--g-ink); --muted: var(--g-sub);
   --chip: var(--g-panel2); --line: #E3E9F5;
-  --accent: var(--g-gold); --accent-ink: var(--g-gold-ink); --on-accent: var(--g-gold-ink);
+  /* ⚠ 여기가 뿌리였다(08-09 실측) — --accent-ink 와 --on-accent 에 **같은 값**을 넣어 뒀다.
+     그런데 둘은 정반대 뜻이다:
+       --accent-ink = «강조색으로 쓰는 글씨»   → 밝은 패널 위에 오므로 **어두워야** 한다
+       --on-accent  = «강조색 면 위에 얹는 글씨» → 금색 면 위에 오므로 역시 **어두워야** 한다
+     둘 다 --g-gold-ink 였고 그게 밝은 값이라, 흰 칩 위 금색 숫자(1.51) ·
+     금색 알약 위 흰 「바꾸기」(2.01) · 노란 원 위 흰 별(1.58) 이 한꺼번에 나왔다.
+     금색은 «면» 색이다. 면 색을 글씨로 쓰면 어디서든 읽히지 않는다. */
+  --accent: var(--g-gold); --accent-ink: #6E4A00; --on-accent: #3A2A00;
   --surf: transparent; --bg: transparent; --outer: transparent;
 }
 
@@ -6131,10 +6140,12 @@ body:has(#tabbar.hidden) #screen:has(.ib),
      어두운 테마는 이미 밝은 글씨라 그대로 둔다. */
 /* ⚠ 테마는 `:root[data-theme="warmgray"]`(0,2,0)로 정의된다 — `html[data-art]`(0,1,1)로는 **진다.**
    한 단계 더 올려 (0,2,1)로 만든다. 특정성을 안 맞추면 고쳐도 값이 그대로다(08-08 두 번 겪음). */
-html:root[data-theme] { --muted: #514B40; --card-sub: #514B40; }
+/* ⚠ 08-09: 유리 카드가 한 단계 밝아지며 경계선이던 값이 넘어갔다(3.98·3.99 실측).
+   카드를 밝히면 그 위의 «약한 글자»도 같이 손봐야 한다 — 한쪽만 만지면 반드시 깨진다. */
+html:root[data-theme] { --muted: #474238; --card-sub: #474238; }
 html:root[data-theme="dark"], html:root[data-theme="navy"],
 html:root[data-theme="charcoal"], html:root[data-theme="lavender"] {
-  --muted: #B9B2A6; --card-sub: #B9B2A6; }
+  --muted: #C8C2B7; --card-sub: #C8C2B7; }
 
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -6382,3 +6393,48 @@ html:root[data-theme="charcoal"], html:root[data-theme="lavender"] {
               inset 0 1px 0 rgba(255, 255, 255, .13),
               0 2px 8px rgba(0, 0, 0, .20);
 }
+
+
+/* ── 대비 마무리 두 곳 (2026-08-09 실측) ────────────────────────────
+   ⚠ 둘 다 «금색을 글씨로 쓴» 같은 뿌리다. 위 .gmw 토큰 수정으로 대부분 잡혔고
+     이 두 곳만 자기 색을 직접 들고 있어 따로 잡는다. */
+
+/* ★ 도장 글리프 — var(--accent) 라 아이 세계에서 금색이 됐다(1.58:1).
+   --accent-ink 는 «강조색으로 쓰는 글씨»라 밝은 면 위에서 읽히도록 잡혀 있다. */
+.ms-mkbtn i { color: var(--accent-ink); }
+
+/* 「바꾸기」 못 누르는 상태 — 흐린 것은 의도지만 2.01:1 은 «안 보이는» 것이다.
+   못 누르는 것도 **무엇인지는 읽혀야** 한다. 켠 버튼과는 면 색으로 이미 갈린다. */
+.gmw .st-buy[disabled], .gmp :root button.st-buy[disabled] { color: #55617A; }
+
+
+/* ── 대비 마지막 네 곳 (2026-08-09 실측 20화면) ──────────────────────
+
+   ⚠ 앞서 `.gmw .st-buy[disabled]` 로 잡으려 했는데 **안 먹었다**.
+     같은 파일 안에서 뒤에 온 같은 특정성 규칙이 이긴다는 점만 믿고
+     여기서 선택자 그대로 다시 쓴다. 특정성 계산으로 이기려다 두 번 헛짚었다. */
+:root button.st-buy[disabled] { color: #55617A; }
+
+/* 「10% 할인」 칩 — 라이트 4.31 · 다크 3.50. 결제 화면 숫자는 흐리면 안 된다 */
+:root .disc { color: #93261F; font-weight: 900; }
+:root[data-theme="dark"] .disc, :root[data-theme="navy"] .disc,
+:root[data-theme="charcoal"] .disc, :root[data-theme="lavender"] .disc { color: #FFAE9C; }
+
+/* 「결제 준비 중」 — 눌리지 않는 상태여도 무슨 버튼인지는 읽혀야 한다(4.12) */
+:root button.btn-primary[disabled] { color: #FFF; opacity: 1; }
+
+/* 서랍의 ＋ — 유리 카드가 밝아지며 다크에서 3.99 로 내려왔다.
+   --accent 는 «면» 색이라 글씨로 쓰면 이렇게 경계선에 걸린다. 글씨용 값으로 바꾼다. */
+:root .dw-fab button span, :root .ttp-add span, :root .mk-add { color: var(--accent-ink); }
+/* ⚠ 위 다섯 줄은 처음에 특정성이 낮아 **조용히 밀렸다**(값이 소수점까지 그대로라 알아챘다).
+   「규칙을 썼다」와 「규칙이 이겼다」는 다른 일이다 — 반드시 기기에서 computed 값을 확인할 것. */
+
+/* 「결제 준비 중」 — .soon 은 --muted 를 쓰는데 회청색 면 위에서 4.12 였다.
+   못 누르는 버튼도 «무슨 버튼인지»는 읽혀야 한다. 면은 그대로, 글씨만 진하게. */
+/* ⚠ 처음에 #2E2A22 를 박았다가 **다크에서 1.79 로 더 나빠졌다** — 어두운 면에 어두운 글씨.
+   고정 색을 넣으면 테마 하나를 고치고 다른 테마를 깬다. --ink 는 테마 밝기를 따라간다. */
+:root button.btn-primary.soon { color: var(--ink); }
+
+/* 서랍의 ＋ — 클래스가 없는 맨 span 이라 부모(버튼)에서 --accent 를 물려받았다.
+   다크에서 연보라 강조색이 유리 카드 위 3.99 로 내려온다. 글씨용 값으로. */
+:root .dw-year button span, :root .dw-sem button span, :root .dw-list button span { color: var(--accent-ink); }
