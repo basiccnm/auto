@@ -6246,8 +6246,11 @@ html:root[data-theme="charcoal"], html:root[data-theme="lavender"] {
    🕰 전광판을 일러스트 위로 (2026-08-09 대표님 지시)
    「시계를 일러까지 올려서 투명 유지하면서」 — 유리는 **뒤가 비쳐야** 유리다.
    ══════════════════════════════════════════════════════════════════════ */
-.hv3-art { height: 232px; display: flex; align-items: flex-end;
-  padding: 0 16px 12px; box-sizing: border-box; }
-/* 어둠막을 두껍게 — 밝은 그림 위에서도 흰 유리와 글자가 살아야 한다 */
-.hv3-art::after { height: 132px; z-index: 0; }
+/* ⚠ 232 → 180px (08-09 「좀 더 올려도 될 듯, 위 공간이 너무 남아」).
+   시계 위의 그림 여백이 화면 첫 화면을 통째로 먹고 있었다.
+   그림은 «분위기»지 «내용»이 아니다 — 첫 화면에는 읽을 것이 먼저 와야 한다. */
+.hv3-art { height: 138px; display: flex; align-items: flex-end;
+  padding: 0 16px 10px; box-sizing: border-box; }
+/* 어둠막 — 밝은 그림 위에서도 흰 유리와 글자가 살아야 한다. 띠 높이에 맞춰 같이 줄인다 */
+.hv3-art::after { height: 92px; z-index: 0; }
 #board { position: relative; z-index: 1; width: 100%; margin: 0; }
