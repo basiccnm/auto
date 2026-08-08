@@ -2172,7 +2172,11 @@ const Screens = {
          배경색 5종 중 무엇을 골랐든 이 순간만은 같은 긴장감이 되게 한다(시안 v4 ②). */
       const playing = S.gameTab === "today" && !S.quizResult && S.quiz
                    && !S.quiz.done && S.quizIdx >= 0;
-      return `<div class="gm ${playing ? "qzp" : gmTheme()}">${
+      /* ⚠ 홈만 «화면에 딱 맞는» 고정 높이다. 안쪽 화면(상점·카드·프로필)은 줄이 늘어나므로
+         고정 높이 flex 로 두면 스크롤이 아니라 **자식이 눌려서 서로 겹친다**(08-08 실기).
+         그런 화면에는 `sc` 를 붙여 보통 문서처럼 흐르게 한다. */
+      const scroll = S.gameTab !== "today" || !!S.quizResult || !!(S.quiz && S.quiz.done);
+      return `<div class="gm ${playing ? "qzp" : gmTheme()}${scroll ? " sc" : ""}">${
         S.gameTab === "shop"    ? gameShop()
       : S.gameTab === "profile" ? gameProfile(c, coin)
       : S.gameTab === "today"   ? gameQuiz()
@@ -7597,8 +7601,19 @@ const App = {
     const popScroll = [...document.querySelectorAll(POPS)].map((e) => e.scrollTop);
     const popBefore = popKey(document);
 
+    /* 🎮 **아이는 게임 세계 밖으로 안 나간다**(2026-08-08 통일).
+       상점에서 「티켓 보러 가기」를 누르면 갑자기 부모 테마 화면이 뜨고, 급식·친구·수업도
+       또 다른 색이었다 — 한 앱을 쓰는데 화면마다 다른 세계로 넘어가는 꼴이었다.
+       아이가 보는 화면은 **같은 바탕·같은 카드·같은 그림자**로 감싼다.
+       ⚠ 게임 화면(game)은 스스로 껍데기를 갖고 있으니 두 번 감싸지 않는다.
+       ⚠ 부모가 볼 때는 감싸지 않는다 — 부모 앱은 테마 18종을 그대로 탄다. */
+    const KID_WRAP = ["tickets", "store", "childmealrate", "childfriend", "childsubject",
+                      "childboard", "childtt", "mission"];
+    const asKid = (isChildToken() || S.kidMode) && KID_WRAP.includes(name);
+    const body = Screens[name]();
     document.getElementById("screen").innerHTML =
-      Screens[name]() + planBar() + lunchSheet() + promoteSheet() + planKillView() + holdMenuView() + pwAskView();
+      (asKid ? `<div class="gmw">${body}</div>` : body)
+      + planBar() + lunchSheet() + promoteSheet() + planKillView() + holdMenuView() + pwAskView();
 
     if (popBefore && popKey(document) === popBefore) {
       [...document.querySelectorAll(POPS)].forEach((e, i) => {

@@ -5386,6 +5386,57 @@ body:has(#tabbar.hidden) #screen:has(.ib),
    ⚠ 대신 2×2 타일은 안 쓴다 — 부모는 «보고 누르는» 사람이라 줄이 읽기 쉽다.
    ⚠ 부모 앱의 나머지 화면(홈·기록·설정)은 그대로 테마를 탄다. 여기만 별도다. */
 
+/* ══════════════════════════════════════════════════════════════════════
+   🎮 «아이 세계» 공통 껍데기 (2026-08-08 통일)
+
+   아이가 보는 화면은 **전부 같은 세계**여야 한다. 게임에서 상점으로, 상점에서 티켓으로,
+   학교 미션에서 급식으로 넘어갈 때 색과 카드 모양이 바뀌면 «다른 앱»으로 읽힌다.
+   그래서 바탕·카드·그림자·모서리를 여기 한 곳에서 정한다.
+
+   ⚠ 부모 앱의 화면(홈·기록·설정)은 여기에 안 들어온다 — 그쪽은 테마 18종을 그대로 탄다.
+   ⚠ 색 이름은 게임과 **같은 것**(--g-*)을 쓴다. 두 벌이 되면 반드시 어긋난다.
+   ══════════════════════════════════════════════════════════════════════ */
+.gmw { --g-panel: #FFFFFF; --g-panel2: #F2F6FF;
+  --g-ink: #16203A; --g-sub: #5B6B8C;
+  --g-gold: #FFC531; --g-gold-d: #E8930B; --g-gold-ink: #7A4E00;
+  --g-lime: #38D46A; --g-pink: #FF6BAA; --g-shadow: 0 5px 0 rgba(0, 0, 0, .12);
+  min-height: 100vh; margin: calc(env(safe-area-inset-top) * -1 - 18px) -20px -24px;
+  padding: max(calc(env(safe-area-inset-top) + 12px), 40px) 14px calc(env(safe-area-inset-bottom) + 24px);
+  background: linear-gradient(180deg, #4A9BFF, #7C5CFF); color: var(--g-ink); }
+
+/* 안쪽 화면들이 부모 테마 토큰으로 그려 놓은 것을 **여기서 갈아입힌다.**
+   화면마다 클래스를 새로 만들지 않는다 — 그러면 화면 수만큼 규칙이 늘고 반드시 어긋난다. */
+.gmw .sub-top { background: none; padding-top: 0; }
+.gmw .sub-t, .gmw .sub-t em { color: #fff; text-shadow: 0 2px 6px rgba(0, 0, 0, .2); }
+.gmw .sub-back { background: rgba(255, 255, 255, .28); color: #fff; border-radius: 13px; }
+.gmw .sub-back i { color: #fff; }
+
+.gmw .card, .gmw .hv3-card, .gmw .daycard, .gmw .kd2-card, .gmw .kd3-card,
+.gmw .msc, .gmw .st-item, .gmw .tk, .gmw .tk-item, .gmw .dw-recent, .gmw .ms-row {
+  background: var(--g-panel); color: var(--g-ink);
+  border-radius: 18px; box-shadow: var(--g-shadow); border: none; }
+.gmw h2, .gmw h3, .gmw .sec-t, .gmw .lab { color: #fff; text-shadow: 0 2px 5px rgba(0, 0, 0, .2); }
+/* 카드 «안»의 글자는 흰 카드 위라 진한 색이어야 읽힌다 — 바깥 글자와 반대다 */
+.gmw .tk b, .gmw .tk-bd b, .gmw .card b, .gmw .msc b { color: var(--g-ink); }
+.gmw .tk em, .gmw .tk-bd em, .gmw .card em { color: var(--g-sub); font-style: normal; }
+.gmw .tk-ic { font-size: 22px; }
+.gmw .tk.done { background: var(--g-panel2); }
+.gmw .tk-st, .gmw .tk .st { padding: 5px 10px; border-radius: 999px; font-size: 11.5px;
+  font-weight: 900; background: #FFEFC2; color: #8A5A00; }
+.gmw .tk.done .tk-st, .gmw .tk.done .st { background: #D6F7E2; color: #1E7B43; }
+.gmw .tk-list { display: grid; gap: 9px; padding: 0; margin: 14px 0 0; list-style: none; }
+.gmw .sub, .gmw .quiet, .gmw .muted { color: rgba(255, 255, 255, .82); }
+.gmw .empty-mid, .gmw .empty { color: rgba(255, 255, 255, .9); font-weight: 800; }
+
+.gmw .btn-primary, .gmw .kd2-cta {
+  background: var(--g-gold); color: var(--g-gold-ink);
+  border-radius: 15px; box-shadow: 0 4px 0 var(--g-gold-d); border: none; font-weight: 900; }
+.gmw .btn-ghost, .gmw .btn-sub {
+  background: rgba(255, 255, 255, .26); color: #fff; border: none; border-radius: 15px; }
+
+/* 아이 화면 안의 «글자만 있는» 줄도 바탕 위라 흰색이어야 읽힌다 */
+.gmw > p, .gmw > .row > b { color: #fff; }
+
 /* 게임과 같은 바탕이되 **스크롤이 되는** 껍데기(.gm 은 fixed 라 안 된다) */
 .gmp { --g-panel: #FFFFFF; --g-panel2: #F2F6FF;
   --g-ink: #16203A; --g-sub: #5B6B8C;
@@ -5481,7 +5532,9 @@ body:has(#tabbar.hidden) #screen:has(.ib),
      그래서 부모 상자에서 아예 빠져나온다. 이러면 어느 기기에서도 딱 맞는다(08-08 실기).
      ⚠ z-index 1 — 서랍·시트·클리어 연출(90)보다 아래여야 한다. */
   position: fixed; inset: 0; z-index: 1; box-sizing: border-box;
-  overflow: hidden;
+  /* ⚠ hidden 으로 두면 진열대처럼 줄이 늘어나는 화면이 **잘려서 겹쳐 보인다**(08-08 실기).
+     홈은 flex 로 딱 맞게 짜여 있어 스크롤이 안 생기고, 넘치는 화면만 스크롤이 붙는다. */
+  overflow-y: auto; overscroll-behavior: contain;
   /* ⚠ 노치가 없는 안드로이드는 env(safe-area-inset-top) 가 0 이다. 그대로 두면
      캐릭터 줄이 상태바(약 24px) 밑에 깔린다 — 실기에서 이름·레벨이 안 보였다(08-08).
      그래서 «둘 중 큰 값»으로 최소 높이를 보장한다. */
@@ -5491,6 +5544,13 @@ body:has(#tabbar.hidden) #screen:has(.ib),
   color: var(--g-ink);
   display: flex; flex-direction: column;
 }
+/* 안쪽 화면 — 보통 문서처럼 흐른다(위 주석 참조). 바탕은 그대로 화면을 덮는다 */
+.gm.sc { position: static; inset: auto; height: auto; min-height: 100vh;
+  display: block; overflow: visible;
+  margin: calc(env(safe-area-inset-top) * -1 - 18px) -20px -24px; }
+.gm.sc .gm-grid { display: grid; }
+.gm.sc .gm-shopwrap { margin-top: 16px; }
+
 /* 배경 5종 — 실제로 갈리는 것은 이 두 줄이 전부다 */
 .gm.gt-lime   { --g-sky1: #4ED07A; --g-sky2: #12A5A0; }
 .gm.gt-lav    { --g-sky1: #A98BFF; --g-sky2: #F06BC0; }
