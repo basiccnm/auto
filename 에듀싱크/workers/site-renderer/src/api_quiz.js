@@ -1,23 +1,34 @@
-// ================= 🧠 데일리 퀴즈 (2026-08-08) =================
-// 기획서 `docs/기획-스타코인-v1.md` §04.
+// ============ 🧠 오늘의 미션 (2026-08-08, 기획서 v2 §02.2·§05) ============
 //
-// 4지선다 10문제 · 문제당 5초 · 하루 1세트 · 맞힌 만큼 코인 · 만점 보너스.
+// 4지선다 10문제 · 문제당 5초 · **하루 6판(무료 1 + 코인 5)** · 맞힌 만큼 코인 · 만점 보너스.
+//
+// ⚠ 용어 — 화면에는 「도전」이 아니라 **「오늘의 미션」**. 아이에겐 부모가 준 것이든
+//   우리가 낸 것이든 다 미션이다. 서버 필드명(quiz_*)은 안 바꾼다 — 출력 단에서만 갈아입힌다.
 //
 // 이 파일이 지키는 규칙 — 화면이 아니라 여기서 지켜야 우회가 안 된다:
 //   ① **정답을 절대 내려보내지 않는다.** 채점은 서버가 한다.
-//      내려보내면 개발자도구로 다 보인다 — 퀴즈가 «못 속이는 미션»인 이유가 사라진다.
-//   ② **하루 한 세트**는 quiz_session 의 PRIMARY KEY(child_id, ymd) 가 강제한다.
-//      세는 로직을 또 쓰지 않는다 — INSERT 가 먹으면 오늘 처음이다.
-//   ③ **코인은 star_core 로만** 준다. 하루 리밋을 여기서 다시 세지 않는다.
+//      내려보내면 개발자도구로 다 보인다 — 「못 속이는 미션」인 이유가 사라진다.
+//   ② **하루 판 수**는 quiz_session 의 PK(child_id, ymd, attempt) 가 강제한다.
+//      세는 로직을 또 쓰지 않는다 — INSERT 가 먹으면 그 판은 처음이다.
+//   ③ **코인·점수는 star_core 로만.** 상한을 여기서 다시 세지 않는다.
 //   ④ 채점은 «낸 문제»(session.codes)로만 한다. 클라이언트가 보낸 code 를 믿지 않는다.
+//   ⑤ **재도전 값은 서버가 매긴다.** 클라이언트가 보낸 값으로 결제하지 않는다.
+//
+// ── 왜 재도전이 «퀴즈만» 인가 (기획서 v2 §02.2) ──────────────────────────
+//   급식·친구·수업은 하루에 한 번뿐인 사실이고 아침도 두 번 오지 않는다.
+//   **반복이 자연스러운 건 문제 푸는 것뿐이다.**
+//   그리고 부모 미션이 리셋되면 **부모가 아이와 한 약속을 아이가 코인으로 지워버리는 셈**이라
+//   말이 안 된다.
 
 import { apiOk, apiErr, readJson } from "./api_core.js";
 import { resolveAuth } from "./auth_core.js";
-import { grantStars, coinState, ymdKst, BONUS } from "./star_core.js";
+import {
+  grantStars, spendStars, refundStars, addPoints, coinState, ymdKst, BONUS,
+  retryCost, RETRY_MAX, bumpLevel,
+} from "./star_core.js";
 
 const nowIso = () => new Date().toISOString();
-const QUIZ_N = 10;          // 한 세트 문제 수
-const SEC_PER_Q = 5;        // 문제당 제한 시간(초) — 화면이 쓰는 값도 여기서 내려준다
+const QUIZ_N = 10;          // 한 판 문제 수
 
 function readCookie(request, name) {
   const raw = request.headers.get("Cookie") || "";
@@ -41,82 +52,189 @@ async function gate(request, db, env, childId) {
   return { child, auth };
 }
 
-/* 문제를 뽑는다 — **8분야에서 고루**. 한 분야만 쏟아지면
-   «나는 수학 못해서 오늘 망함»이 되어 그날을 통째로 포기한다. */
-async function pickQuestions(db, band, seed) {
-  const fields = ["kor", "math", "sci", "world", "proverb", "life", "sports", "ent"];
+const bandOf = (grade) => (+grade <= 2) ? "low" : (+grade <= 4) ? "mid" : "high";
+
+/* 저학년은 어려운 문제를 아예 안 본다 — 표의 인지도 등급(tier)으로 자른다.
+   「부르키나파소 수도」가 1학년에게 나오면 그날을 통째로 포기한다. */
+const tierCapOf = (band) => (band === "low") ? 1 : (band === "mid") ? 2 : 3;
+
+/* 문제를 뽑는다 — **8분야에서 고루**.
+   한 분야만 쏟아지면 «나는 수학 못해서 오늘 망함»이 되어 그날을 포기한다.
+   ⚠ 2판째부터는 **틀렸던 문제를 먼저** 채운다(기획서 v2 §02.2).
+      재출제가 「우려먹기」가 아니라 오답노트가 되고, 문제 재고 압박도 준다. */
+async function pickQuestions(db, child, band, seed, attempt) {
   const picked = [];
-  for (const f of fields) {
+  const seen = new Set();
+  const tierCap = tierCapOf(band);
+
+  if (attempt > 1) {
+    // 틀린 적 있고 그 뒤로 맞힌 적 없는 문제 — 오래 틀린 것부터
     const { results } = await db.prepare(
-      `SELECT code, field FROM quiz_questions
-        WHERE active = 1 AND field = ? AND (band = 'all' OR band = ?)
-        ORDER BY (id * 31 + ?) % 997 LIMIT 2`
-    ).bind(f, band, seed).all();
-    for (const r of (results || [])) picked.push(r);
+      `SELECT q.code, q.field FROM quiz_questions q
+         JOIN (SELECT code, MAX(correct) mx, COUNT(*) n FROM quiz_answer_log
+                WHERE child_id = ? GROUP BY code) l ON l.code = q.code
+        WHERE l.mx = 0 AND q.active = 1 AND q.tier <= ?
+          AND (q.band = 'all' OR q.band = ?)
+          AND q.pack_id IN (SELECT id FROM packs WHERE active = 1)
+        ORDER BY l.n DESC LIMIT ?`
+    ).bind(child.id, tierCap, band, QUIZ_N).all();
+    for (const r of (results || [])) { picked.push(r); seen.add(r.code); }
   }
-  // 8분야 × 2 = 16 중 10개만. 순서도 섞어서 «항상 국어부터»가 안 되게 한다
+
+  const fields = ["kor", "math", "sci", "world", "proverb", "life", "sports", "ent"];
+  for (const f of fields) {
+    if (picked.length >= QUIZ_N) break;
+    const { results } = await db.prepare(
+      `SELECT q.code, q.field FROM quiz_questions q
+        WHERE q.active = 1 AND q.field = ? AND q.tier <= ?
+          AND (q.band = 'all' OR q.band = ?)
+          AND q.pack_id IN (SELECT id FROM packs WHERE active = 1)
+        ORDER BY (q.id * 31 + ?) % 997 LIMIT 3`
+    ).bind(f, tierCap, band, seed).all();
+    for (const r of (results || [])) {
+      /* ⚠ 여기서 «넘치게 담고 뒤에서 자르면» 안 된다.
+         한때 그렇게 짰다가, 일부러 앞에 넣은 **오답노트 문제가 잘려 나갔다**(2026-08-08 실측).
+         빈자리만큼만 담는다. */
+      if (picked.length >= QUIZ_N) break;
+      if (!seen.has(r.code)) { picked.push(r); seen.add(r.code); }
+    }
+  }
+
+  // 순서만 섞는다 — «항상 국어부터»가 안 되게. 개수는 이미 QUIZ_N 이하라 버릴 것이 없다
   picked.sort((a, b) => ((a.code.length * 7 + seed) % 13) - ((b.code.length * 7 + seed) % 13));
-  return picked.slice(0, QUIZ_N);
+  return picked;
 }
 
-/* GET /api/v1/children/{id}/quiz — 오늘 세트를 받는다(없으면 만든다)
-   ⚠ 응답에 answer 가 없다. 있으면 안 된다. */
+/* 오늘 판을 다 읽는다 — 마지막 판이 «지금 판»이다 */
+async function sessionsToday(db, childId, ymd) {
+  const { results } = await db.prepare(
+    "SELECT * FROM quiz_session WHERE child_id = ? AND ymd = ? ORDER BY attempt"
+  ).bind(childId, ymd).all();
+  return results || [];
+}
+
+async function makeSession(db, child, ymd, attempt, paid) {
+  const band = bandOf(child.grade);
+  const qs = await pickQuestions(db, child, band, parseInt(ymd, 10) % 997 + attempt * 17, attempt);
+  if (qs.length < QUIZ_N) return null;
+  await db.prepare(
+    "INSERT INTO quiz_session (child_id, ymd, attempt, codes, paid, created_at) VALUES (?,?,?,?,?,?)"
+  ).bind(child.id, ymd, attempt, qs.map((q) => q.code).join(","), paid, nowIso()).run();
+  return db.prepare("SELECT * FROM quiz_session WHERE child_id = ? AND ymd = ? AND attempt = ?")
+    .bind(child.id, ymd, attempt).first();
+}
+
+/* 세션에 적힌 문제를 «세션 순서대로» 낸다. ⚠ 응답에 answer 가 없다. 있으면 안 된다. */
+async function itemsOf(db, ses) {
+  const codes = String(ses.codes).split(",");
+  const holes = codes.map(() => "?").join(",");
+  const { results } = await db.prepare(
+    `SELECT code, field, kind, sec, image_url, q, a1, a2, a3, a4 FROM quiz_questions WHERE code IN (${holes})`
+  ).bind(...codes).all();
+  const byCode = new Map((results || []).map((r) => [r.code, r]));
+  return codes.map((c) => byCode.get(c)).filter(Boolean).map((r) => ({
+    code: r.code, field: r.field, kind: r.kind, sec: r.sec,
+    // ⚠ 그림 문제는 **다 받은 뒤에** 타이머를 켜야 한다 — 아니면 「안 늦었는데 틀렸다」가 된다
+    image: r.image_url || null,
+    q: r.q,
+    options: r.kind === "ox" ? [r.a1, r.a2] : [r.a1, r.a2, r.a3, r.a4],
+  }));
+}
+
+function stateOf(sessions) {
+  const cur = sessions.length ? sessions[sessions.length - 1] : null;
+  const used = sessions.length;                       // 오늘 연 판 수
+  const openable = used < RETRY_MAX;                  // 더 열 수 있나
+  return { cur, used, openable, nextCost: openable ? retryCost(used + 1) : null };
+}
+
+/* GET /api/v1/children/{id}/quiz — 오늘 판을 받는다(첫 판은 무료로 자동 생성) */
 async function getQuiz(request, db, env, childId) {
   const { child, err } = await gate(request, db, env, childId);
   if (err) return err;
   const ymd = ymdKst();
 
-  let ses = await db.prepare("SELECT * FROM quiz_session WHERE child_id = ? AND ymd = ?")
-    .bind(child.id, ymd).first();
-
-  if (!ses) {
-    const band = (+child.grade <= 2) ? "low" : (+child.grade <= 4) ? "mid" : "high";
-    const qs = await pickQuestions(db, band, parseInt(ymd, 10) % 997);
-    if (qs.length < QUIZ_N) {
-      return apiErr("SERVER", null, "오늘 낼 문제가 모자라요. 잠시 후 다시 해 주세요.");
-    }
-    await db.prepare(
-      "INSERT INTO quiz_session (child_id, ymd, codes, answered, correct, coins, created_at) VALUES (?,?,?,0,0,0,?)"
-    ).bind(child.id, ymd, qs.map((q) => q.code).join(","), nowIso()).run();
-    ses = await db.prepare("SELECT * FROM quiz_session WHERE child_id = ? AND ymd = ?")
-      .bind(child.id, ymd).first();
+  let sessions = await sessionsToday(db, child.id, ymd);
+  if (!sessions.length) {
+    const made = await makeSession(db, child, ymd, 1, 0);
+    if (!made) return apiErr("SERVER", null, "오늘 낼 문제가 모자라요. 잠시 후 다시 해 주세요.");
+    sessions = [made];
   }
 
-  const codes = String(ses.codes).split(",");
-  const holes = codes.map(() => "?").join(",");
-  const { results } = await db.prepare(
-    `SELECT code, field, q, a1, a2, a3, a4 FROM quiz_questions WHERE code IN (${holes})`
-  ).bind(...codes).all();
-  // DB 순서가 아니라 **세션에 적힌 순서**로 낸다(매번 같은 순서를 보장)
-  const byCode = new Map((results || []).map((r) => [r.code, r]));
-  const items = codes.map((c) => byCode.get(c)).filter(Boolean).map((r) => ({
-    code: r.code, field: r.field, q: r.q, options: [r.a1, r.a2, r.a3, r.a4],
-  }));
-
+  const { cur, used, openable, nextCost } = stateOf(sessions);
   return apiOk({
-    ymd, total: QUIZ_N, sec_per_q: SEC_PER_Q,
-    done: !!ses.finished_at,
-    answered: ses.answered, correct: ses.correct, coins: ses.coins,
+    ymd,
+    attempt: cur.attempt,
+    total: QUIZ_N,
+    done: !!cur.finished_at,
+    answered: cur.answered, correct: cur.correct, coins: cur.coins, points: cur.points,
     perfect_bonus: BONUS.quizPerfect,
-    items: ses.finished_at ? [] : items,      // 이미 끝냈으면 문제를 다시 안 준다
+    items: cur.finished_at ? [] : await itemsOf(db, cur),   // 끝낸 판은 문제를 다시 안 준다
+    // 재도전 — 값은 **서버가** 말한다
+    retry: { used, max: RETRY_MAX, can: openable && !!cur.finished_at, cost: nextCost },
     coin: await coinState(db, child.id),
   });
 }
 
-/* POST /api/v1/children/{id}/quiz — 10개 답을 한 번에 제출하고 채점받는다
-   body: { answers: [{code, picked}] }  picked 는 1~4, 시간초과면 null
+/* POST /api/v1/children/{id}/quiz/retry — 코인을 내고 한 판 더 연다
+   ⚠ 값은 서버가 매긴다. 클라이언트가 보낸 금액을 쓰지 않는다. */
+async function retryQuiz(request, db, env, childId) {
+  const { child, err } = await gate(request, db, env, childId);
+  if (err) return err;
+  const ymd = ymdKst();
+
+  const sessions = await sessionsToday(db, child.id, ymd);
+  const { cur, used, openable, nextCost } = stateOf(sessions);
+
+  if (!cur) return apiErr("VALIDATION", null, "오늘 미션을 먼저 받아 주세요.");
+  if (!cur.finished_at) {
+    return apiErr("VALIDATION", { attempt: cur.attempt }, "지금 판을 먼저 끝내 주세요.");
+  }
+  if (!openable) {
+    return apiErr("LIMIT_EXCEEDED", { used, max: RETRY_MAX },
+      "오늘 몫은 다 썼어요. 내일 또 만나요!");
+  }
+
+  const st = await coinState(db, child.id);
+  if (st.stars < nextCost) {
+    return apiErr("VALIDATION", { need: nextCost, have: st.stars },
+      "★" + nextCost + "개가 필요해요. 지금 " + st.stars + "개 있어요.");
+  }
+
+  const attempt = used + 1;
+  await spendStars(db, child.id, nextCost, "quiz-retry:" + ymd + ":" + attempt);
+  const made = await makeSession(db, child, ymd, attempt, nextCost);
+  if (!made) {
+    /* 문제 재고가 모자라 판을 못 열었다 → **받은 코인을 돌려준다.**
+       ⚠ grantStars 가 아니라 refundStars 다 — grantStars 는 하루 상한을 타서
+         상한에 걸린 아이는 환불을 «못 받는» 사고가 난다. 아이 돈으로 우리 재고 부족을 메우지 않는다. */
+    await refundStars(db, child.id, nextCost, "quiz-retry:" + ymd + ":" + attempt);
+    return apiErr("SERVER", null, "낼 문제가 모자라요. 코인은 돌려드렸어요.");
+  }
+
+  return apiOk({
+    ymd, attempt, paid: nextCost, total: QUIZ_N,
+    items: await itemsOf(db, made),
+    retry: { used: attempt, max: RETRY_MAX, can: false, cost: attempt < RETRY_MAX ? retryCost(attempt + 1) : null },
+    coin: await coinState(db, child.id),
+  });
+}
+
+/* POST /api/v1/children/{id}/quiz — 지금 판의 답 10개를 한 번에 내고 채점받는다
+   body: { answers: [{code, picked}] }  picked 는 1~4(OX 는 1~2), 시간초과면 null
    ⚠ 한 문제씩 채점하지 않는다 — 매 문제 정답이 오가면 «틀린 걸 알고 다시 내는» 길이 열린다. */
 async function submitQuiz(request, db, env, childId) {
   const { child, err } = await gate(request, db, env, childId);
   if (err) return err;
   const ymd = ymdKst();
 
-  const ses = await db.prepare("SELECT * FROM quiz_session WHERE child_id = ? AND ymd = ?")
-    .bind(child.id, ymd).first();
-  if (!ses) return apiErr("VALIDATION", null, "오늘 퀴즈를 먼저 받아 주세요.");
-  if (ses.finished_at) {
-    return apiErr("LIMIT_EXCEEDED", { correct: ses.correct, coins: ses.coins },
-      "오늘 퀴즈는 이미 풀었어요. 내일 또 만나요!");
+  const sessions = await sessionsToday(db, child.id, ymd);
+  const { cur, used, openable, nextCost } = stateOf(sessions);
+  if (!cur) return apiErr("VALIDATION", null, "오늘 미션을 먼저 받아 주세요.");
+  if (cur.finished_at) {
+    return apiErr("LIMIT_EXCEEDED",
+      { correct: cur.correct, coins: cur.coins, retry: { used, max: RETRY_MAX, cost: nextCost } },
+      openable ? "이 판은 이미 끝냈어요. 한 판 더 할 수 있어요!" : "오늘 몫은 다 썼어요. 내일 또 만나요!");
   }
 
   const b = await readJson(request);
@@ -127,26 +245,26 @@ async function submitQuiz(request, db, env, childId) {
   }
 
   // 채점은 **세션에 적힌 문제**로만. 클라이언트가 보낸 code 목록을 믿지 않는다
-  const codes = String(ses.codes).split(",");
+  const codes = String(cur.codes).split(",");
   const holes = codes.map(() => "?").join(",");
   const { results } = await db.prepare(
-    `SELECT code, field, answer, hint, a1, a2, a3, a4 FROM quiz_questions WHERE code IN (${holes})`
+    `SELECT code, field, answer, hint, points, a1, a2, a3, a4 FROM quiz_questions WHERE code IN (${holes})`
   ).bind(...codes).all();
   const byCode = new Map((results || []).map((r) => [r.code, r]));
 
-  let correct = 0;
+  let correct = 0, points = 0;
   const review = [];
   for (const c of codes) {
     const row = byCode.get(c);
     if (!row) continue;
     const picked = sent.has(c) ? sent.get(c) : null;
     const ok = picked === row.answer;
-    if (ok) correct++;
+    if (ok) { correct++; points += (row.points || 5); }
     await db.prepare(
       "INSERT INTO quiz_answer_log (child_id, ymd, code, field, picked, correct, created_at) VALUES (?,?,?,?,?,?,?)"
     ).bind(child.id, ymd, c, row.field, picked, ok ? 1 : 0, nowIso()).run();
-    /* 틀린 문제는 **정답을 알려 준다** — «아 이거였구나»가 남아야 학습이다(기획서 §04).
-       맞힌 문제는 안 보낸다(응답을 가볍게, 그리고 답 유출 면적을 줄인다). */
+    /* 틀린 문제는 **정답을 알려 준다** — «아 이거였구나»가 남아야 학습이다.
+       맞힌 문제는 안 보낸다(응답을 가볍게, 답 유출 면적을 줄인다). */
     if (!ok) {
       review.push({ code: c, answer: row.answer,
         answer_text: [row.a1, row.a2, row.a3, row.a4][row.answer - 1], hint: row.hint || null });
@@ -154,19 +272,28 @@ async function submitQuiz(request, db, env, childId) {
   }
 
   const perfect = correct === codes.length;
-  const want = correct + (perfect ? BONUS.quizPerfect : 0);
-  const g = await grantStars(db, child.id, want, `quiz:${ymd}`);
+  const wantCoin = correct + (perfect ? BONUS.quizPerfect : 0);
+  const g = await grantStars(db, child.id, wantCoin, "quiz:" + ymd + ":" + cur.attempt);
+  // ⚠ 점수는 **상한을 안 탄다** — 코인이 깎여도 점수는 그대로 들어간다.
+  //   이게 「코인을 태워 순위를 산다」가 성립하는 지점이다.
+  const p = await addPoints(db, child.id, points);
 
   await db.prepare(
-    "UPDATE quiz_session SET answered = ?, correct = ?, coins = ?, finished_at = ? WHERE child_id = ? AND ymd = ?"
-  ).bind(codes.length, correct, g.granted, nowIso(), child.id, ymd).run();
+    "UPDATE quiz_session SET answered = ?, correct = ?, coins = ?, points = ?, finished_at = ? " +
+    "WHERE child_id = ? AND ymd = ? AND attempt = ?"
+  ).bind(codes.length, correct, g.granted, points, nowIso(), child.id, ymd, cur.attempt).run();
 
+  if (correct > 0) await bumpLevel(db, child.id, 1);   // 레벨은 «해낸 미션 수»
+
+  const canMore = used < RETRY_MAX;
   return apiOk({
-    total: codes.length, correct, perfect,
+    attempt: cur.attempt, total: codes.length, correct, perfect,
     coins: g.granted,
-    capped: g.capped,        // 리밋에 걸려 깎였으면 화면이 «오늘은 여기까지»를 말한다
+    capped: g.capped,          // 상한에 걸려 깎였으면 화면이 «오늘은 여기까지»를 말한다
+    points, season: p.season,
     perfect_bonus: perfect ? BONUS.quizPerfect : 0,
     review,
+    retry: { used, max: RETRY_MAX, can: canMore, cost: canMore ? retryCost(used + 1) : null },
     coin: await coinState(db, child.id),
   });
 }
@@ -186,17 +313,20 @@ async function quizStats(request, db, env, childId) {
   return apiOk({ fields: rows, best: rows[0]?.field || null });
 }
 
-// ════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════
 //  라우터
 //  ⚠ index.js 접두어 화이트리스트에 안 넣으면 여기까지 오지도 못하고 HTML 404 로 샌다.
-// ════════════════════════════════════════════════════════════
+// ════════════════════════════════════════════════════════════════════
 export async function handleQuizApi(request, db, env, url) {
   const p = url.pathname, m = request.method;
   let x;
 
-  // ⚠ 더 긴 경로(/quiz/stats)를 먼저 잡는다
+  // ⚠ 더 긴 경로를 먼저 잡는다
   x = p.match(/^\/api\/v1\/children\/(\d+)\/quiz\/stats$/);
   if (x && m === "GET") return quizStats(request, db, env, x[1]);
+
+  x = p.match(/^\/api\/v1\/children\/(\d+)\/quiz\/retry$/);
+  if (x && m === "POST") return retryQuiz(request, db, env, x[1]);
 
   x = p.match(/^\/api\/v1\/children\/(\d+)\/quiz\/?$/);
   if (x) {

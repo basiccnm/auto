@@ -1,0 +1,414 @@
+<title>미션 게임 시안 v4 — 아이 화면(B안 타일)</title>
+<style>
+  /* ══ 게임 전용 팔레트 ══
+     부모 앱 18테마(--surf/--card-a)와 **무관하다**. 아이 화면은 다른 세계다.
+     아이 테마는 «바탕색 한 쌍»만 갈아끼운다 — 카드가 흰색 고정이라 그것만으로 화면이 바뀐다. */
+  :root{
+    --sky1:#4A9BFF; --sky2:#7C5CFF;          /* ← 이 둘만 테마로 교체된다 */
+    --panel:#FFFFFF; --panel2:#F2F6FF;
+    --ink:#16203A; --sub:#5B6B8C;
+    --gold:#FFC531; --gold-d:#E8930B; --gold-ink:#7A4E00;
+    --lime:#38D46A; --pink:#FF6BAA; --violet:#9B6BFF; --cyan:#2ED3E0; --orange:#FF8A3D; --red:#FF4E7A;
+    --shadow:0 6px 0 rgba(0,0,0,.13);
+  }
+  /* 배경 테마 5종 — 실제로는 :root 에 이 한 줄만 바뀐다 */
+  .t-lime  {--sky1:#4ED07A;--sky2:#12A5A0}
+  .t-lav   {--sky1:#A98BFF;--sky2:#F06BC0}
+  .t-sunset{--sky1:#FF9F4A;--sky2:#F0517A}
+  .t-mint  {--sky1:#3ED6D2;--sky2:#3A79E8}
+
+  body{margin:0;background:#242833;font-family:"Malgun Gothic",sans-serif;
+    display:flex;gap:20px;justify-content:center;padding:26px 14px;flex-wrap:wrap;align-items:flex-start}
+  .col{width:360px}
+  .phone{width:360px;border-radius:26px;overflow:hidden;box-shadow:0 18px 50px rgba(0,0,0,.5);
+    background:linear-gradient(180deg,var(--sky1),var(--sky2));color:var(--ink)}
+  .scr{padding:14px 14px 22px;min-height:720px;display:flex;flex-direction:column}
+  .cap{color:#c9c9d2;font-size:12px;text-align:center;margin:9px 0 0;font-weight:800;line-height:1.5}
+  .cap b{color:#fff}
+
+  /* ── 캐릭터 시트 ── */
+  .hero{display:flex;align-items:center;gap:10px}
+  .back{width:40px;height:40px;flex:none;display:grid;place-items:center;border:none;
+    border-radius:13px;background:rgba(255,255,255,.28);color:#fff;font-size:20px;font-weight:900}
+  .ava{width:44px;height:44px;flex:none;display:grid;place-items:center;border:none;border-radius:14px;
+    background:rgba(255,255,255,.32);font-size:24px;box-shadow:inset 0 0 0 2px rgba(255,255,255,.5)}
+  .me{flex:1;min-width:0;color:#fff}
+  .lv{display:inline-block;padding:3px 9px;border-radius:8px;background:var(--gold);
+    color:var(--gold-ink);font-size:11px;font-weight:900;box-shadow:0 2px 0 var(--gold-d)}
+  .nm{display:block;font-size:19px;font-weight:900;margin-top:4px;letter-spacing:-.02em;
+    text-shadow:0 2px 6px rgba(0,0,0,.22)}
+  .purse{flex:none;display:flex;align-items:center;gap:5px;padding:8px 13px;border-radius:13px;
+    background:var(--gold);color:var(--gold-ink);box-shadow:0 3px 0 var(--gold-d)}
+  .purse i{font-style:normal;font-size:15px}
+  .purse b{font-size:18px;font-weight:900;font-variant-numeric:tabular-nums}
+
+  .xp{margin-top:12px;background:rgba(255,255,255,.22);border-radius:14px;padding:10px 12px}
+  .xpb{height:13px;border-radius:8px;background:rgba(0,0,0,.18);overflow:hidden;padding:3px}
+  .xpb span{display:block;height:100%;border-radius:6px;
+    background:linear-gradient(90deg,var(--gold-d),var(--gold));box-shadow:0 0 10px rgba(255,197,49,.7)}
+  .xpt{display:flex;margin-top:6px;font-size:12px;font-weight:900;color:#fff;font-variant-numeric:tabular-nums}
+  .xpt em{margin-left:auto;font-style:normal;font-weight:800;color:rgba(255,255,255,.82)}
+
+  /* ══ 타일 — 홈도 카드 안도 «같은 문법» ══ */
+  .grid{margin-top:13px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .tile{border:none;font-family:inherit;color:var(--ink);text-align:left;width:100%;
+    padding:13px 12px 12px;border-radius:18px;background:var(--panel);box-shadow:var(--shadow);
+    position:relative;overflow:hidden}
+  .tile::before{content:"";position:absolute;left:0;right:0;top:0;height:6px;background:var(--c)}
+  .tile .ic{width:44px;height:44px;display:grid;place-items:center;border-radius:14px;
+    font-size:24px;background:color-mix(in srgb,var(--c) 16%,#fff);margin-top:4px}
+  .tile .tt{margin-top:9px;font-size:15px;font-weight:900;letter-spacing:-.02em}
+  .tile .qm{margin-top:3px;font-size:11px;font-weight:700;color:var(--sub);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tile .bar{margin-top:8px;height:9px;border-radius:6px;background:var(--panel2);overflow:hidden}
+  .tile .bar i{display:block;height:100%;border-radius:6px;background:var(--c)}
+  .tile .bt{margin-top:7px;display:flex;align-items:center}
+  .tile .fr{font-style:normal;font-size:11.5px;font-weight:900;color:var(--sub);font-variant-numeric:tabular-nums}
+  .tile .co{margin-left:auto;padding:4px 8px;border-radius:9px;background:var(--gold);
+    color:var(--gold-ink);font-size:12px;font-weight:900;box-shadow:0 2px 0 var(--gold-d);
+    font-variant-numeric:tabular-nums}
+  /* 국내 전용 — 학교정보 모듈이 붙는 타일. 해외판은 이 타일만 빠진다 */
+  .tile .kr{position:absolute;top:6px;right:0;padding:3px 8px;border-radius:9px 0 0 9px;
+    font-size:9.5px;font-weight:900;background:var(--c);color:#fff}
+  /* 끝낸 타일 — 흐리게가 아니라 «도장 찍힘»으로 */
+  .tile.clear{background:var(--panel2)}
+  .tile.clear .tt{color:var(--sub)}
+  .tile.clear .co{background:var(--lime);color:#fff;box-shadow:0 2px 0 #23A94E}
+  .tile.clear .ic::after{content:"✓";position:absolute;font-size:15px;font-weight:900;color:#fff;
+    width:22px;height:22px;border-radius:50%;background:var(--lime);display:grid;place-items:center;
+    transform:translate(16px,-16px);box-shadow:0 2px 0 #23A94E}
+  /* 클리어 딱지 — 연출이 끝난 뒤 타일에 «도장처럼» 남는다.
+     연출은 1.2초면 사라지지만 딱지는 하루 종일 남아 «오늘 내가 깬 것»이 보인다. */
+  .tile.clear .stamp{position:absolute;right:-13px;top:15px;transform:rotate(-11deg);
+    padding:4px 22px;background:var(--lime);color:#fff;font-size:12px;font-weight:900;
+    letter-spacing:.14em;box-shadow:0 3px 0 #23A94E;pointer-events:none}
+  .tile.clear .stamp::before,.tile.clear .stamp::after{content:"";position:absolute;
+    top:50%;width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,.75);
+    transform:translateY(-50%)}
+  .tile.clear .stamp::before{left:7px} .tile.clear .stamp::after{right:7px}
+  /* 아직 안 한 미션 타일 — 누르라고 살짝 들려 있다 */
+  .tile.todo{box-shadow:0 6px 0 rgba(0,0,0,.13),0 0 0 3px color-mix(in srgb,var(--c) 45%,#fff)}
+
+  /* ── 보스 타일(도전) — 4칸 중 하나지만 색으로 «다른 것»임을 알린다 ── */
+  .tile.boss{background:linear-gradient(135deg,#FF8A3D,#FF4E7A);color:#fff}
+  .tile.boss::before{background:rgba(255,255,255,.5)}
+  .tile.boss .ic{background:rgba(255,255,255,.26)}
+  .tile.boss .qm{color:rgba(255,255,255,.85)}
+  .tile.boss .bar{background:rgba(0,0,0,.2)}
+  .tile.boss .fr{color:rgba(255,255,255,.9)}
+
+  /* ══ 상점 — 맨 아래 길게 하나 ══ */
+  .shop{margin-top:auto;padding-top:13px}
+  .shopbar{display:flex;align-items:center;gap:13px;width:100%;border:none;font-family:inherit;
+    padding:15px 16px;border-radius:20px;text-align:left;color:var(--gold-ink);
+    background:linear-gradient(135deg,#FFD86B,#FFB01F);box-shadow:0 6px 0 var(--gold-d)}
+  .shopbar .ic{font-size:30px;flex:none}
+  .shopbar b{display:block;font-size:17px;font-weight:900;letter-spacing:-.02em}
+  .shopbar em{font-style:normal;font-size:12px;font-weight:800;opacity:.78}
+  .shopbar .cnt{margin-left:auto;flex:none;padding:7px 12px;border-radius:12px;
+    background:rgba(255,255,255,.75);font-size:14px;font-weight:900;font-variant-numeric:tabular-nums}
+
+  /* ── 안쪽 화면 머리 ── */
+  .sh-head{display:flex;align-items:center;gap:11px;color:#fff}
+  .sh-head .ic{width:46px;height:46px;flex:none;display:grid;place-items:center;border-radius:15px;
+    background:rgba(255,255,255,.26);font-size:25px}
+  .sh-head .tt{font-size:19px;font-weight:900;letter-spacing:-.02em;text-shadow:0 2px 6px rgba(0,0,0,.2)}
+  .sh-head .sb{font-size:11.5px;font-weight:800;opacity:.85;margin-top:2px}
+  .wide{grid-column:1 / -1}
+  .reroll{margin-top:11px;width:100%;min-height:46px;border:none;border-radius:14px;font-family:inherit;
+    background:rgba(255,255,255,.26);color:#fff;font-size:14px;font-weight:900}
+
+  /* ── 세트 보너스 (가로로 긴 타일) ── */
+  .bonus{display:flex;align-items:center;gap:12px;padding:13px 14px}
+  .bonus .ic{margin-top:0}
+  .bonus .tb{flex:1;min-width:0}
+  .bonus .tt{margin-top:0}
+
+  /* ══ 상점 진열대 ══ */
+  .item{padding:12px;border-radius:18px;background:var(--panel);box-shadow:var(--shadow);text-align:center}
+  .item .ph{height:66px;border-radius:13px;background:var(--panel2);display:grid;place-items:center;font-size:34px}
+  .item .nm2{margin-top:8px;font-size:14px;font-weight:900;letter-spacing:-.01em}
+  .item .buy{margin-top:8px;width:100%;min-height:38px;border:none;border-radius:11px;font-family:inherit;
+    background:var(--gold);color:var(--gold-ink);font-size:14px;font-weight:900;box-shadow:0 3px 0 var(--gold-d)}
+  .item.lock .buy{background:#DDE5F2;color:#95A3BC;box-shadow:none}
+  .item .need{margin-top:5px;font-size:10.5px;font-weight:800;color:var(--pink)}
+  .shelf-h{display:flex;align-items:center;gap:8px;margin-top:16px;color:#fff}
+  .shelf-h b{font-size:14px;font-weight:900;text-shadow:0 2px 5px rgba(0,0,0,.2)}
+  .shelf-h em{margin-left:auto;font-style:normal;font-size:11.5px;font-weight:900;
+    padding:3px 9px;border-radius:8px;background:rgba(255,255,255,.26)}
+  .ticket{margin-top:9px;display:flex;align-items:center;gap:11px;padding:12px;border-radius:16px;
+    background:var(--panel)}
+  .ticket .ic{font-size:24px}
+  .ticket b{display:block;font-size:14px;font-weight:900}
+  .ticket em{font-style:normal;font-size:11.5px;font-weight:800;color:var(--sub)}
+  .ticket .st{margin-left:auto;padding:5px 10px;border-radius:9px;font-size:11.5px;font-weight:900;
+    background:#FFEFC2;color:#8A5A00}
+  .ticket .st.ok{background:#D6F7E2;color:#1E7B43}
+
+  /* ══ 프로필 ══ */
+  .pf{margin-top:14px;padding:18px 14px 16px;border-radius:20px;background:var(--panel);
+    box-shadow:var(--shadow);text-align:center}
+  .pf .big{width:104px;height:104px;margin:0 auto;border-radius:32px;display:grid;place-items:center;
+    font-size:52px;background:var(--panel2);position:relative}
+  /* 캐릭터가 들어올 자리 — 지금은 이모지, 업데이트 때 이 칸만 갈아끼운다 */
+  .pf .soon{position:absolute;right:-6px;bottom:-6px;padding:4px 9px;border-radius:10px;
+    background:var(--violet);color:#fff;font-size:10px;font-weight:900;box-shadow:0 2px 0 #7A47E0}
+  .pf .nm3{margin-top:12px;font-size:20px;font-weight:900;letter-spacing:-.02em}
+  .pf .lv2{margin-top:5px;display:inline-block;padding:4px 11px;border-radius:10px;
+    background:var(--gold);color:var(--gold-ink);font-size:12px;font-weight:900;box-shadow:0 2px 0 var(--gold-d)}
+  .stats{margin-top:14px;display:grid;grid-template-columns:repeat(3,1fr);gap:9px}
+  .st2{padding:11px 6px;border-radius:14px;background:var(--panel2)}
+  .st2 b{display:block;font-size:19px;font-weight:900;font-variant-numeric:tabular-nums}
+  .st2 em{font-style:normal;font-size:10.5px;font-weight:800;color:var(--sub)}
+  .lab{margin:16px 0 8px;color:#fff;font-size:14px;font-weight:900;text-shadow:0 2px 5px rgba(0,0,0,.2)}
+  .swatch{display:grid;grid-template-columns:repeat(5,1fr);gap:9px}
+  .sw{aspect-ratio:1;border:none;border-radius:16px;box-shadow:0 4px 0 rgba(0,0,0,.16);
+    position:relative;font-size:20px;color:#fff;font-weight:900}
+  .sw.on::after{content:"✓";position:absolute;inset:0;display:grid;place-items:center;
+    text-shadow:0 2px 5px rgba(0,0,0,.35)}
+  .badges{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+  .bg2{padding:11px 4px;border-radius:14px;background:var(--panel);box-shadow:var(--shadow);
+    text-align:center;font-size:26px}
+  .bg2 em{display:block;margin-top:4px;font-style:normal;font-size:10px;font-weight:900;color:var(--sub)}
+  .bg2.off{background:rgba(255,255,255,.28);box-shadow:none;color:rgba(255,255,255,.55)}
+  .bg2.off em{color:rgba(255,255,255,.7)}
+
+  /* ══ 클리어 연출 — «세트를 완주한 순간»에만 ══
+     개별 미션 완료는 조용히 체크만 한다. 매번 연출하면 3초 만에 성가신 것이 된다.
+     화면이 어두워졌다 밝아지는 데 1.2초, 아무 데나 누르면 즉시 건너뛴다.
+     ⚠ prefers-reduced-motion 이면 어두워지지 않고 배지만 뜬다. */
+  .phone.clr{position:relative}
+  .veil{position:absolute;inset:0;background:rgba(8,12,28,.74);
+    display:grid;place-items:center;text-align:center;padding:20px}
+  .veil .ring{width:132px;height:132px;border-radius:50%;display:grid;place-items:center;
+    background:radial-gradient(circle,rgba(255,197,49,.42),transparent 66%);
+    box-shadow:0 0 60px rgba(255,197,49,.55);margin:0 auto}
+  .veil .ring b{font-size:62px}
+  .veil .big2{margin-top:6px;font-size:44px;font-weight:900;letter-spacing:.14em;color:#fff;
+    text-shadow:0 0 26px rgba(255,197,49,.85),0 4px 0 rgba(0,0,0,.28)}
+  .veil .sub2{margin-top:2px;font-size:15px;font-weight:900;color:var(--gold)}
+  .veil .gain{margin-top:16px;display:inline-flex;align-items:center;gap:6px;
+    padding:10px 18px;border-radius:15px;background:var(--gold);color:var(--gold-ink);
+    font-size:19px;font-weight:900;box-shadow:0 4px 0 var(--gold-d)}
+  .veil .tap{margin-top:18px;font-size:11.5px;font-weight:800;color:rgba(255,255,255,.6)}
+  /* 날아가는 코인 — 지갑 쪽으로 빨려 들어간다 */
+  .fly{position:absolute;font-size:19px;color:var(--gold);text-shadow:0 0 10px rgba(255,197,49,.9)}
+  .f1{left:120px;top:300px} .f2{left:186px;top:262px} .f3{left:238px;top:214px}
+  .f4{left:272px;top:160px} .f5{left:292px;top:112px;opacity:.55}
+</style>
+
+<!-- ══════════ ① 홈 (B안 확정) ══════════ -->
+<div class="col">
+<div class="phone"><div class="scr">
+  <div class="hero">
+    <button class="ava">🦊</button>
+    <div class="me"><span class="lv">Lv.7 일꾼</span><b class="nm">민준</b></div>
+    <div class="purse"><i>★</i><b>1,240</b></div>
+  </div>
+  <div class="xp">
+    <div class="xpb"><span style="width:60%"></span></div>
+    <div class="xpt">오늘 18 / 30 획득<em>12개 더!</em></div>
+  </div>
+
+  <div class="grid">
+    <button class="tile clear" style="--c:var(--orange)">
+      <span class="stamp">CLEAR</span>
+      <div class="ic">🌅</div><div class="tt">아침 미션</div>
+      <div class="bar"><i style="width:100%"></i></div>
+      <div class="bt"><em class="fr">3 / 3 완료</em><span class="co">★5</span></div>
+    </button>
+    <button class="tile todo" style="--c:var(--cyan)">
+      <span class="kr">학교정보</span>
+      <div class="ic">🏫</div><div class="tt">학교 미션</div>
+      <div class="bar"><i style="width:33%"></i></div>
+      <div class="bt"><em class="fr">1 / 3</em><span class="co">★3</span></div>
+    </button>
+    <button class="tile todo" style="--c:var(--violet)">
+      <div class="ic">📚</div><div class="tt">방과후 미션</div>
+      <div class="bar"><i style="width:0%"></i></div>
+      <div class="bt"><em class="fr">0 / 2</em><span class="co">★6</span></div>
+    </button>
+    <button class="tile boss" style="--c:var(--red)">
+      <div class="ic">⚔️</div><div class="tt">오늘의 도전</div>
+      <div class="qm">10문제 · 한 문제 5초</div>
+      <div class="bar"><i style="width:0%"></i></div>
+      <div class="bt"><em class="fr">아직 안 함</em><span class="co">★15</span></div>
+    </button>
+  </div>
+
+  <div class="shop">
+    <button class="shopbar">
+      <span class="ic">🏪</span>
+      <span><b>스타코인 상점</b><em>모은 ★로 바꾸기</em></span>
+      <span class="cnt">★1,240</span>
+    </button>
+  </div>
+</div></div>
+<p class="cap"><b>① 홈</b> — 2×2 타일 + 상점 긴 바<br>끝낸 칸은 초록 체크, 남은 칸은 테두리가 들려 «여기 눌러»가 보인다</p>
+</div>
+
+<!-- ══════════ ② 카드 안 — 같은 타일 문법 ══════════ -->
+<div class="col">
+<div class="phone"><div class="scr">
+  <div class="sh-head">
+    <button class="back">‹</button>
+    <div class="ic">🏫</div>
+    <div><div class="tt">학교 미션</div><div class="sb">오늘 1 / 3 · 모으면 ★3</div></div>
+  </div>
+
+  <div class="grid">
+    <button class="tile clear" style="--c:var(--cyan)">
+      <span class="stamp">CLEAR</span>
+      <div class="ic">🍚</div><div class="tt">오늘 급식</div>
+      <div class="qm">별점만 누르면 끝</div>
+      <div class="bar"><i style="width:100%"></i></div>
+      <div class="bt"><em class="fr">했어요</em><span class="co">★1</span></div>
+    </button>
+    <button class="tile todo" style="--c:var(--cyan)">
+      <div class="ic">🙌</div><div class="tt">오늘 누구랑</div>
+      <div class="qm">친구 이름 고르기</div>
+      <div class="bar"><i style="width:0%"></i></div>
+      <div class="bt"><em class="fr">30초면 끝</em><span class="co">★1</span></div>
+    </button>
+    <button class="tile todo" style="--c:var(--cyan)">
+      <div class="ic">✏️</div><div class="tt">재밌던 수업</div>
+      <div class="qm">시간표에서 고르기</div>
+      <div class="bar"><i style="width:0%"></i></div>
+      <div class="bt"><em class="fr">30초면 끝</em><span class="co">★1</span></div>
+    </button>
+    <button class="tile" style="--c:var(--gold)">
+      <div class="ic">🎁</div><div class="tt">세트 보너스</div>
+      <div class="qm">3개 다 하면</div>
+      <div class="bar"><i style="width:33%"></i></div>
+      <div class="bt"><em class="fr">2개 남음</em><span class="co">＋★2</span></div>
+    </button>
+  </div>
+
+</div></div>
+<p class="cap"><b>② 카드 안</b> — 홈과 «똑같은 타일»이라 배울 게 없다<br>국내 전용 학교정보(급식·친구·시간표)가 여기로 들어간다</p>
+</div>
+
+<!-- ══════════ ③ 상점 진열대 ══════════ -->
+<div class="col">
+<div class="phone"><div class="scr">
+  <div class="sh-head">
+    <button class="back">‹</button>
+    <div class="ic">🏪</div>
+    <div><div class="tt">스타코인 상점</div><div class="sb">내 코인 ★1,240</div></div>
+  </div>
+
+  <div class="grid">
+    <div class="item"><div class="ph">🍦</div><div class="nm2">아이스크림</div>
+      <button class="buy">★5</button></div>
+    <div class="item"><div class="ph">🎮</div><div class="nm2">게임 1시간</div>
+      <button class="buy">★10</button></div>
+    <div class="item"><div class="ph">🍔</div><div class="nm2">햄버거</div>
+      <button class="buy">★20</button></div>
+    <div class="item lock"><div class="ph">🚲</div><div class="nm2">자전거</div>
+      <button class="buy">★2,000</button><div class="need">760개 더!</div></div>
+  </div>
+
+  <div class="shelf-h"><b>🎟 내 티켓</b><em>2장</em></div>
+  <div class="ticket"><span class="ic">🍦</span>
+    <span><b>아이스크림</b><em>어제 바꿨어요</em></span><span class="st">기다리는 중</span></div>
+  <div class="ticket"><span class="ic">🎮</span>
+    <span><b>게임 1시간</b><em>8월 5일</em></span><span class="st ok">받았어요</span></div>
+</div></div>
+<p class="cap"><b>③ 상점</b> — 부모가 올린 보상이 실제로 진열된다<br>못 사는 건 «760개 더» 로 남겨 목표가 된다</p>
+</div>
+
+<!-- ══════════ ④ 프로필 + 배경색 ══════════ -->
+<div class="col">
+<div class="phone t-lav"><div class="scr">
+  <div class="sh-head">
+    <button class="back">‹</button>
+    <div><div class="tt">내 프로필</div><div class="sb">Lv.7 일꾼 · 시작한 지 34일</div></div>
+  </div>
+
+  <div class="pf">
+    <div class="big">🦊<span class="soon">곧 캐릭터</span></div>
+    <div class="nm3">민준</div>
+    <span class="lv2">Lv.7 일꾼 · 다음까지 ★60</span>
+    <div class="stats">
+      <div class="st2"><b>1,240</b><em>모은 코인</em></div>
+      <div class="st2"><b>34</b><em>연속 출석</em></div>
+      <div class="st2"><b>82%</b><em>퀴즈 정답률</em></div>
+    </div>
+  </div>
+
+  <div class="lab">🎨 배경 바꾸기</div>
+  <div class="swatch">
+    <button class="sw" style="background:linear-gradient(160deg,#4A9BFF,#7C5CFF)"></button>
+    <button class="sw" style="background:linear-gradient(160deg,#4ED07A,#12A5A0)"></button>
+    <button class="sw on" style="background:linear-gradient(160deg,#A98BFF,#F06BC0)"></button>
+    <button class="sw" style="background:linear-gradient(160deg,#FF9F4A,#F0517A)"></button>
+    <button class="sw" style="background:linear-gradient(160deg,#3ED6D2,#3A79E8)"></button>
+  </div>
+
+  <div class="lab">🏅 모은 뱃지</div>
+  <div class="badges">
+    <div class="bg2">🧠<em>과학박사</em></div>
+    <div class="bg2">🔥<em>30일</em></div>
+    <div class="bg2">🌍<em>나라왕</em></div>
+    <div class="bg2 off">🔒<em>???</em></div>
+  </div>
+</div></div>
+<p class="cap"><b>④ 프로필</b> — 배경색 5개 · 뱃지<br>캐릭터·꾸미기는 이 칸만 갈아끼우면 되게 자리를 비워 뒀다</p>
+</div>
+
+<!-- ══════════ ⑤ 클리어 연출 ══════════ -->
+<div class="col">
+<div class="phone clr"><div class="scr">
+  <div class="hero">
+    <button class="ava">🦊</button>
+    <div class="me"><span class="lv">Lv.7 일꾼</span><b class="nm">민준</b></div>
+    <div class="purse"><i>★</i><b>1,245</b></div>
+  </div>
+  <div class="xp">
+    <div class="xpb"><span style="width:60%"></span></div>
+    <div class="xpt">오늘 18 / 60 획득<em>42개 더!</em></div>
+  </div>
+  <div class="grid">
+    <button class="tile clear" style="--c:var(--orange)">
+      <span class="stamp">CLEAR</span>
+      <div class="ic">🌅</div><div class="tt">아침 미션</div>
+      <div class="bar"><i style="width:100%"></i></div>
+      <div class="bt"><em class="fr">3 / 3 완료</em><span class="co">★5</span></div>
+    </button>
+    <button class="tile todo" style="--c:var(--cyan)">
+      <div class="ic">🏫</div><div class="tt">학교 미션</div>
+      <div class="bar"><i style="width:33%"></i></div>
+      <div class="bt"><em class="fr">1 / 3</em><span class="co">★3</span></div>
+    </button>
+    <button class="tile todo" style="--c:var(--violet)">
+      <div class="ic">📚</div><div class="tt">방과후 미션</div>
+      <div class="bar"><i style="width:0%"></i></div>
+      <div class="bt"><em class="fr">0 / 2</em><span class="co">★6</span></div>
+    </button>
+    <button class="tile boss" style="--c:var(--red)">
+      <div class="ic">⚔️</div><div class="tt">오늘의 미션</div>
+      <div class="qm">10문제 · 한 문제 5초</div>
+      <div class="bar"><i style="width:0%"></i></div>
+      <div class="bt"><em class="fr">아직 안 함</em><span class="co">★15</span></div>
+    </button>
+  </div>
+  <div class="shop">
+    <button class="shopbar"><span class="ic">🏪</span>
+      <span><b>스타코인 상점</b><em>모은 ★로 바꾸기</em></span>
+      <span class="cnt">★1,245</span></button>
+  </div>
+
+  <div class="veil">
+    <div>
+      <div class="ring"><b>🌅</b></div>
+      <div class="big2">CLEAR</div>
+      <div class="sub2">아침 미션 완주!</div>
+      <div class="gain">＋★5</div>
+      <div class="tap">아무 데나 누르면 넘어가요</div>
+    </div>
+  </div>
+  <span class="fly f1">★</span><span class="fly f2">★</span><span class="fly f3">★</span>
+  <span class="fly f4">★</span><span class="fly f5">★</span>
+</div></div>
+<p class="cap"><b>⑤ 클리어</b> — 세트를 완주한 «순간»에만 1.2초<br>코인이 지갑으로 날아가 1,240 → 1,245 로 오른다</p>
+</div>

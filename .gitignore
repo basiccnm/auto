@@ -160,3 +160,11 @@ client_secret*.json
 *.key
 credentials.json
 client_secret*.json
+
+# ─── 2026-08-08 ───
+# 그래들 로컬 캐시 — 빌드할 때마다 바뀌는 바이너리라 올릴 것이 아니다
+**/app/android/.gradle/
+
+# 화면 시안은 «없으면 다시 못 만든다» — 위 `*.html` 무시 규칙의 예외.
+# 세션이 바뀌면 임시폴더가 날아가서 승인받은 시안이 사라진다(대표님 지시: 다 저장하면서 해).
+!**/docs/시안-*.html

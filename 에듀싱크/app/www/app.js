@@ -2705,8 +2705,10 @@ const Screens = {
     ${(() => {
       const wait = (S.missions || []).filter((x) => x.status === "waiting").length;
       const done = (S.missions || []).filter((x) => x.status === "done").length;
-      /* ⚠ ★ 는 부모의 미션 관리(#mission)가 아니라 **아이의 게임 세계**(#game)로 간다(2026-08-08 지시).
-           부모가 미션을 관리하는 길은 드로어와 게임 안 «부모» 버튼에 있다. */
+      /* ★ = **미션 게임**으로 들어간다(2026-08-08 대표님 지시).
+           ⚠ «아이 전용 화면»이 아니다 — 부모도 아이도 이 안으로 들어오고, 안에서 역할만 갈린다
+             (부모는 내주고·승인하고, 아이는 해내고 받는다).
+           ⚠ 한 번 #mission 으로 되돌렸다가 다시 고쳤다. 지시는 «노란 별 = 게임 미션»이다. */
       return `<button class="hv3-star" onclick="location.hash='#game'" aria-label="미션 게임">
         <span class="st">★</span>${wait ? `<em class="bdg">${wait}</em>` : ""}</button>`;
     })()}
@@ -5334,8 +5336,23 @@ const QUIZ_FIELD_KO = { kor: "국어", math: "수학", sci: "과학", world: "�
 function gameShop() {
   const list = S.store;
   if (list === null) return `<p class="gm-empty">불러오는 중…</p>`;
+
+  /* 부모가 보고 있으면 «진열대 꾸미기» 길을 준다 (2026-08-08 지적: 등록할 데가 없었다).
+     ⚠ 아이에게는 안 보인다 — 진열대를 정하는 건 부모의 일이다(기획서 §06).
+       아이 토큰·아이 모드·부모의 아이 미리보기 셋 다 아이로 친다.
+     ⚠ 등록 화면은 #store 에 이미 있다. 게임 안에 폼을 또 만들지 않는다 — 입구가 둘이면 갈린다. */
+  const kid = isChildToken() || S.childView || S.kidMode;
+  const setup = kid ? "" : `
+      <button class="gm-go ghost" onclick="location.hash='#store'">
+        진열대 꾸미기</button>`;
+
   if (!list.length) return `
-    <div class="gm-body"><p class="gm-empty">엄마아빠가 무엇과 바꿀 수 있는지<br>정해 주면 여기에 나와요</p></div>`;
+    <div class="gm-body">
+      <p class="gm-empty">${kid
+        ? "엄마아빠가 무엇과 바꿀 수 있는지<br>정해 주면 여기에 나와요"
+        : "아직 바꿀 수 있는 게 없어요<br>무엇과 바꿔 줄지 정해 주세요"}</p>
+      ${setup}
+    </div>`;
 
   const why = { limit: "이번엔 다 바꿨어요", stars: "★이 모자라요" };
   return `
@@ -5352,6 +5369,7 @@ function gameShop() {
         </div>`;
       }).join("")}
       <button class="gm-go ghost" onclick="location.hash='#tickets'">내 티켓 보기</button>
+      ${setup}
     </div>`;
 }
 
@@ -6974,7 +6992,7 @@ const App = {
       if (location.hash !== "#childview") history.replaceState(null, "", "#childview");
     }
     /* 🔒 아이 모드 — 열어 줄 화면은 넷뿐(§5④). 서랍만 감추면 주소·뒤로가기로 샌다 */
-    if (S.kidMode && !["home", "mission", "store", "tickets"].includes(name)) {
+    if (S.kidMode && !["home", "game", "mission", "store", "tickets"].includes(name)) {
       name = "home";
       if (location.hash !== "#home") history.replaceState(null, "", "#home");
     }
