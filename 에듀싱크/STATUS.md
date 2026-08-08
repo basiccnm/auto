@@ -426,6 +426,36 @@ node scripts/check_wiring.mjs
 
 **같이 잡은 것** — 상점의 ★가격 칩과 「바꾸기」 버튼이 **겹쳐 보였다**(08-08 실기) → 줄을 갈라 띄웠다.
 
+### 🛠 배포·검사 도구 둘 (2026-08-08) — 「최신이 아닌 거 같은데」
+
+**`scripts/deploy_app.sh`** — 찍고 · 옮기고 · 굽고 · **붙어 있는 폰 전부에** 넣고 · **대조까지**
+
+```bash
+bash scripts/deploy_app.sh
+```
+두 번 겪은 사고를 막는다 —
+① 캐시 표시(`?v=`)를 안 찍고 구우면 덮어 설치해도 웹뷰가 옛 파일을 쓴다
+② 폰이 두 대인데 **한 대에만 넣고** 「다 올렸다」고 보고했다(부모만 새 것, 자녀는 두 판 뒤)
+→ 마지막에 **각 폰이 실제로 물고 있는 해시**를 읽어 소스와 대조한다.
+   「설치 Success」는 증거가 아니다.
+
+**`scripts/probe_theme_leak.js`** — 아이 세계 안에서 **부모 테마 색을 쓰는 요소**를 기기에서 찾는다
+
+```bash
+node scripts/emul_eval.mjs --file scripts/probe_theme_leak.js          # 부모 폰
+CDP_PORT=9334 node scripts/emul_eval.mjs --file scripts/probe_theme_leak.js   # 자녀 폰
+```
+
+**이 둘로 잡은 것**
+- 상점의 `.ms-mkbtn` · `.ti` · 맨 `span/b/em` 이 부모 색이었다
+- `.gmp` 에 **토큰만 갈아입히고 `color` 를 안 줘서** 글자가 부모 `--ink`(#1A1A1F)로 상속됐다
+
+**🔑 고치는 방식을 바꿨다** — 클래스를 하나씩 쫓지 않는다.
+**아이 세계 안에서 부모 토큰 자체를 게임 색으로 재정의**한다(`.gmw, .gmp { --card-a: var(--g-panel); … }`).
+앞으로 어떤 규칙이 들어와도 자동으로 맞는다.
+
+**지금 상태 — 두 폰 전 화면에서 섞임 0** (`#game`·`#store`·`#tickets`·`#mission`)
+
 **남은 STAGE 0** — 언어팩 키 정리 · 원격 마이그레이션 + 워커 배포 · APK 빌드/실기 몽타주 ·
 미션 완주 시 클리어 연출을 실제 완료 흐름에 연결(`clearShow` 호출 지점)
 

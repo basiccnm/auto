@@ -5396,6 +5396,20 @@ body:has(#tabbar.hidden) #screen:has(.ib),
    ⚠ 부모 앱의 화면(홈·기록·설정)은 여기에 안 들어온다 — 그쪽은 테마 18종을 그대로 탄다.
    ⚠ 색 이름은 게임과 **같은 것**(--g-*)을 쓴다. 두 벌이 되면 반드시 어긋난다.
    ══════════════════════════════════════════════════════════════════════ */
+/* 🔑 **부모 테마 토큰을 아이 세계 안에서 통째로 갈아입힌다.**
+   화면마다 어떤 클래스가 어떤 토큰을 쓰는지 쫓아다니면 반드시 빠뜨린다 —
+   실제로 상점에서 `.ms-mkbtn`·`.ti`·맨 `span/b/em` 이 부모 색으로 남아 있었다(08-08 기기 실측).
+   여기서 토큰 자체를 바꿔 두면 **앞으로 어떤 규칙이 들어와도 자동으로 맞는다.**
+   ⚠ 바깥 배경 토큰(--surf/--bg/--outer)은 투명으로 — 게임 그라데이션을 덮으면 안 된다. */
+.gmw, .gmp {
+  --card-a: var(--g-panel); --card-b: var(--g-panel2); --card: var(--g-panel);
+  --card-ink: var(--g-ink); --card-sub: var(--g-sub);
+  --ink: var(--g-ink); --muted: var(--g-sub);
+  --chip: var(--g-panel2); --line: #E3E9F5;
+  --accent: var(--g-gold); --accent-ink: var(--g-gold-ink); --on-accent: var(--g-gold-ink);
+  --surf: transparent; --bg: transparent; --outer: transparent;
+}
+
 .gmw { --g-panel: #FFFFFF; --g-panel2: #F2F6FF;
   --g-ink: #16203A; --g-sub: #5B6B8C;
   --g-gold: #FFC531; --g-gold-d: #E8930B; --g-gold-ink: #7A4E00;
@@ -5461,7 +5475,11 @@ body:has(#tabbar.hidden) #screen:has(.ib),
   --g-lime: #38D46A; --g-shadow: 0 5px 0 rgba(0, 0, 0, .12);
   min-height: 100vh; margin: calc(env(safe-area-inset-top) * -1 - 18px) -20px -24px;
   padding: max(calc(env(safe-area-inset-top) + 8px), 30px) 14px calc(env(safe-area-inset-bottom) + 20px);
-  background: linear-gradient(180deg, #4A9BFF, #7C5CFF); }
+  background: linear-gradient(180deg, #4A9BFF, #7C5CFF);
+  /* ⚠ 토큰만 갈아입히고 **글자색을 안 주면** 부모 색이 그대로 상속된다 —
+     기기에서 재 보니 실제 글자가 부모 --ink(#1A1A1F)였다(08-08).
+     바깥은 그라데이션 위라 흰색, 카드 안은 각 규칙이 --g-ink 를 명시한다. */
+  color: #fff; }
 /* ── 관리 허브 카드 (2026-08-08) ────────────────────────────────────
    ⚠ 한 장에 다 펼치면 스크롤이 길어져 «무엇부터 봐야 하는지»가 안 보인다.
      아이 홈과 **같은 타일 문법**이라 부모도 배울 게 없다. */
@@ -5603,6 +5621,7 @@ body:has(#tabbar.hidden) #screen:has(.ib),
 .gm-hero { display: flex; align-items: center; gap: 10px; flex: none; }
 .gm-ava { width: 46px; height: 46px; flex: none; display: grid; place-items: center;
   border: none; border-radius: 15px; background: rgba(255, 255, 255, .32); font-size: 25px;
+  color: #fff;
   box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .5); }
 .gm-me { flex: 1; min-width: 0; color: #fff; }
 .gm-lv { display: inline-block; padding: 3px 9px; border-radius: 9px;
@@ -5670,7 +5689,11 @@ body:has(#tabbar.hidden) #screen:has(.ib),
    카드 가운데가 휑해지고, 이름을 아래로 밀면 아이콘이 떠 보인다 — 둘 다 08-08 실기에서 확인. */
 .gm-tile { justify-content: center; }
 .gm-tt { display: block; margin-top: 8px; font-size: 15px; font-weight: 900;
-  letter-spacing: -.02em; }
+  letter-spacing: -.02em; line-height: 1.28;
+  /* ⚠ 「가족 신발 가지런히 놓 / 기」 처럼 마지막 글자만 넘어가면 읽기가 나쁘다.
+     두 줄까지 보여주고 넘치면 … 로 끊는다. 낱말 단위로 줄을 바꾼다. */
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; word-break: keep-all; }
 .gm-tn { display: block; margin-top: 3px; font-size: 11px; font-weight: 700;
   font-style: normal; color: var(--g-sub); min-height: 0;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
