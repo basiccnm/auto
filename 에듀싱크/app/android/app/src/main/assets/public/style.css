@@ -5416,7 +5416,10 @@ body:has(#tabbar.hidden) #screen:has(.ib),
   --g-lime: #38D46A; --g-pink: #FF6BAA; --g-shadow: 0 5px 0 rgba(0, 0, 0, .12);
   min-height: 100vh; margin: calc(env(safe-area-inset-top) * -1 - 18px) -20px -24px;
   padding: max(calc(env(safe-area-inset-top) + 8px), 30px) 14px calc(env(safe-area-inset-bottom) + 20px);
-  background: linear-gradient(180deg, #4A9BFF, #7C5CFF); color: var(--g-ink); }
+  background: linear-gradient(180deg, #4A9BFF, #7C5CFF); color: var(--g-ink);
+  /* ⚠ 전수검사에서 가로로 2px 이 새고 있었다 — 아이 세계는 가로로 흐를 것이 없다.
+     넘치는 표·코드 같은 것은 각자 제 상자에서 스크롤한다(전역 규칙). */
+  overflow-x: hidden; }
 
 /* 안쪽 화면들이 부모 테마 토큰으로 그려 놓은 것을 **여기서 갈아입힌다.**
    화면마다 클래스를 새로 만들지 않는다 — 그러면 화면 수만큼 규칙이 늘고 반드시 어긋난다. */
@@ -5993,4 +5996,55 @@ body:has(#tabbar.hidden) #screen:has(.ib),
   .gm-veil { animation: none; background: rgba(6, 9, 22, .9); }
   .gm-xpb span, .gm-bar i { transition: none; }
   .gm-tile:active, .gm-go:active, .qz-op:active, .gm-shopbar:active { transform: none; }
+}
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   🎯 네모 버튼 안 기호 «가운데» 맞추기 (2026-08-08 전수검사)
+
+   대표님 지적: 「사각 박스 안에 ＋ · ‹ 기호 중앙정렬해라」
+   기기에서 재 보니 이렇게 쏠려 있었다 —
+     .sub-back  dx=4.6 dy=4.7   (뒤로가기 ‹ — 전 화면)
+     .hv3-ham   dx=-5.0 dy=1.5  (홈 ☰ — 오른쪽 padding 10px 탓)
+     .gmp-back  dy=1.8          (관리 화면 ‹)
+
+   왜 place-items:center 만으로는 안 되나 —
+     아이콘 폰트의 글자는 **em 상자 안에서 이미 치우쳐** 있고, 그 위에 줄높이가 더해진다.
+     상자를 가운데 두는 것과 «글자를 가운데 두는 것»은 다르다.
+   그래서 ① 줄높이를 1 로 죽이고 ② 여백을 좌우 같게 하고 ③ 아이콘을 블록으로 만든다.
+   ⚠ 이 규칙은 **파일 맨 끝**에 둔다 — 앞의 개별 규칙을 확실히 덮어야 한다.
+   ══════════════════════════════════════════════════════════════════════ */
+.sub-back, .hv3-ham, .gm-back, .gmp-back, .gm-ava, .ib-more,
+.hd-box, .hd-bell, .back {
+  display: grid; place-items: center; padding: 0; line-height: 1;
+  text-align: center; box-sizing: border-box;
+}
+.sub-back > i, .hv3-ham > i, .ib-more > i, .hd-box > i, .hd-bell > i, .back > i {
+  display: block; line-height: 1; width: 1em; height: 1em;
+  font-size: inherit; text-align: center;
+}
+/* ☰ 는 오른쪽에만 여백이 있어 왼쪽으로 5px 쏠렸다 — 좌우를 같게 */
+.hv3-ham { width: 44px; height: 44px; font-size: 24px; }
+
+/* 글자로 그린 ‹ 는 폰트마다 위로 뜬다. 줄높이를 죽이고 시각 보정만 살짝 준다 */
+.gm-back, .gmp-back, .gm-ava { font-size: 22px; }
+.gm-back, .gmp-back { padding-bottom: 2px; }
+
+/* 터치 영역 — 눈에 보이는 크기는 그대로 두고 «누를 수 있는 넓이»만 44px 로 넓힌다.
+   ⚠ 아이콘을 키우면 상단 줄의 균형이 깨진다. 그래서 겉을 넓히지 않고 가상 요소로 넓힌다. */
+.hd-box::after, .hd-bell::after, .hv3-ham::after {
+  content: ""; position: absolute; left: 50%; top: 50%;
+  width: 44px; height: 44px; transform: translate(-50%, -50%);
+}
+.hd-box, .hd-bell, .hv3-ham { position: relative; }
+
+/* 터치 영역만 넓히기 — 설정·기록 화면의 작은 토글들(전수검사 08-08).
+   ⚠ **보이는 크기는 안 바꾼다.** 여기는 8/4 정본 구역이고, 버튼을 키우면 줄 배치가 흔들린다.
+      누를 넓이만 가상 요소로 44px 을 깔아 준다 — 눈에는 아무 변화가 없다. */
+.cl-on, .cl-off, .swt, .ml-alarm, .dy-go, .tl-go { position: relative; }
+.cl-on::before, .cl-off::before, .swt::before, .ml-alarm::before,
+.dy-go::before, .tl-go::before {
+  content: ""; position: absolute; left: 50%; top: 50%;
+  min-width: 44px; min-height: 44px; width: 100%; height: 100%;
+  transform: translate(-50%, -50%);
 }

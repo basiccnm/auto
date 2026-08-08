@@ -51,7 +51,7 @@ WANT=$(PYTHONUTF8=1 python -c "
 import hashlib
 print(hashlib.sha1(open('app/www/app.js','rb').read()).hexdigest()[:8])")
 echo "  소스: app.js?v=$WANT"
-FAIL=0
+FAIL=0; WARN=0
 PORT=9400
 for D in $DEVS; do
   PORT=$((PORT+1))
@@ -59,9 +59,14 @@ for D in $DEVS; do
   if [ -z "$PID" ]; then echo "  ⚠ $D — 웹뷰를 못 찾았다(앱이 아직 안 떴나)"; FAIL=1; continue; fi
   MSYS_NO_PATHCONV=1 "$ADB" -s "$D" forward tcp:$PORT localabstract:webview_devtools_remote_$PID >/dev/null
   GOT=$(CDP_PORT=$PORT node scripts/emul_eval.mjs "[...document.scripts].map(s=>s.src).filter(x=>x.includes('app.js'))[0].split('?v=')[1]||''" 2>/dev/null | tail -1)
-  if [ "$GOT" = "$WANT" ]; then echo "  ✅ $D — $GOT"; else echo "  ❌ $D — $GOT (소스와 다르다)"; FAIL=1; fi
+  # ⚠ 「못 읽었다」와 「다르다」는 다른 일이다. 섞으면 멀쩡한 폰을 옛 판으로 오해한다
+  #   (08-08: 자녀 폰 화면은 최신인데 디버깅 소켓만 안 읽혀 «최신 아님»으로 보고했다).
+  if [ -z "$GOT" ]; then echo "  ⚠ $D — 못 읽었다(디버깅 소켓). 화면은 눈으로 확인할 것"; WARN=1
+  elif [ "$GOT" = "$WANT" ]; then echo "  ✅ $D — $GOT"
+  else echo "  ❌ $D — $GOT (소스와 다르다)"; FAIL=1; fi
 done
 
 echo
 echo "════════════════════════════════════════════════════════"
-[ "$FAIL" = "0" ] && echo "  ✅ 모든 폰이 최신을 물고 있다" || { echo "  ❌ 최신이 아닌 폰이 있다"; exit 1; }
+if [ "$FAIL" != "0" ]; then echo "  ❌ 최신이 아닌 폰이 있다"; exit 1; fi
+[ "$WARN" = "0" ] && echo "  ✅ 모든 폰이 최신을 물고 있다"                   || echo "  ⚠ 최신이지만 **못 읽은 폰이 있다** — 그 폰은 화면으로 확인할 것"
