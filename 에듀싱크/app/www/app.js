@@ -2637,7 +2637,7 @@ const Screens = {
       /* 세 카드를 **같은 한 줄 문법**으로 맞춘다(2026-08-04 지시) —
          [아이콘] 제목 …… 값 [>]. 내용이 있으면 그 아래로 펼친다.
          ⚠ 하나만 아이콘이 있으면 그 줄만 특별해 보인다 → 셋 다 준다. */
-      return `<button class="hv3-card" onclick="App.dayOpen('${TODAY}')">
+      return `<button class="hv3-card k-day" onclick="App.dayOpen('${TODAY}')">
         <div class="hv3-hdrow">
           <span class="ic"><i aria-hidden="true" class="ti ti-calendar"></i></span>
           <b>오늘 일정</b>
@@ -2653,7 +2653,7 @@ const Screens = {
     <!-- ③ 준비물 — **버튼 하나.** 내용은 나열하지 않는다. 숫자는 «내일» 미체크 개수(§1) -->
     ${(() => {
       const n = packs.length;
-      return `<button class="hv3-card ${n ? "on" : ""}" onclick="location.hash='#supplies'">
+      return `<button class="hv3-card k-supply ${n ? "on" : ""}" onclick="location.hash='#supplies'">
         <div class="hv3-hdrow">
           <span class="ic"><i aria-hidden="true" class="ti ti-backpack"></i></span>
           <b>내일 준비물</b>
@@ -2666,7 +2666,7 @@ const Screens = {
     ${(() => {
       const acts = STUB.activities.filter((a) => String(a.days_of_week || "").split(",").includes(String(dow)))
         .sort((x, y) => String(x.start_time).localeCompare(String(y.start_time)));
-      return `<button class="hv3-card" onclick="location.hash='#afterschool'">
+      return `<button class="hv3-card k-after" onclick="location.hash='#afterschool'">
         <div class="hv3-hdrow">
           <span class="ic"><i aria-hidden="true" class="ti ti-run"></i></span>
           <b>방과후 · 학원</b>
@@ -2688,7 +2688,7 @@ const Screens = {
       const kid = isChildToken() || S.childView || S.kidMode;
       const n = kid ? 0 : (S.verifyPending || []).length;
       if (!n) return "";
-      return `<button class="hv3-card need" onclick="location.hash='#game'">
+      return `<button class="hv3-card k-mission need" onclick="location.hash='#game'">
         <div class="hv3-hdrow">
           <span class="ic"><i aria-hidden="true" class="ti ti-eye"></i></span>
           <b>확인해 주세요</b><span class="cnt">${n}</span>
@@ -2708,7 +2708,7 @@ const Screens = {
          «회원이 보는 진짜 홈 그대로»가 원칙이므로 빈 상태 카드를 그대로 보여 준다. */
       const done = (list || []).filter((x) => x.status === "done").length;
       if (!list || !list.length) {
-        return `<button class="hv3-card" onclick="location.hash='#game'">
+        return `<button class="hv3-card k-mission" onclick="location.hash='#game'">
           <div class="hv3-hdrow">
             <span class="ic"><i aria-hidden="true" class="ti ti-target"></i></span>
             <b>오늘 미션</b><em class="val">아직 없어요</em>
@@ -2717,7 +2717,7 @@ const Screens = {
           /* ⚠ 설명 한 줄을 덧붙이지 않는다(2026-08-07 지시). 다른 카드는 «제목 + 값 + ›» 한 줄인데
              여기만 «골라 주면 아이가…» 를 달아 두면 그 카드만 튀고, 매번 읽을 말도 아니다. */
       }
-      return `<button class="hv3-card" onclick="location.hash='#game'">
+      return `<button class="hv3-card k-mission" onclick="location.hash='#game'">
         <div class="hv3-hdrow">
           <span class="ic"><i aria-hidden="true" class="ti ti-target"></i></span>
           <b>오늘 미션</b><em class="val">${done}/${list.length}</em>
@@ -3961,7 +3961,10 @@ const Screens = {
       ${STUB.children.map((c) => {
         const on = !!c.child_device;
         const when = c.child_device_at ? String(c.child_device_at).slice(0, 10).replace(/-/g, ".") : "";
-        return `<div class="mp-row two">
+        /* ⚠ 연결된 아이는 «불이 들어온» 것처럼 보여야 한다(08-09 지시).
+           지금까지는 정작 «자녀 추가» 쪽이 강조색이라 켜진 것처럼 보이고,
+           진짜 붙어 있는 아이 줄이 밋밋했다 — 순서가 반대였다. */
+        return `<div class="mp-row two${on ? " lit" : ""}">
           <span class="mp-l">${esc(c.nickname)}<em>${on ? `연결됨${when ? ` · ${when}부터` : ""}` : "연결 안 됨"}</em></span>
           <span class="cl-acts">
             ${on ? `<button class="cl-off" onclick="App.unlinkChild(${c.id})">끊기</button>` : ""}

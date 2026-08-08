@@ -6318,3 +6318,67 @@ html:root[data-theme="charcoal"], html:root[data-theme="lavender"] {
   border-color: var(--glass-edge);
   box-shadow: inset 0 1px 0 var(--glass-edge), 0 2px 8px rgba(0, 0, 0, .20);
 }
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   유리로 바꾸고 남은 네 곳 (2026-08-09 대표님 지적)
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ① 상단 머리띠도 유리로 — 카드만 유리고 머리는 옛 불투명 색이라 따로 놀았다.
+      sticky 라 아래 내용이 뒤로 지나가면서 흐려진다. 유리가 제일 잘 사는 자리다. */
+.sub-top {
+  background: rgba(255, 255, 255, .40);
+  -webkit-backdrop-filter: blur(16px) saturate(1.2);
+          backdrop-filter: blur(16px) saturate(1.2);
+  border-bottom: 1px solid rgba(255, 255, 255, .40);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .55);
+}
+:root[data-theme="dark"] .sub-top, :root[data-theme="navy"] .sub-top,
+:root[data-theme="charcoal"] .sub-top, :root[data-theme="lavender"] .sub-top {
+  background: rgba(255, 255, 255, .09);
+  border-bottom-color: rgba(255, 255, 255, .14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12);
+}
+
+/* ② 「끊기 · 다시 연결」이 붙어 있었다 — 뜻이 정반대인 버튼 둘은 붙이면 안 된다.
+      잘못 누르면 되돌리기 어려운 쪽(끊기)이 있는 짝이라 간격이 안전장치다. */
+.cl-acts { gap: 12px; }
+/* ⚠ 간격을 벌리니 왼쪽 글자 폭이 줄어 「2026.08.08부 / 터」로 **어절 중간에서** 끊겼다.
+   한글은 글자 단위로 끊으면 안 읽힌다 — 어절째 다음 줄로 넘긴다. */
+.mp-row.two .mp-l em { word-break: keep-all; }
+
+/* ③ 연결된 아이 = «켜짐». 왼쪽 불빛 막대 + 옅은 강조색 물.
+      --accent 에서 파생하니 테마 18종이 각자 색으로 켜진다. */
+.mp-row.lit {
+  background-color: color-mix(in srgb, var(--accent) 11%, transparent);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+.mp-row.lit .mp-l { font-weight: 900; }
+.mp-row.lit .mp-l em { color: var(--accent-ink, var(--accent)); font-weight: 800; }
+
+/* ④ 칸마다 다른 색 — 「통일이 아니라 다르게 튀게」.
+      유리는 그대로 두고 **왼쪽 색 막대 + 옅은 물**만 얹는다.
+      배경색을 통째로 갈면 유리가 죽고 테마 18종을 다시 맞춰야 한다. */
+.hv3-card.k-day    { --k: #3B72C8; }   /* 오늘 일정 — 파랑 */
+.hv3-card.k-supply { --k: #2F9E6E; }   /* 내일 준비물 — 초록 */
+.hv3-card.k-after  { --k: #7B5CD6; }   /* 방과후 · 학원 — 보라 */
+.hv3-card.k-mission{ --k: #D98A1F; }   /* 오늘 미션 — 주황 */
+.hv3-card.k-day, .hv3-card.k-supply, .hv3-card.k-after, .hv3-card.k-mission {
+  background-color: color-mix(in srgb, var(--k) 9%, rgba(255, 255, 255, .44));
+  box-shadow: inset 4px 0 0 var(--k),
+              inset 0 1px 0 rgba(255, 255, 255, .60),
+              0 2px 8px rgba(0, 0, 0, .05);
+}
+:root[data-theme="dark"] .hv3-card.k-day, :root[data-theme="navy"] .hv3-card.k-day,
+:root[data-theme="charcoal"] .hv3-card.k-day, :root[data-theme="lavender"] .hv3-card.k-day,
+:root[data-theme="dark"] .hv3-card.k-supply, :root[data-theme="navy"] .hv3-card.k-supply,
+:root[data-theme="charcoal"] .hv3-card.k-supply, :root[data-theme="lavender"] .hv3-card.k-supply,
+:root[data-theme="dark"] .hv3-card.k-after, :root[data-theme="navy"] .hv3-card.k-after,
+:root[data-theme="charcoal"] .hv3-card.k-after, :root[data-theme="lavender"] .hv3-card.k-after,
+:root[data-theme="dark"] .hv3-card.k-mission, :root[data-theme="navy"] .hv3-card.k-mission,
+:root[data-theme="charcoal"] .hv3-card.k-mission, :root[data-theme="lavender"] .hv3-card.k-mission {
+  background-color: color-mix(in srgb, var(--k) 20%, rgba(255, 255, 255, .08));
+  box-shadow: inset 4px 0 0 var(--k),
+              inset 0 1px 0 rgba(255, 255, 255, .13),
+              0 2px 8px rgba(0, 0, 0, .20);
+}
