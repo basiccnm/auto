@@ -5391,9 +5391,17 @@ body:has(#tabbar.hidden) #screen:has(.ib),
   --g-ink: #16203A; --g-sub: #5B6B8C;
   --g-gold: #FFC531; --g-gold-d: #E8930B; --g-gold-ink: #7A4E00;
   --g-lime: #38D46A; --g-shadow: 0 5px 0 rgba(0, 0, 0, .12);
-  min-height: 100vh; margin: 0 -20px -24px;
-  padding: 4px 14px calc(env(safe-area-inset-bottom) + 24px);
+  min-height: 100vh; margin: calc(env(safe-area-inset-top) * -1 - 18px) -20px -24px;
+  padding: max(calc(env(safe-area-inset-top) + 12px), 40px) 14px calc(env(safe-area-inset-bottom) + 24px);
   background: linear-gradient(180deg, #4A9BFF, #7C5CFF); }
+/* 머리도 같은 세계 안에 — 부모 테마 헤더(살구·라벤더)를 얹으면 아래와 따로 논다 */
+.gmp-top { display: flex; align-items: center; gap: 11px; margin-bottom: 14px; }
+.gmp-back { width: 40px; height: 40px; flex: none; display: grid; place-items: center;
+  border: none; border-radius: 13px; background: rgba(255, 255, 255, .28);
+  color: #fff; font-family: inherit; font-size: 22px; font-weight: 900; line-height: 1; }
+.gmp-top b { flex: 1; min-width: 0; font-size: 19px; font-weight: 900; color: #fff;
+  letter-spacing: -.02em; text-shadow: 0 2px 6px rgba(0, 0, 0, .2);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pm-top { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 4px; }
 .pm-big { padding: 13px 8px; border-radius: 16px; background: var(--g-panel);
   box-shadow: var(--g-shadow); text-align: center; }

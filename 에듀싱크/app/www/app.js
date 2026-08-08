@@ -5288,9 +5288,14 @@ function parentMissionAdmin(c, coin) {
       ${extra || ""}
     </div>`;
 
+  /* ⚠ subHeader 를 안 쓴다 — 그건 부모 테마(살구·라벤더…)를 입어서
+     아래 게임 바탕과 따로 논다(대표님 지적 08-08). 머리도 같은 세계 안에 둔다. */
   return `
-  ${subHeader(nm + " 미션 관리")}
   <div class="gmp">
+    <div class="gmp-top">
+      <button class="gmp-back" onclick="App.goBack()" aria-label="뒤로">‹</button>
+      <b>${nm} 미션 관리</b>
+    </div>
 
   <!-- 오늘 한눈에 -->
   <div class="pm-top">
@@ -5302,7 +5307,7 @@ function parentMissionAdmin(c, coin) {
   <!-- ① 확인해 주세요 — 부모가 손대야 하는 것 -->
   <h3 class="pm-h">확인해 주세요${todo ? ` <em>${todo}</em>` : ""}</h3>
   ${!todo ? `<p class="pm-none">지금 확인할 게 없어요</p>` : `
-    ${!waitVerify ? "" : `<button class="pm-go" onclick="location.hash='#verify'">
+    ${!waitVerify ? "" : `<button class="pm-go" onclick="location.hash='#mission'">
       <span class="pm-i">📸</span><b>아이가 낸 것</b><span class="pm-cnt">${waitVerify}</span></button>`}
     ${!waitMission ? "" : `<button class="pm-go" onclick="location.hash='#mission'">
       <span class="pm-i">✅</span><b>미션 확인 기다림</b><span class="pm-cnt">${waitMission}</span></button>`}
@@ -5446,7 +5451,10 @@ function gameTile(t) {
     ${t.act ? `onclick="${t.act}"`
     : t.go ? `onclick="location.hash='${t.go}'"`
     : t.tap ? `onclick="App.missionDone(${t.tap})"`
-    : t.key === "bonus" ? "disabled"
+    /* ⚠ 여기서 «아무것도 아니면 카드 열기»로 흘려보내면 안 된다.
+       미션 타일의 key 는 **미션 id** 라, 끝낸 미션을 누르면 App.gameTab('39') 같은
+       없는 화면으로 갔다(08-08 실기). 갈 곳이 없는 타일은 **누를 수 없어야** 한다. */
+    : t.leaf ? "disabled"
     : `onclick="App.gameTab('${t.key}')"`}>
     ${t.kr ? `<span class="gm-kr">학교정보</span>` : ""}
     ${clear ? `<span class="gm-stamp">CLEAR</span>` : ""}
@@ -5472,7 +5480,7 @@ function gameCard(catKey) {
     const list = schoolMissionList();
     all = list.length; done = list.filter((x) => x.done).length;
     stars = list.reduce((a, x) => a + x.stars, 0);
-    tiles = list.map((x) => gameTile({ key: x.key, icon: x.icon, name: x.name, note: x.note,
+    tiles = list.map((x) => gameTile({ leaf: true, key: x.key, icon: x.icon, name: x.name, note: x.note,
       c: "cyan", done: x.done ? 1 : 0, all: 1, stars: x.stars, go: x.go,
       foot: x.done ? "했어요" : "30초면 끝" })).join("");
   } else {
@@ -5480,14 +5488,31 @@ function gameCard(catKey) {
     all = list.length; done = list.filter((x) => x.status === "done").length;
     stars = list.reduce((a, x) => a + (x.stars || 0), 0);
     if (S.missions === null) return gmHead(icon, name, "불러오는 중…") + `<p class="gm-empty">잠시만요…</p>`;
-    tiles = list.map((x) => gameTile({
-      key: x.id, icon: gmMissionIcon(x), name: x.title,
-      note: x.minutes ? `${x.minutes}분` : "",
-      c: catKey === "morning" ? "orange" : "violet",
-      done: x.status === "done" ? 1 : 0, all: 1, stars: x.stars || 1,
-      foot: x.status === "done" ? "했어요" : x.status === "waiting" ? "확인 기다리는 중" : "눌러서 완료",
-      tap: x.status === "open" ? x.id : null,
-    })).join("");
+    /* ⚠ 미션마다 «끝내는 방법»이 다르다. 전부 App.missionDone 으로 보내면
+       **사진 미션이 사진 없이 그냥 완료로 처리된다**(대표님 지적 08-08).
+         photo  → 카메라(App.missionShoot) → 부모 확인 대기
+         나머지 → 그 자리에서 완료(App.missionDone) */
+    /* ⚠ 카탈로그에 `verify='photo'` 인 미션이 **하나도 없다**(원격 실측 08-08:
+       instant 71 · review 73 · endday 13 · photo 0). 그래서 「사진 연결이 왜 안 되냐」였다 —
+       사진을 낼 길(POST /missions/{id}/photo)은 서버에 있는데 그걸 쓰는 미션이 없었다.
+       **부모가 확인해야 하는 미션(review·endday)은 사진이 붙을 수 있게** 연다.
+       사진은 «해야 하는 것»이 아니라 «있으면 부모가 바로 아는 것»이다 — 취소하면 그냥 완료로 간다. */
+    tiles = list.map((x) => {
+      const shot = x.verify === "photo" || x.verify === "review" || x.verify === "endday";
+      const open = x.status === "open";
+      return gameTile({
+        leaf: true,
+        key: x.id, icon: shot ? "📷" : gmMissionIcon(x), name: x.title,
+        note: x.minutes ? `${x.minutes}분` : (shot ? "사진 찍어서 보내기" : ""),
+        c: catKey === "morning" ? "orange" : "violet",
+        done: x.status === "done" ? 1 : 0, all: 1, stars: x.stars || 1,
+        foot: x.status === "done" ? "했어요"
+            : x.status === "waiting" ? "확인 기다리는 중"
+            : shot ? "사진 찍기" : "눌러서 완료",
+        act: !open ? null : shot ? `App.missionShotOrDone(${x.id})` : null,
+        tap: open && !shot ? x.id : null,
+      });
+    }).join("");
   }
 
   /* 세트 보너스 — 다 하면 얹어 준다. «몇 개 남았는지»가 보여야 마지막 하나를 하게 된다.
@@ -5502,7 +5527,7 @@ function gameCard(catKey) {
   const ready = all > 0 && left === 0 && !taken;
   const act = !ready ? null
     : catKey === "school" ? "App.schoolBonus()" : `App.setBonus('${catKey}')`;
-  const bonus = all > 1 ? gameTile({ key: "bonus", icon: "🎁", name: "세트 보너스",
+  const bonus = all > 1 ? gameTile({ leaf: true, key: "bonus", icon: "🎁", name: "세트 보너스",
     note: `${all}개 다 하면`, c: "gold", done: taken ? all : done, all,
     stars: (catKey === "school" ? (S.schoolMs && S.schoolMs.bonus) : (S.msets && S.msets.bonus)) || 2,
     act,
@@ -5952,9 +5977,12 @@ function stickerView() {
 }
 
 function subHeader(title, sub) {
+  /* ⚠ 뒤로가기가 **항상 홈으로** 가고 있었다(대표님 지적 08-08).
+     두 단계 들어갔다가 한 번 누르면 처음으로 튕겨 나와서, 되돌아가려면 다시 두 번을 눌러야 했다.
+     이제 «한 걸음 뒤로»다 — 갈 곳이 없을 때만 홈으로 간다(App.goBack). */
   return `
   <div class="sub-top">
-    <button class="sub-back" onclick="App.goHome()" aria-label="오늘 화면으로">
+    <button class="sub-back" onclick="App.goBack()" aria-label="뒤로">
       <i aria-hidden="true" class="ti ti-chevron-left"></i></button>
     <h1 class="sub-t">${title}${sub ? `<em>${sub}</em>` : ""}</h1>
   </div>`;
@@ -9229,7 +9257,7 @@ const App = {
   kidTheme(theme) {
     if (!KID_THEMES[theme]) return;
     S.kidTheme = theme; S.kidAccent = theme;   // 색이 곧 테마다 — 따로 고르지 않는다
-    saveKidPrefs(); location.hash = "#childview"; this.render();
+    saveKidPrefs(); location.hash = "#game"; this.render();   // 아이 홈은 이제 게임이다
   },
   /* 강조색 따로 고르기는 없앴다(2026-08-03) — 색 12벌 자체가 그 역할을 한다.
      테마×강조색 36가지는 아이에게 고르라고 낼 수가 없다. */
@@ -9241,7 +9269,15 @@ const App = {
   },
   /* 사진 제출 — 기록 올릴 때 쓰는 카메라를 그대로 쓴다.
      보내고 나면 기다림이 시작된다. 언제 끝나는지 화면이 말해줘야 재촉을 안 한다. */
-  async missionShoot(id) {
+  /* 사진을 찍어 보내되, **안 찍으면 그냥 완료**로 간다.
+     사진을 강제하면 카메라가 없는 상황에서 미션이 통째로 막히고,
+     아예 안 물으면 부모가 «뭘 했는지» 볼 방법이 없다. 둘 다 열어 둔다. */
+  async missionShotOrDone(id) {
+    const sent = await this.missionShoot(id, true);
+    if (!sent) await this.missionDone(id);
+  },
+
+  async missionShoot(id, quiet) {
     const C = window.Capacitor?.Plugins?.Camera;
     let blob = null;
     try {
@@ -9257,18 +9293,19 @@ const App = {
           i.click();
         });
       }
-    } catch (_) { return; }
-    if (!blob) return;
+    } catch (_) { return false; }
+    if (!blob) return false;          // 취소했다 — 부르는 쪽이 «그냥 완료»로 넘긴다
     S.missionBusy = id; this.render();
     try {
       const fd = new FormData();
       fd.append("photo", blob, "mission.jpg");
       const r = await api(`/missions/${id}/photo`, { method: "POST", form: fd });
       S.missionBusy = null;
-      if (!r?.ok) { this.render(); return toast(r?.error?.message || "사진을 보내지 못했어요"); }
+      if (!r?.ok) { this.render(); toast(r?.error?.message || "사진을 보내지 못했어요"); return false; }
       await this.loadMissions(true);
       toast("보냈어요! 내일 아침 8시까지는 도장이 나와요");
-    } catch (_) { S.missionBusy = null; this.render(); toast("사진을 보내지 못했어요"); }
+      return true;
+    } catch (_) { S.missionBusy = null; this.render(); toast("사진을 보내지 못했어요"); return false; }
   },
   async missionApprove(id) {
     // 사진은 도장 **찍기 전에** 붙잡아 둔다 — 찍고 나면 그 미션 사진을 서버가 안 내줄 수 있다
@@ -9573,6 +9610,14 @@ const App = {
     if (!TOKENS.access || !c?.server_id) return;  // 서버에 못 남겨도 화면은 이미 바뀌었다
     try { await api(`/children/${c.server_id}`, { method: "PATCH", body: { kid_theme: k } }); }
     catch (_) {}
+  },
+
+  /* 한 걸음 뒤로. 뒤로 갔는데 주소가 그대로면 «갈 곳이 없던 것»이라 홈으로 보낸다 —
+     history.length 만 보면 앱 밖(빈 페이지)으로 나가 흰 화면이 된다. */
+  goBack() {
+    const from = location.hash;
+    history.back();
+    setTimeout(() => { if (location.hash === from) App.goHome(); }, 120);
   },
 
   clearClose() { S.clear = null; this.render(); },
