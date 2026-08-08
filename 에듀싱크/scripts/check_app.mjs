@@ -52,14 +52,23 @@ console.log("\n② 색이 테마를 따르나");
   // 토큰 «정의» 구역은 건너뛴다 — 거기 있는 hex 는 정의라서 있는 게 맞다.
   //   :root{...} · [data-theme=...]{...} · [data-art=...]{...}
   const lines = css.split("\n");
-  const defRe = /(:root|\[data-theme|\[data-art)/;
-  let depth = 0, inDef = false;
+  // data-kid-theme 미리보기 칩도 «토큰 정의» 구역이다 — 여기 hex 는 정의라서 있는 게 맞다
+  const defRe = /(:root|\[data-theme|\[data-art|\[data-kid-theme)/;
+  let depth = 0, inDef = false, inGame = false;
   const hits = [];
   lines.forEach((ln, i) => {
+    if (ln.includes("--g-sky1")) inGame = true;   // 게임 전용 팔레트 시작(아래 주석)
     if (depth === 0 && defRe.test(ln) && ln.includes("{")) inDef = true;
     depth += (ln.match(/\{/g) || []).length - (ln.match(/\}/g) || []).length;
+    // 닫는 줄을 먼저 빼면 안 된다 — 테마 블록은 마지막 줄에 선언과 } 가 같이 있어서
+    // `--drawer-a: #813721; }` 같은 «정의»가 전부 오탐으로 잡힌다 (2026-08-08)
+    const wasDef = inDef;
     if (depth <= 0) { depth = 0; if (inDef && ln.includes("}")) inDef = false; }
-    if (inDef) return;
+    if (wasDef) return;
+    // 게임 전용 팔레트는 **일부러 테마를 안 탄다.** 아이 화면은 부모 테마 18종과
+    // 무관한 «다른 세계»라, 여기를 테마 토큰으로 «고치면» 8/4 처럼 부모 카드색까지
+    // 물들어 전부 퍼음해진다. 건드리지 말 것.
+    if (inGame) return;
     // 토큰이 있는데도 박아 쓴 색 — 채도 있는 것만(흰·검·회는 그림자·선이라 뺀다)
     for (const m of ln.matchAll(/#([0-9a-fA-F]{6})\b/g)) {
       const [r, g, b] = [0, 2, 4].map((k) => parseInt(m[1].slice(k, k + 2), 16));
@@ -79,7 +88,9 @@ console.log("\n③ 주석이 템플릿 문자열을 깨지 않나");
   js.split("\n").forEach((ln, i) => {
     if (/<!--/.test(ln) || /^\s*(\/\/|\*|\/\*)/.test(ln)) {
       const inHtmlComment = /<!--/.test(ln);
-      if (inHtmlComment && ln.includes("`")) hits.push(`${i + 1}행  ${ln.trim().slice(0, 70)}`);
+      // 재는 것은 «주석 안»의 역따옴표다. 템플릿을 여는 것이 <!-- 앞이면 정상 (2026-08-08 오탐)
+      const after = ln.slice(ln.indexOf("<!--"));
+      if (inHtmlComment && after.includes("`")) hits.push(`${i + 1}행  ${ln.trim().slice(0, 70)}`);
     }
   });
   hits.length ? bad("HTML 주석 안에 역따옴표 — 템플릿 문자열이 그 자리에서 끊긴다", hits)
@@ -90,8 +101,14 @@ console.log("\n③ 주석이 템플릿 문자열을 깨지 않나");
 console.log("\n④ 바탕색이 테마를 따라가나");
 {
   // 테마 블록 하나를 골라 거기 정의된 토큰 목록을 만든다
-  const themeBlock = css.match(/\[data-art="theme_01"\][^{]*\{([\s\S]*?)\}/);
-  const themed = new Set(themeBlock ? [...themeBlock[1].matchAll(/(--[a-z0-9-]+)\s*:/g)].map((m) => m[1]) : []);
+  // 한 종류만 보면 안 된다 — 바탕 토큰은 [data-theme]·:root 쪽에 정의된 것도 있다 (2026-08-08 오탐)
+  const themed = new Set();
+  for (const re of [/\[data-art="theme_01"\][^{]*\{([\s\S]*?)\}/,
+                    /\[data-theme="dark"\][^{]*\{([\s\S]*?)\}/,
+                    /:root\s*\{([\s\S]*?)\}/]) {
+    const m = css.match(re);
+    if (m) for (const t of m[1].matchAll(/(--[a-z0-9-]+)\s*:/g)) themed.add(t[1]);
+  }
   // body 와 #screen 이 배경으로 쓰는 토큰
   const surfaces = [];
   for (const m of css.matchAll(/(^|\n)\s*(body|#screen)[^{]*\{([^}]*)\}/g)) {
