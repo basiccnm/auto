@@ -5401,7 +5401,7 @@ body:has(#tabbar.hidden) #screen:has(.ib),
   --g-gold: #FFC531; --g-gold-d: #E8930B; --g-gold-ink: #7A4E00;
   --g-lime: #38D46A; --g-pink: #FF6BAA; --g-shadow: 0 5px 0 rgba(0, 0, 0, .12);
   min-height: 100vh; margin: calc(env(safe-area-inset-top) * -1 - 18px) -20px -24px;
-  padding: max(calc(env(safe-area-inset-top) + 12px), 40px) 14px calc(env(safe-area-inset-bottom) + 24px);
+  padding: max(calc(env(safe-area-inset-top) + 8px), 30px) 14px calc(env(safe-area-inset-bottom) + 20px);
   background: linear-gradient(180deg, #4A9BFF, #7C5CFF); color: var(--g-ink); }
 
 /* 안쪽 화면들이 부모 테마 토큰으로 그려 놓은 것을 **여기서 갈아입힌다.**
@@ -5424,7 +5424,20 @@ body:has(#tabbar.hidden) #screen:has(.ib),
 .gmw .tk-st, .gmw .tk .st { padding: 5px 10px; border-radius: 999px; font-size: 11.5px;
   font-weight: 900; background: #FFEFC2; color: #8A5A00; }
 .gmw .tk.done .tk-st, .gmw .tk.done .st { background: #D6F7E2; color: #1E7B43; }
-.gmw .tk-list { display: grid; gap: 9px; padding: 0; margin: 14px 0 0; list-style: none; }
+.gmw .tk-list, .gmw .st-list { display: grid; gap: 9px; padding: 0; margin: 14px 0 0; list-style: none; }
+
+/* 상점(부모가 보는 진열대) — 지갑 줄과 「바꾸기」 버튼이 부모 테마로 남아 있었다 */
+.gmw .st-purse { background: var(--g-panel); color: var(--g-ink);
+  border-radius: 18px; box-shadow: var(--g-shadow); }
+.gmw .st-purse b, .gmw .st-purse strong { color: var(--g-ink); }
+.gmw .st-purse em, .gmw .st-purse span { color: var(--g-sub); font-style: normal; }
+.gmw .st-bd b { color: var(--g-ink); }
+.gmw .st-bd em, .gmw .st-lim { color: var(--g-sub); font-style: normal; }
+.gmw .st-act, .gmw .st-act button, .gmw .st-item button:not(.btn-ghost) {
+  background: var(--g-gold); color: var(--g-gold-ink); border: none;
+  border-radius: 12px; box-shadow: 0 3px 0 var(--g-gold-d); font-weight: 900; }
+.gmw .st-act button[disabled], .gmw .st-item button[disabled] {
+  background: #DDE5F2; color: #95A3BC; box-shadow: none; }
 .gmw .sub, .gmw .quiet, .gmw .muted { color: rgba(255, 255, 255, .82); }
 .gmw .empty-mid, .gmw .empty { color: rgba(255, 255, 255, .9); font-weight: 800; }
 
@@ -5443,7 +5456,7 @@ body:has(#tabbar.hidden) #screen:has(.ib),
   --g-gold: #FFC531; --g-gold-d: #E8930B; --g-gold-ink: #7A4E00;
   --g-lime: #38D46A; --g-shadow: 0 5px 0 rgba(0, 0, 0, .12);
   min-height: 100vh; margin: calc(env(safe-area-inset-top) * -1 - 18px) -20px -24px;
-  padding: max(calc(env(safe-area-inset-top) + 12px), 40px) 14px calc(env(safe-area-inset-bottom) + 24px);
+  padding: max(calc(env(safe-area-inset-top) + 8px), 30px) 14px calc(env(safe-area-inset-bottom) + 20px);
   background: linear-gradient(180deg, #4A9BFF, #7C5CFF); }
 /* 머리도 같은 세계 안에 — 부모 테마 헤더(살구·라벤더)를 얹으면 아래와 따로 논다 */
 .gmp-top { display: flex; align-items: center; gap: 11px; margin-bottom: 14px; }
@@ -5538,8 +5551,8 @@ body:has(#tabbar.hidden) #screen:has(.ib),
   /* ⚠ 노치가 없는 안드로이드는 env(safe-area-inset-top) 가 0 이다. 그대로 두면
      캐릭터 줄이 상태바(약 24px) 밑에 깔린다 — 실기에서 이름·레벨이 안 보였다(08-08).
      그래서 «둘 중 큰 값»으로 최소 높이를 보장한다. */
-  padding: max(calc(env(safe-area-inset-top) + 12px), 40px) 14px
-           calc(env(safe-area-inset-bottom) + 16px);
+  padding: max(calc(env(safe-area-inset-top) + 8px), 30px) 14px
+           calc(env(safe-area-inset-bottom) + 14px);
   background: linear-gradient(180deg, var(--g-sky1), var(--g-sky2));
   color: var(--g-ink);
   display: flex; flex-direction: column;
@@ -5630,8 +5643,12 @@ body:has(#tabbar.hidden) #screen:has(.ib),
 .gm-tt { display: block; margin-top: 8px; font-size: 15px; font-weight: 900;
   letter-spacing: -.02em; }
 .gm-tn { display: block; margin-top: 3px; font-size: 11px; font-weight: 700;
-  font-style: normal; color: var(--g-sub);
+  font-style: normal; color: var(--g-sub); min-height: 0;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* ⚠ 타일이 짧아지면 설명이 이름·진행바와 겹쳐 보였다(08-08 실기).
+   좁을 때는 설명을 통째로 접는다 — 이름과 숫자가 먼저다. */
+@media (max-height: 720px) { .gm-tn { display: none; } }
+.gm-tile { row-gap: 0; }
 .gm-bar { display: block; height: 9px; border-radius: 6px; overflow: hidden;
   background: var(--g-panel2); }
 .gm-bar i { display: block; height: 100%; border-radius: 6px; background: var(--c);
@@ -5755,22 +5772,24 @@ body:has(#tabbar.hidden) #screen:has(.ib),
 .gm-item.off { opacity: .78; }
 
 /* ── 프로필 ── */
-.gm-pf { margin-top: 14px; padding: 18px 14px 16px; border-radius: 20px; text-align: center;
+.gm-pf { margin-top: 12px; padding: 14px; border-radius: 20px;
   background: var(--g-panel); box-shadow: var(--g-shadow); }
-.gm-big { position: relative; width: 104px; height: 104px; margin: 0 auto;
-  display: grid; place-items: center; border-radius: 32px;
-  background: var(--g-panel2); font-size: 52px; }
+.gm-prow { display: flex; align-items: center; gap: 14px; }
+.gm-pinfo { flex: 1; min-width: 0; }
+.gm-big { position: relative; width: 72px; height: 72px; flex: none;
+  display: grid; place-items: center; border-radius: 22px;
+  background: var(--g-panel2); font-size: 38px; }
 /* 캐릭터가 들어올 자리 — 업데이트 때 이 칸만 갈아끼운다 */
-.gm-soon { position: absolute; right: -6px; bottom: -6px; padding: 4px 9px;
-  border-radius: 10px; background: var(--g-violet); color: #fff;
-  font-size: 10px; font-weight: 900; box-shadow: 0 2px 0 #7A47E0; }
-.gm-pnm { display: block; margin-top: 12px; font-size: 20px; font-weight: 900;
+.gm-soon { position: absolute; right: -5px; bottom: -5px; padding: 3px 7px;
+  border-radius: 9px; background: var(--g-violet); color: #fff;
+  font-size: 9.5px; font-weight: 900; box-shadow: 0 2px 0 #7A47E0; }
+.gm-pnm { display: block; font-size: 20px; font-weight: 900;
   letter-spacing: -.02em; color: var(--g-ink); }
-.gm-lv2 { display: inline-block; margin-top: 5px; padding: 4px 11px; border-radius: 10px;
+.gm-lv2 { display: inline-block; margin-top: 6px; padding: 4px 11px; border-radius: 10px;
   background: var(--g-gold); color: var(--g-gold-ink);
   font-size: 12px; font-weight: 900; box-shadow: 0 2px 0 var(--g-gold-d); }
-.gm-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin-top: 14px; }
-.gm-stats > div { padding: 11px 6px; border-radius: 14px; background: var(--g-panel2); }
+.gm-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+.gm-stats > div { padding: 9px 6px; border-radius: 13px; background: var(--g-panel2); }
 .gm-stats b { display: block; font-size: 18px; font-weight: 900; color: var(--g-ink);
   font-variant-numeric: tabular-nums; }
 .gm-stats em { font-style: normal; font-size: 10.5px; font-weight: 800; color: var(--g-sub); }
@@ -5852,6 +5871,9 @@ body:has(#tabbar.hidden) #screen:has(.ib),
 .qz-op.no  { background: #FCE3E1; box-shadow: 0 5px 0 #C3352F; }
 .qz-op.no .qz-k  { background: #F6CFCC; color: #C3352F; }
 .qz-op.no .qz-mk { color: #C3352F; }
+/* 누른 «그 순간» 표시 — 정답 여부는 서버가 말해 줄 때 색으로 갈린다 */
+.qz-op.picked { background: var(--g-panel2); box-shadow: 0 5px 0 #8FA8D0; }
+.qz-op.picked .qz-mk { color: #5B6B8C; }
 .qz-op.dim { opacity: .5; }
 .qz-op[disabled] { pointer-events: none; }
 

@@ -796,8 +796,8 @@ const S = {
   missionPick: [],        // 시트에서 고른 code 들
   msDetail: null,         // 카드 상세 시트에 띄운 미션 id (2026-08-03 카드판)
          // 카드 상세 시트에 띄운 미션 id (2026-08-03 카드판)
-  /* ── 별도장 상점 · 2단계 보상 (2026-08-07 지시서 §3·§5) ──────────────────
-     ⚠ 잔액(별도장)은 **여기 따로 세지 않는다.** `missionStars` 하나만 본다 —
+  /* ── 스타코인 상점 · 2단계 보상 (2026-08-07 지시서 §3·§5) ──────────────────
+     ⚠ 잔액(스타코인)은 **여기 따로 세지 않는다.** `missionStars` 하나만 본다 —
        서버도 `star_ledger` 원장 하나로 세고, 상점 결제는 거기 «음수»로 적힌다.
        화면에 두 번째 숫자를 만들면 반드시 어긋나고, 그때부터 어느 쪽이 맞는지 아무도 모른다.
      ⚠ 살 수 있는지(`can_buy`)도 **화면이 다시 계산하지 않는다.** 서버가 준 값을 그대로 쓴다.
@@ -820,6 +820,7 @@ const S = {
   gameTab: null,          // null=홈(2×2 타일) | morning | school | after | today | shop | profile
   gmTheme: null,          // 아이 배경색 (sky|lime|lav|sunset|mint) — 부모 테마와 무관
   clear: null,            // 클리어 연출 {icon,name,stars} — 1.2초만 산다
+  quizMy: null,           // 방금 «고른» 보기 — 서버 답이 오기 전에도 표시한다
   quizFeed: null,         // 문제 하나를 답한 «직후» 뜨는 정답 — 다음 문제로 넘어가면 사라진다
   schoolMs: null,         // 학교 «미션» 오늘 상태 — 서버 school_missions.js 가 정본
   msets: null,            // 아침·방과후 «세트 완주» 상태 {morning:{done,all,taken},after:{…}}
@@ -2123,10 +2124,10 @@ const Screens = {
       <i aria-hidden="true" class="ti ti-award"></i>
       <span><b>칭찬 보내기</b><em>아이 화면에 스티커가 떠요</em></span></button>`}
 
-    <!-- 별도장 상점 — 모은 도장을 쓰는 자리. 미션 화면에서 바로 간다 -->
+    <!-- 스타코인 상점 — 모은 도장을 쓰는 자리. 미션 화면에서 바로 간다 -->
     <button class="ms-mkbtn" onclick="location.hash='#store'">
       <i aria-hidden="true">★</i>
-      <span><b>별도장 상점</b><em>모은 도장으로 바꿔요</em></span></button>
+      <span><b>스타코인 상점</b><em>모은 도장으로 바꿔요</em></span></button>
 
     <!-- 리포트 — 일일 퀘스트가 쌓아온 것을 부모가 보는 자리(2026-08-03) -->
     <button class="ms-mkbtn" onclick="location.hash='#report'">
@@ -2216,7 +2217,7 @@ const Screens = {
     ${stickerView()}${clearView()}`;
   },
 
-  /* ── 별도장 상점 (2026-08-07 지시서 §5③) ────────────────────────────
+  /* ── 스타코인 상점 (2026-08-07 지시서 §5③) ────────────────────────────
      아이는 «사는 것»만, 부모는 «진열대 고치기»까지. 같은 화면 안에서 갈린다.
      ⚠ 말은 게이밍 언어다 — 「바꾸기」「🎟 티켓」. 구매·결제·주문이라고 쓰지 않는다(§1.1).
      ⚠ 못 사는 이유(`reason`)를 **서버가 준 대로** 보여 준다. 버튼만 흐리게 하면
@@ -2224,19 +2225,19 @@ const Screens = {
   store: () => {
     const c = cur();
     const kid = isChildToken() || S.childView || S.kidMode;
-    if (!c) return `${subHeader("별도장 상점")}
+    if (!c) return `${subHeader("스타코인 상점")}
       <div class="ms-empty">
         <b>아이를 등록하면 열려요</b>
         <button class="btn-primary" onclick="location.hash='#register'">아이 등록하기</button>
       </div>`;
-    if (S.store === null) return `${subHeader("별도장 상점")}<p class="sub">불러오는 중…</p>`;
+    if (S.store === null) return `${subHeader("스타코인 상점")}<p class="sub">불러오는 중…</p>`;
 
     const stars = S.missionStars || 0;
-    const why = { limit: "이번 기간엔 다 바꿨어요", stars: "별도장이 모자라요" };
+    const why = { limit: "이번 기간엔 다 바꿨어요", stars: "스타코인이 모자라요" };
 
     return `
-    ${subHeader("별도장 상점")}
-    <div class="st-purse"><i aria-hidden="true">★</i><b>${stars}</b><em>지금 가진 별도장</em></div>
+    ${subHeader("스타코인 상점")}
+    <div class="st-purse"><i aria-hidden="true">★</i><b>${stars}</b><em>지금 가진 스타코인</em></div>
 
     ${!S.store.length ? `
       <div class="ms-empty">
@@ -2726,7 +2727,7 @@ const Screens = {
         </ul></button>`;
     })()}
 
-    <!-- 별도장 상점 카드는 홈에서 뺐다(2026-08-07 지시) — 부모의 매일 화면에 매일 볼 것이 아니다.
+    <!-- 스타코인 상점 카드는 홈에서 뺐다(2026-08-07 지시) — 부모의 매일 화면에 매일 볼 것이 아니다.
          입구는 드로어 «보상» 그룹. 미션·확인해주세요 카드는 부모 일이라 남긴다. -->
 
     <!-- 하단 3버튼 (§1) — 좌 달력 · 가운데 큰 ＋ · 우 미션 -->
@@ -5539,8 +5540,9 @@ function gameCard(catKey) {
 
   return `
     ${gmHead(icon, name, `오늘 ${done} / ${all} · 모으면 ★${stars}`)}
-    <div class="gm-grid">${tiles || `<p class="gm-empty">오늘 할 게 없어요</p>`}${bonus}</div>
-    ${gmShopBar()}`;
+    <div class="gm-grid">${tiles || `<p class="gm-empty">오늘 할 게 없어요</p>`}${bonus}</div>`;
+    /* ⚠ 상점 바는 **홈에만** 둔다(대표님 지시 08-08). 카드 안에도 두었더니
+       같은 것이 두 번 보여서 «여기도 상점이 있나»가 됐다. */
 }
 function gmMissionIcon(x) {
   const a = String(x.area || "");
@@ -5564,9 +5566,15 @@ function gameProfile(c, coin) {
   return `
     ${gmHead("🙂", "내 프로필", `Lv.${lv} ${gmRank(lv)}`)}
     <div class="gm-pf">
-      <div class="gm-big">${gmAvatar(c)}<span class="gm-soon">곧 캐릭터</span></div>
-      <b class="gm-pnm">${esc((c && c.nickname) || "나")}</b>
-      <span class="gm-lv2">Lv.${lv} ${gmRank(lv)}</span>
+      <!-- ⚠ 얼굴을 크게 띄우고 이름·레벨을 밑에 세로로 쌓았더니 카드가 화면 절반을 먹고
+           빈 곳만 커졌다(대표님 지적 08-08). 가로 한 줄로 눕힌다. -->
+      <div class="gm-prow">
+        <div class="gm-big">${gmAvatar(c)}<span class="gm-soon">곧</span></div>
+        <div class="gm-pinfo">
+          <b class="gm-pnm">${esc((c && c.nickname) || "나")}</b>
+          <span class="gm-lv2">Lv.${lv} ${gmRank(lv)}</span>
+        </div>
+      </div>
       <div class="gm-stats">
         <div><b>${coin.stars}</b><em>모은 코인</em></div>
         <div><b>${coin.streak || 0}</b><em>연속 출석</em></div>
@@ -5741,12 +5749,17 @@ function gameQuiz() {
       <div class="qz-opts${item.kind === "ox" ? " ox" : ""}">
         ${item.options.map((o, i) => {
           const f = S.quizFeed;
+          /* 누른 순간 표시가 나야 «눌렸나?» 하고 두 번 안 누른다.
+             정답 여부는 서버가 말해 줄 때(f) 색으로 갈린다 — 그전엔 «고른 것»만 보여준다. */
+          const picked = !f && S.quizMy === (i + 1);
           /* 답한 «직후»에만 색이 붙는다 — 정답은 초록, 내가 고른 오답은 빨강.
              ⚠ 답하기 전에는 서버가 정답을 안 보내므로 여기서 칠할 방법 자체가 없다. */
-          const mark = !f ? "" : (i + 1) === f.answer ? " ok" : (i + 1) === f.picked ? " no" : " dim";
+          const mark = !f ? (picked ? " picked" : "")
+            : (i + 1) === f.answer ? " ok" : (i + 1) === f.picked ? " no" : " dim";
           return `
           <button class="qz-op${mark}" ${f ? "disabled" : `onclick="App.quizPick(${i + 1})"`}>
             <span class="qz-k">${i + 1}</span>${esc(o)}
+            ${mark === " picked" ? `<span class="qz-mk">✓</span>` : ""}
             ${mark === " ok" ? `<span class="qz-mk">○</span>` : ""}
             ${mark === " no" ? `<span class="qz-mk">✕</span>` : ""}</button>`;
         }).join("")}
@@ -5872,7 +5885,7 @@ function gameShop() {
     ${setup}`;
 }
 
-/* ═══ 별도장 상점 · 칭찬 · PIN 의 보조 뷰 (2026-08-07) ═══════════════════
+/* ═══ 스타코인 상점 · 칭찬 · PIN 의 보조 뷰 (2026-08-07) ═══════════════════
    ⚠ 전부 `function` 선언이다 — Screens 객체가 파일 위쪽에 있어 `const` 로 두면
      화면을 그릴 때 «아직 정의 안 됨»으로 죽는다. 끌어올려지는 형태여야 한다. */
 
@@ -5898,7 +5911,7 @@ function storeAddSheet() {
       <label class="st-f"><span>무엇과 바꿔 줄까요</span>
         <input id="st-title" type="text" maxlength="40" value="${esc(a.title)}"
           placeholder="예: 만화 30분 · 아이스크림" oninput="App.storeAddSet('title', this.value)"></label>
-      <label class="st-f"><span>별도장 몇 개</span>
+      <label class="st-f"><span>스타코인 몇 개</span>
         <input id="st-need" type="number" min="1" max="999" value="${a.need}"
           oninput="App.storeAddSet('need', this.value)"></label>
       <div class="st-f"><span>얼마나 자주 바꿀 수 있나요</span>
@@ -6003,7 +6016,7 @@ function drawerView(c) {
   const undone = STUB.documents.filter((d) => d.kind === "field" && !d.reported).length;
   const unread = unreadFor("parent");
   /* 그룹 배치 (2026-08-07 마이다이어리 벤치마킹) — 홈에서 뺀 보상 화면들의 정식 입구가 여기다.
-     학교(매일 보는 것) → 보상(별도장 경제) → 소통(오가는 것) 순. ⚠ 아이콘은 서브셋에 있는 것만 */
+     학교(매일 보는 것) → 보상(스타코인 경제) → 소통(오가는 것) 순. ⚠ 아이콘은 서브셋에 있는 것만 */
   const GROUPS = [
     ["학교", [
       ["ti-archive",   "서랍",     "location.hash='#timeline'", ""],
@@ -6012,7 +6025,7 @@ function drawerView(c) {
       ["ti-school",    "학교정보", "location.hash='#schoolinfo'", ""],
     ]],
     ["보상", [
-      ["ti-discount",  "별도장 상점", "location.hash='#store'", ""],
+      ["ti-discount",  "스타코인 상점", "location.hash='#store'", ""],
       ["ti-receipt",   "내 티켓",   "location.hash='#tickets'", ""],
       ["ti-user",      "아이 모드", "location.hash='#childmode'", ""],
     ]],
@@ -7607,9 +7620,12 @@ const App = {
        아이가 보는 화면은 **같은 바탕·같은 카드·같은 그림자**로 감싼다.
        ⚠ 게임 화면(game)은 스스로 껍데기를 갖고 있으니 두 번 감싸지 않는다.
        ⚠ 부모가 볼 때는 감싸지 않는다 — 부모 앱은 테마 18종을 그대로 탄다. */
-    const KID_WRAP = ["tickets", "store", "childmealrate", "childfriend", "childsubject",
-                      "childboard", "childtt", "mission"];
-    const asKid = (isChildToken() || S.kidMode) && KID_WRAP.includes(name);
+    /* «보상 구획»은 부모가 봐도 같은 세계다 — 미션 관리에서 상점·티켓으로 넘어가는데
+       거기만 옛 부모 테마면 또 다른 앱이 된다(대표님 지적 08-08: 「부모페이지 작업 안 된 곳 많어」). */
+    const WORLD = ["tickets", "store", "mission"];
+    const KID_ONLY = ["childmealrate", "childfriend", "childsubject", "childboard", "childtt"];
+    const kidNow = isChildToken() || S.kidMode;
+    const asKid = WORLD.includes(name) || (kidNow && KID_ONLY.includes(name));
     const body = Screens[name]();
     document.getElementById("screen").innerHTML =
       (asKid ? `<div class="gmw">${body}</div>` : body)
@@ -9338,7 +9354,7 @@ const App = {
   },
 
   /* 리포트 불러오기. 달을 바꾸면 다시 받는다 — 캐시를 두면 «지난달인데 이번달 숫자»가 뜬다. */
-  /* ═══ 별도장 상점 · 2단계 보상 · 아이 모드 (2026-08-07 지시서 §3·§5) ═══════════
+  /* ═══ 스타코인 상점 · 2단계 보상 · 아이 모드 (2026-08-07 지시서 §3·§5) ═══════════
      ⚠ **화면은 규칙을 세지 않는다.** 잔액·주간상한·중복·«보너스 한 번만»은 전부 서버가 막는다
        (api_reward.js 머리말 ①~⑥). 여기서 버튼을 가리는 건 «친절»이지 «방어»가 아니다 —
        그래서 서버가 거절하면 그 문구를 그대로 보여 준다. 지어내지 않는다.
@@ -9395,10 +9411,14 @@ const App = {
       const r = await api(`/children/${c.server_id}/store/${itemId}/buy`, { method: "POST" });
       S.storeBusy = null;
       if (!r?.ok) { this.render(); toast(r?.error?.message || "잘 안 됐어요"); return; }
+      /* ⚠ 목록을 «지우고 다시 받기»로 두면 그 사이 화면이 빈다 —
+         「전체적으로 느리다」의 큰 몫이 이것이었다(대표님 지적 08-08).
+         잔액은 서버가 준 값으로 **그 자리에서** 바꾸고, 목록은 뒤에서 조용히 새로 받는다. */
       S.missionStars = r.data.stars_left;
-      S.store = null; S.rewards = null;          // 상한·잔액이 바뀌었다 → 둘 다 다시 받는다
-      await this.loadStore(true); await this.loadRewards(true);
+      if (S.coin) S.coin = { ...S.coin, stars: r.data.stars_left };
       toast(`🎟 ${r.data.item_title} 티켓으로 바꿨어요`);
+      this.render();
+      Promise.all([this.loadStore(true), this.loadRewards(true)]).catch(() => {});
     } catch (_) { S.storeBusy = null; this.render(); toast("잘 안 됐어요"); }
   },
 
@@ -9410,8 +9430,14 @@ const App = {
       const r = await api(`/rewards/${orderId}/fulfill`, { method: "POST" });
       S.storeBusy = null;
       if (!r?.ok) { this.render(); toast(r?.error?.message || "잘 안 됐어요"); return; }
-      await this.loadRewards(true);
-      toast("바꿔줬어요로 표시했어요");
+      /* ⚠ **그 자리에서 바꾼다.** 서버를 다시 불러올 때까지 옛 화면이 남으면
+         부모가 «안 됐나?» 하고 한 번 더 누르고, 그게 「이미 처리했거나 없는 주문이에요」였다
+         (08-08 실기: 세 건 다 이미 fulfilled 였다). 목록 새로고침은 뒤에서 조용히 한다. */
+      const o = (S.rewards || []).find((x) => x.reward_order_id === orderId);
+      if (o) o.status = "fulfilled";
+      toast("바꿔줬어요!");
+      this.render();
+      this.loadRewards(true);
     } catch (_) { S.storeBusy = null; this.render(); toast("잘 안 됐어요"); }
   },
 
@@ -9433,7 +9459,7 @@ const App = {
     const title = String(a.title || "").trim();
     // 서버도 막지만, 여기서 먼저 말해 주면 왕복 한 번을 아낀다(막는 건 어차피 서버다)
     if (!title) { toast("무엇과 바꿔 줄지 적어 주세요"); return; }
-    if (!(a.need >= 1 && a.need <= 999)) { toast("별도장 수를 확인해 주세요"); return; }
+    if (!(a.need >= 1 && a.need <= 999)) { toast("스타코인 수를 확인해 주세요"); return; }
     const c = cur();
     if (!c?.server_id) return;
     const r = await api(`/children/${c.server_id}/store`, { method: "POST", body: {
@@ -9790,16 +9816,31 @@ const App = {
   },
 
   /* 게임 화면에 들어올 때 한 번에 불러온다 — 카드가 하나씩 뒤늦게 뜨면 «고장»으로 읽힌다 */
+  /* 게임·관리 화면에 들어올 때 필요한 것을 **한꺼번에** 받는다.
+     ⚠ 하나씩 끝날 때마다 다시 그리면 화면이 여섯 번 덜컹인다 — 그게 「느리다」로 읽힌다.
+        각 로더의 render 는 그대로 두되(먼저 온 것부터 보이는 게 낫다), 요청은 동시에 나간다. */
   gameEnter() {
-    this.loadCoin();
-    if (S.missions === null) this.loadMissions();
-    if (S.schoolMs === null) this.loadSchoolMissions();
-    if (S.msets === null) this.loadMissionSets();
-    if (S.store === null) this.loadStore();
-    if (S.rewards === null) this.loadRewards();   // 티켓 개수가 «…» 로 남지 않게
-    if (S.quiz === null) this.loadQuiz();         // 관리 화면의 «오늘의 미션» 줄
-    if (S.verifyPending === null) this.loadVerify();
-    if (S.bonusGiven === null) this.loadBonusGiven();
+    /* 🔴 **여기서 무조건 render 를 부르면 앱이 멈춘다.**
+       라우터가 게임 화면을 그릴 때마다 gameEnter 를 부르는데, 받을 게 하나도 없어도
+       마지막에 render 를 부르면 → 라우터 → gameEnter → render … 로 서로를 무한히 부른다
+       (08-08 실기에서 화면이 얼어붙었다). **받을 게 있을 때만** 다시 그린다. */
+    if (S._gameLoading) return;
+    const jobs = [];
+    if (!S.coin) jobs.push(this.loadCoin());
+    if (S.missions === null) jobs.push(this.loadMissions());
+    if (S.schoolMs === null) jobs.push(this.loadSchoolMissions());
+    if (S.msets === null) jobs.push(this.loadMissionSets());
+    if (S.store === null) jobs.push(this.loadStore());
+    if (S.rewards === null) jobs.push(this.loadRewards());
+    if (S.quiz === null) jobs.push(this.loadQuiz());
+    if (!isChildToken() && !S.kidMode) {          // 부모 관리 화면에만 필요한 둘
+      if (S.verifyPending === null) jobs.push(this.loadVerify());
+      if (S.bonusGiven === null) jobs.push(this.loadBonusGiven());
+    }
+    if (!jobs.length) return;              // 받을 게 없다 — 다시 그리지 않는다(위 주석)
+    S._gameLoading = true;
+    Promise.all(jobs.map((p) => Promise.resolve(p).catch(() => null)))
+      .then(() => { S._gameLoading = false; this.render(); });
   },
 
   async loadQuiz(force) {
@@ -9854,6 +9895,8 @@ const App = {
     const item = q.items[S.quizIdx];
     if (!item) return;
     clearInterval(QUIZ_TIMER);
+    S.quizMy = n;            // 누른 것을 그 자리에서 보여준다
+    this.render();
     S._answering = true;
     const c = cur();
     try {
@@ -9881,6 +9924,7 @@ const App = {
     if (!S.quizFeed) return;
     const last = S.quizFeed.last;
     S.quizFeed = null;
+    S.quizMy = null;
     if (last) { S.quizIdx = -1; this.render(); return; }   // 결과 화면으로
     S.quizIdx += 1;
     this.quizTick();
