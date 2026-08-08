@@ -9680,6 +9680,7 @@ const App = {
   /* 부모가 «아이 화면»을 일부러 들여다본다. 기본은 관리 화면이다 — 부모에게 아이 세계를
      기본으로 띄우면 «내 화면이 왜 애들 것이지»가 된다(대표님 지적 08-08). */
   pmTab(k) { if (k === "preview") return this.gamePreviewOn(); S.pmTab = k || null; this.render(); },
+  gameReload() { S._gameTried = null; this.gameEnter(); },
   gamePreviewOn() { S.gamePreview = true; S.gameTab = null; S.pmTab = null; this.gameEnter(); this.render(); },
   gamePreviewOff() { S.gamePreview = false; S.gameTab = null; this.render(); },
 
@@ -9839,18 +9840,26 @@ const App = {
        라우터가 게임 화면을 그릴 때마다 gameEnter 를 부르는데, 받을 게 하나도 없어도
        마지막에 render 를 부르면 → 라우터 → gameEnter → render … 로 서로를 무한히 부른다
        (08-08 실기에서 화면이 얼어붙었다). **받을 게 있을 때만** 다시 그린다. */
+    /* 🔴 **한 번 시도한 것은 다시 안 부른다.**
+       「받을 게 있으면 다시 그린다」만으로는 부족했다 — 어떤 로더가 **실패해서 값이 계속 null**
+       이면 그릴 때마다 다시 부르고, 부르면 또 그려서 **무한히 돈다.**
+       화면은 마지막 그림이 남아 멀쩡해 보이는데 JS 가 멈춰 있어 원인을 찾기가 아주 어렵다
+       (08-08: 자녀 폰이 이 상태였다. 웹소켓은 열리는데 응답이 없어서 잡았다).
+       그래서 «값이 없나»가 아니라 «부른 적 있나»로 막는다. */
     if (S._gameLoading) return;
+    S._gameTried = S._gameTried || {};
+    const once = (k, fn) => { if (S._gameTried[k]) return null; S._gameTried[k] = 1; return fn(); };
     const jobs = [];
-    if (!S.coin) jobs.push(this.loadCoin());
-    if (S.missions === null) jobs.push(this.loadMissions());
-    if (S.schoolMs === null) jobs.push(this.loadSchoolMissions());
-    if (S.msets === null) jobs.push(this.loadMissionSets());
-    if (S.store === null) jobs.push(this.loadStore());
-    if (S.rewards === null) jobs.push(this.loadRewards());
-    if (S.quiz === null) jobs.push(this.loadQuiz());
+    const c0 = once("coin", () => this.loadCoin()); if (c0) jobs.push(c0);
+    { const j = once("missions", () => this.loadMissions()); if (j) jobs.push(j); }
+    { const j = once("schoolMs", () => this.loadSchoolMissions()); if (j) jobs.push(j); }
+    { const j = once("msets", () => this.loadMissionSets()); if (j) jobs.push(j); }
+    { const j = once("store", () => this.loadStore()); if (j) jobs.push(j); }
+    { const j = once("rewards", () => this.loadRewards()); if (j) jobs.push(j); }
+    { const j = once("quiz", () => this.loadQuiz()); if (j) jobs.push(j); }
     if (!isChildToken() && !S.kidMode) {          // 부모 관리 화면에만 필요한 둘
-      if (S.verifyPending === null) jobs.push(this.loadVerify());
-      if (S.bonusGiven === null) jobs.push(this.loadBonusGiven());
+      { const j = once("verify", () => this.loadVerify()); if (j) jobs.push(j); }
+      { const j = once("bonus", () => this.loadBonusGiven()); if (j) jobs.push(j); }
     }
     if (!jobs.length) return;              // 받을 게 없다 — 다시 그리지 않는다(위 주석)
     S._gameLoading = true;

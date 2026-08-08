@@ -63,7 +63,12 @@
     const clipped = [];
     for (const e of document.querySelectorAll("b, em, span, p, h1, h2, h3, .gm-tt, .pm-tile b")) {
       if (!vis(e) || e.children.length) continue;
-      if (e.scrollWidth > e.clientWidth + 2 && getComputedStyle(e).textOverflow !== "ellipsis") {
+      const cs2 = getComputedStyle(e);
+      /* ⚠ 넘쳐도 **안 잘리는** 것이 있다 — overflow:visible 이면 밖으로 그려질 뿐이다.
+         아이콘 상자의 이모지가 그렇다(폰트마다 폭이 달라 상자를 넓혀도 또 걸린다).
+         「잘렸다」는 **실제로 안 보이게 됐을 때**만이다. */
+      if (cs2.overflow === "visible" && cs2.overflowX === "visible") continue;
+      if (e.scrollWidth > e.clientWidth + 2 && cs2.textOverflow !== "ellipsis") {
         clipped.push((e.className || e.tagName).toString().split(/\s+/)[0] + ": " + (e.textContent || "").trim().slice(0, 16));
       }
     }
