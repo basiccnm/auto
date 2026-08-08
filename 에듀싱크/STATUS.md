@@ -601,6 +601,47 @@ CDP_PORT=9334 node scripts/emul_eval.mjs --file scripts/probe_theme_leak.js   # 
 화면으로 보면 파란 바탕 위 흰 글씨라 읽히는데, 측정기가 부모를 타고 올라가다 흰 카드를 잡는
 **오탐일 가능성**이 있다. **확인 안 됐다 — 다음에 잡을 것.**
 
+### 🔬 전 화면 실측 결과 — **다음 세션은 여기서 시작한다** (2026-08-08 밤)
+
+`Screens` 에 있는 화면을 **손으로 안 적고 전부 돈다**(44개 순회). 결과:
+
+| 종류 | 건수 | 성격 |
+|---|---|---|
+| **흐린 글자** | **58** | 대비 미달 — 읽기 어렵다 |
+| 빈 상자 | 19 | 글자 없는 자리 — 「낙서」로 보일 후보 |
+| 작은 버튼 | 2 | 터치 44px 미만 |
+| 가로 넘침 · 겹침 · 기호 쏠림 | **0** | 오늘 잡은 것이 유지되고 있다 |
+
+**문제 있는 화면 33개**
+`mission game store childmode help ask asks home homeedit calendar school backup editname
+missionpick theme day timetable meal schoolinfo community timeline afterschool mypage docs
+doc-preview notify childmealrate childsubject childfriend childtheme childboard childshoot childview`
+
+**🔑 다음 세션이 할 일 — 화면별로 고치지 말 것**
+
+**흐린 글자 58건은 화면 문제가 아니라 «색 체계» 문제다.**
+`--muted` 를 고쳐 서랍·설정은 잡혔는데 홈·달력·학교·백업·오늘이 **또 다른 흐린 색**을 쓴다.
+→ **어떤 색이 몇 번 걸리는지 세서 근원을 잡는다.** 하나씩 고치면 58번 고치고 또 나온다.
+
+```bash
+CDP_TIMEOUT=300000 node scripts/emul_eval.mjs --file scripts/probe_screens.js
+```
+
+**빈 상자 19건**도 서랍처럼 「낙서」로 보일 후보다 — **하나씩 정체를 확인**해야 한다
+(진짜 장식이면 검사기에서 빼고, 자리만 그린 것이면 없애거나 말을 붙인다).
+
+⚠ 두 번 헛디딘 함정을 기억할 것 —
+① 커스텀 속성 안의 `color-mix` 는 이 웹뷰에서 **무효**다(값으로 적어라)
+② 테마는 `:root[data-theme="…"]`**(0,2,0)** — 특정성을 안 넘기면 **고쳐도 값이 그대로다**
+
+### 🔴 대표님 판단 대기 (모듈A 출시)
+
+「모듈A(학교정보)를 지금 올려도 되나」 → **아니다**로 의견 일치.
+홈은 봐줄 만한데 **한 화면만 들어가면 무너진다**. 위 58+19건이 그 근거다.
+남은 것 넷 — ① 전 화면 훑기(위 목록) ② **카드 대비 결정**(흰 카드로 올릴지 — 테마 18종을 다시 여는 일)
+③ 빈 상태 전수 점검 ④ `DEV_TOOLS = "false"`
+**미션 게임과 같이 나가는 것**이 맞다(오늘 방향 전환: 게임이 본체, 학교정보가 붙는 모듈).
+
 **남은 STAGE 0** — 언어팩 키 정리 · 원격 마이그레이션 + 워커 배포 · APK 빌드/실기 몽타주 ·
 미션 완주 시 클리어 연출을 실제 완료 흐름에 연결(`clearShow` 호출 지점)
 

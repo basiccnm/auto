@@ -35,7 +35,8 @@ if (!page) { console.error("웹뷰를 못 찾았습니다. adb forward 가 걸�
 
 const ws = new WebSocket(page.webSocketDebuggerUrl);
 const done = new Promise((resolve, reject) => {
-  const timer = setTimeout(() => reject(new Error("시간 초과")), 30000);
+  // 전 화면 순회 같은 긴 검사는 30초를 넘는다 — CDP_TIMEOUT 으로 늘린다(기본 30초)
+  const timer = setTimeout(() => reject(new Error("시간 초과")), +(process.env.CDP_TIMEOUT || 30000));
   ws.onopen = () => ws.send(JSON.stringify({
     id: 1, method: "Runtime.evaluate",
     params: { expression: expr, awaitPromise: true, returnByValue: true },

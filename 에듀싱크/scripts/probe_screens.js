@@ -16,9 +16,14 @@
 // ⚠ 「스크린샷을 봤다」는 검사가 아니다 — 값을 재야 검사다.
 // ============================================================
 (async () => {
-  const SCREENS = (typeof isChildToken === "function" && isChildToken())
-    ? ["game", "store", "tickets", "childmealrate", "childfriend", "childsubject", "childtt", "childtheme"]
-    : ["home", "game", "store", "tickets", "mission", "switch", "mypage", "notify", "timeline"];
+  /* 화면을 손으로 적지 않는다 — 새 화면이 생기면 검사에서 조용히 빠진다.
+     Screens 에 있는 것을 **전부** 돈다(자녀 토큰이면 아이가 열 수 있는 것만). */
+  const ALL = Object.keys(typeof Screens !== "undefined" ? Screens : {})
+    .filter((k) => typeof Screens[k] === "function" && k !== "holdGuard");
+  const kid = typeof isChildToken === "function" && isChildToken();
+  const SKIP = ["login", "intro", "register", "findpw", "locked", "childlocked", "childexpired", "pay"];
+  const SCREENS = ALL.filter((k) => !SKIP.includes(k))
+    .filter((k) => !kid || (typeof CHILD_SCREENS === "undefined" || CHILD_SCREENS.includes(k)));
 
   const out = [];
   const seen = new Set();
@@ -133,8 +138,31 @@
     }
     hit.빈상자 = [...new Set(doodle)].slice(0, 8);
 
+    /* ⑧ 글자 대비 — 읽을 수 없는 글자는 **취향이 아니라 결함**이다(4.5:1 · 큰 글자 3:1).
+       ⚠ 배경은 부모를 타고 올라가며 찾는다 — 투명한 요소가 겹쳐 있으면 잘못 잡을 수 있어
+         «측정상 미달»과 «진짜 안 보임»은 다를 수 있다. 의심되면 화면으로 한 번 더 본다. */
+    const lum = (c) => { const [r0,g0,b0] = (c.match(/\d+/g)||[0,0,0]).slice(0,3).map(Number)
+        .map(v => { v/=255; return v<=0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4); });
+      return 0.2126*r0 + 0.7152*g0 + 0.0722*b0; };
+    const ratio = (a,b) => { const [x,y]=[lum(a),lum(b)].sort((m,n)=>n-m); return (x+0.05)/(y+0.05); };
+    const bgOf = (el) => { let e2 = el; while (e2) { const c = getComputedStyle(e2).backgroundColor;
+        if (c && c !== "rgba(0, 0, 0, 0)" && c !== "transparent") return c; e2 = e2.parentElement; }
+      return "rgb(255,255,255)"; };
+    const dim = [];
+    for (const e of document.querySelectorAll("b,em,span,p,h1,h2,h3,button,a,i,div,label")) {
+      if (e.children.length) continue;
+      const t = (e.textContent || "").trim(); if (!t) continue;
+      if (!vis(e)) continue;
+      const cs3 = getComputedStyle(e);
+      const size = parseFloat(cs3.fontSize), fw = parseInt(cs3.fontWeight) || 400;
+      const need = (size >= 24 || (size >= 18.66 && fw >= 700)) ? 3 : 4.5;
+      const cr = ratio(cs3.color, bgOf(e));
+      if (cr < need) dim.push(`${(e.className||e.tagName).toString().split(/\s+/)[0]} ${cr.toFixed(2)}<${need} "${t.slice(0,10)}"`);
+    }
+    hit.흐린글자 = [...new Set(dim)].slice(0, 6);
+
     const bad = hit.가로넘침 || hit.작은버튼.length || hit.글자잘림.length || hit.겹침.length
-              || hit.기호쏠림.length || hit.빈상자.length;
+              || hit.기호쏠림.length || hit.빈상자.length || hit.흐린글자.length;
     if (bad) out.push(hit);
     seen.add(hit.실제);
   }
