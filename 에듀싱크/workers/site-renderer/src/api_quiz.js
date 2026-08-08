@@ -12,6 +12,10 @@
 //      세는 로직을 또 쓰지 않는다 — INSERT 가 먹으면 그 판은 처음이다.
 //   ③ **코인·점수는 star_core 로만.** 상한을 여기서 다시 세지 않는다.
 //   ④ 채점은 «낸 문제»(session.codes)로만 한다. 클라이언트가 보낸 code 를 믿지 않는다.
+//   ⑥ **한 문제씩 채점하고 그 자리에서 답을 알려 준다**(대표님 지시 08-08 — 「답안지 주지 말고
+//      바로 문제 풀고 답이 나오게」). 답이 안 새는 이유는 **이미 잠근 문제의 답만** 주기 때문이다.
+//      잠금은 quiz_answer_log 의 UNIQUE(child_id, ymd, attempt, code) 가 강제한다 —
+//      «틀린 걸 알고 다시 내는» 길이 DB 수준에서 막힌다.
 //   ⑤ **재도전 값은 서버가 매긴다.** 클라이언트가 보낸 값으로 결제하지 않는다.
 //
 // ── 왜 재도전이 «퀴즈만» 인가 (기획서 v2 §02.2) ──────────────────────────
@@ -58,11 +62,13 @@ const bandOf = (grade) => (+grade <= 2) ? "low" : (+grade <= 4) ? "mid" : "high"
    「부르키나파소 수도」가 1학년에게 나오면 그날을 통째로 포기한다. */
 const tierCapOf = (band) => (band === "low") ? 1 : (band === "mid") ? 2 : 3;
 
-/* 문제를 뽑는다 — **8분야에서 고루**.
+/* 문제를 뽑는다 — **8분야에서 고루, 진짜 랜덤으로**(대표님 지시 08-08).
    한 분야만 쏟아지면 «나는 수학 못해서 오늘 망함»이 되어 그날을 포기한다.
+   ⚠ 한때 날짜로 만든 씨앗을 썼는데, 그러면 **같은 학년 아이들이 같은 날 같은 문제**를 받고
+     내일 무엇이 나올지도 정해져 있다. RANDOM() 이 정본이다.
    ⚠ 2판째부터는 **틀렸던 문제를 먼저** 채운다(기획서 v2 §02.2).
       재출제가 「우려먹기」가 아니라 오답노트가 되고, 문제 재고 압박도 준다. */
-async function pickQuestions(db, child, band, seed, attempt) {
+async function pickQuestions(db, child, band, attempt) {
   const picked = [];
   const seen = new Set();
   const tierCap = tierCapOf(band);
@@ -89,8 +95,8 @@ async function pickQuestions(db, child, band, seed, attempt) {
         WHERE q.active = 1 AND q.field = ? AND q.tier <= ?
           AND (q.band = 'all' OR q.band = ?)
           AND q.pack_id IN (SELECT id FROM packs WHERE active = 1)
-        ORDER BY (q.id * 31 + ?) % 997 LIMIT 3`
-    ).bind(f, tierCap, band, seed).all();
+        ORDER BY RANDOM() LIMIT 3`
+    ).bind(f, tierCap, band).all();
     for (const r of (results || [])) {
       /* ⚠ 여기서 «넘치게 담고 뒤에서 자르면» 안 된다.
          한때 그렇게 짰다가, 일부러 앞에 넣은 **오답노트 문제가 잘려 나갔다**(2026-08-08 실측).
@@ -100,8 +106,12 @@ async function pickQuestions(db, child, band, seed, attempt) {
     }
   }
 
-  // 순서만 섞는다 — «항상 국어부터»가 안 되게. 개수는 이미 QUIZ_N 이하라 버릴 것이 없다
-  picked.sort((a, b) => ((a.code.length * 7 + seed) % 13) - ((b.code.length * 7 + seed) % 13));
+  /* 순서도 진짜로 섞는다 — «항상 국어부터»가 안 되게.
+     ⚠ 개수는 이미 QUIZ_N 이하라 버릴 것이 없다(넘치게 담고 자르면 오답노트가 잘려 나간다). */
+  for (let i = picked.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [picked[i], picked[j]] = [picked[j], picked[i]];
+  }
   return picked;
 }
 
@@ -115,7 +125,7 @@ async function sessionsToday(db, childId, ymd) {
 
 async function makeSession(db, child, ymd, attempt, paid) {
   const band = bandOf(child.grade);
-  const qs = await pickQuestions(db, child, band, parseInt(ymd, 10) % 997 + attempt * 17, attempt);
+  const qs = await pickQuestions(db, child, band, attempt);
   if (qs.length < QUIZ_N) return null;
   await db.prepare(
     "INSERT INTO quiz_session (child_id, ymd, attempt, codes, paid, created_at) VALUES (?,?,?,?,?,?)"
@@ -220,10 +230,18 @@ async function retryQuiz(request, db, env, childId) {
   });
 }
 
-/* POST /api/v1/children/{id}/quiz — 지금 판의 답 10개를 한 번에 내고 채점받는다
-   body: { answers: [{code, picked}] }  picked 는 1~4(OX 는 1~2), 시간초과면 null
-   ⚠ 한 문제씩 채점하지 않는다 — 매 문제 정답이 오가면 «틀린 걸 알고 다시 내는» 길이 열린다. */
-async function submitQuiz(request, db, env, childId) {
+/* ⚠ 한때 있던 «10개를 한 번에 내는» POST /quiz 는 **없앴다**(2026-08-08).
+   화면이 한 문제씩 내고 그 자리에서 답을 받는 방식으로 바뀌었고, 그 판을 한 번에 내면
+   quiz_answer_log 의 UNIQUE(child_id, ymd, attempt, code) 와도 어긋난다.
+   지금 채점 경로는 answerOne() 하나뿐이다 — 길이 둘이면 한쪽만 고쳐서 반드시 어긋난다. */
+
+/* POST /api/v1/children/{id}/quiz/answer — **한 문제**를 내고 그 자리에서 답을 받는다
+   body: { code, picked }   picked 는 1~4(OX 는 1~2), 시간초과면 null
+
+   ⚠ 여기서만 답이 나간다. **그 문제를 이미 잠근 뒤**다.
+   ⚠ 두 번 답할 수 없다 — UNIQUE 인덱스가 막고, 여기서도 먼저 확인해 친절한 문구를 준다.
+   ⚠ 마지막 문제를 답하면 그 자리에서 판을 마감하고 코인·점수를 준다(final). */
+async function answerOne(request, db, env, childId) {
   const { child, err } = await gate(request, db, env, childId);
   if (err) return err;
   const ymd = ymdKst();
@@ -232,70 +250,100 @@ async function submitQuiz(request, db, env, childId) {
   const { cur, used, openable, nextCost } = stateOf(sessions);
   if (!cur) return apiErr("VALIDATION", null, "오늘 미션을 먼저 받아 주세요.");
   if (cur.finished_at) {
-    return apiErr("LIMIT_EXCEEDED",
-      { correct: cur.correct, coins: cur.coins, retry: { used, max: RETRY_MAX, cost: nextCost } },
+    return apiErr("LIMIT_EXCEEDED", { retry: { used, max: RETRY_MAX, cost: nextCost } },
       openable ? "이 판은 이미 끝냈어요. 한 판 더 할 수 있어요!" : "오늘 몫은 다 썼어요. 내일 또 만나요!");
   }
 
   const b = await readJson(request);
-  const sent = new Map();
-  for (const a of (b?.answers || [])) {
-    const p = parseInt(a?.picked, 10);
-    sent.set(String(a?.code), (p >= 1 && p <= 4) ? p : null);
-  }
-
-  // 채점은 **세션에 적힌 문제**로만. 클라이언트가 보낸 code 목록을 믿지 않는다
+  const code = String(b?.code || "");
   const codes = String(cur.codes).split(",");
-  const holes = codes.map(() => "?").join(",");
-  const { results } = await db.prepare(
-    `SELECT code, field, answer, hint, points, a1, a2, a3, a4 FROM quiz_questions WHERE code IN (${holes})`
-  ).bind(...codes).all();
-  const byCode = new Map((results || []).map((r) => [r.code, r]));
+  if (codes.indexOf(code) < 0) return apiErr("VALIDATION", null, "이 판에 없는 문제예요.");
 
-  let correct = 0, points = 0;
-  const review = [];
-  for (const c of codes) {
-    const row = byCode.get(c);
-    if (!row) continue;
-    const picked = sent.has(c) ? sent.get(c) : null;
-    const ok = picked === row.answer;
-    if (ok) { correct++; points += (row.points || 5); }
-    await db.prepare(
-      "INSERT INTO quiz_answer_log (child_id, ymd, code, field, picked, correct, created_at) VALUES (?,?,?,?,?,?,?)"
-    ).bind(child.id, ymd, c, row.field, picked, ok ? 1 : 0, nowIso()).run();
-    /* 틀린 문제는 **정답을 알려 준다** — «아 이거였구나»가 남아야 학습이다.
-       맞힌 문제는 안 보낸다(응답을 가볍게, 답 유출 면적을 줄인다). */
-    if (!ok) {
-      review.push({ code: c, answer: row.answer,
-        answer_text: [row.a1, row.a2, row.a3, row.a4][row.answer - 1], hint: row.hint || null });
-    }
+  const dup = await db.prepare(
+    "SELECT 1 x FROM quiz_answer_log WHERE child_id = ? AND ymd = ? AND attempt = ? AND code = ?"
+  ).bind(child.id, ymd, cur.attempt, code).first();
+  if (dup) return apiErr("VALIDATION", null, "이미 답한 문제예요.");
+
+  const row = await db.prepare(
+    "SELECT code, field, q, answer, hint, points, a1, a2, a3, a4 FROM quiz_questions WHERE code = ?"
+  ).bind(code).first();
+  if (!row) return apiErr("NOT_FOUND");
+
+  const p = parseInt(b?.picked, 10);
+  const picked = (p >= 1 && p <= 4) ? p : null;
+  const ok = picked === row.answer;
+
+  await db.prepare(
+    "INSERT INTO quiz_answer_log (child_id, ymd, attempt, code, field, picked, correct, created_at) " +
+    "VALUES (?,?,?,?,?,?,?,?)"
+  ).bind(child.id, ymd, cur.attempt, code, row.field, picked, ok ? 1 : 0, nowIso()).run();
+
+  const answered = cur.answered + 1;
+  const correct = cur.correct + (ok ? 1 : 0);
+  const opts = [row.a1, row.a2, row.a3, row.a4];
+
+  const out = {
+    code, ok, answered, total: codes.length,
+    answer: row.answer, answer_text: opts[row.answer - 1],
+    picked, picked_text: picked ? opts[picked - 1] : null,
+    hint: row.hint || null,
+  };
+
+  if (answered < codes.length) {
+    await db.prepare("UPDATE quiz_session SET answered = ?, correct = ? WHERE child_id = ? AND ymd = ? AND attempt = ?")
+      .bind(answered, correct, child.id, ymd, cur.attempt).run();
+    return apiOk(out);
   }
+
+  // ── 마지막 문제였다 → 판을 마감한다 ──────────────────────────────
+  out.final = await finishAttempt(db, child, ymd, cur, codes, correct);
+  return apiOk(out);
+}
+
+/* 판 마감 — 코인·리그 점수를 주고 세션을 닫는다.
+   ⚠ **리그 점수는 «그 문제를 처음 맞혔을 때»에만** 준다.
+     답을 그 자리에서 알려 주므로, 안 그러면 「답 보고 → 코인 내고 재도전 → 외운 답으로 만점」이
+     점수 자판기가 된다. 코인은 그대로 준다(반복 학습의 보상). */
+async function finishAttempt(db, child, ymd, ses, codes, correct) {
+  const holes = codes.map(() => "?").join(",");
+  // 이 판보다 «먼저» 맞힌 적이 있는 문제
+  const { results: had } = await db.prepare(
+    `SELECT DISTINCT code FROM quiz_answer_log
+      WHERE child_id = ? AND correct = 1 AND code IN (${holes})
+        AND NOT (ymd = ? AND attempt = ?)`
+  ).bind(child.id, ...codes, ymd, ses.attempt).all();
+  const seen = new Set((had || []).map((r) => r.code));
+
+  // 이 판에서 맞힌 문제 중 «처음» 맞힌 것만 점수
+  const { results: mine } = await db.prepare(
+    `SELECT l.code, q.points FROM quiz_answer_log l JOIN quiz_questions q ON q.code = l.code
+      WHERE l.child_id = ? AND l.ymd = ? AND l.attempt = ? AND l.correct = 1`
+  ).bind(child.id, ymd, ses.attempt).all();
+  let points = 0;
+  for (const r of (mine || [])) if (!seen.has(r.code)) points += (r.points || 5);
 
   const perfect = correct === codes.length;
   const wantCoin = correct + (perfect ? BONUS.quizPerfect : 0);
-  const g = await grantStars(db, child.id, wantCoin, "quiz:" + ymd + ":" + cur.attempt);
-  // ⚠ 점수는 **상한을 안 탄다** — 코인이 깎여도 점수는 그대로 들어간다.
-  //   이게 「코인을 태워 순위를 산다」가 성립하는 지점이다.
-  const p = await addPoints(db, child.id, points);
+  const g = await grantStars(db, child.id, wantCoin, "quiz:" + ymd + ":" + ses.attempt);
+  const pt = await addPoints(db, child.id, points);
 
   await db.prepare(
     "UPDATE quiz_session SET answered = ?, correct = ?, coins = ?, points = ?, finished_at = ? " +
     "WHERE child_id = ? AND ymd = ? AND attempt = ?"
-  ).bind(codes.length, correct, g.granted, points, nowIso(), child.id, ymd, cur.attempt).run();
+  ).bind(codes.length, correct, g.granted, points, nowIso(), child.id, ymd, ses.attempt).run();
 
   if (correct > 0) await bumpLevel(db, child.id, 1);   // 레벨은 «해낸 미션 수»
 
-  const canMore = used < RETRY_MAX;
-  return apiOk({
-    attempt: cur.attempt, total: codes.length, correct, perfect,
-    coins: g.granted,
-    capped: g.capped,          // 상한에 걸려 깎였으면 화면이 «오늘은 여기까지»를 말한다
-    points, season: p.season,
+  const sessions = await sessionsToday(db, child.id, ymd);
+  const { used, openable, nextCost } = stateOf(sessions);
+  return {
+    attempt: ses.attempt, total: codes.length, correct, perfect,
+    coins: g.granted, capped: g.capped,
+    points, season: pt.season,
     perfect_bonus: perfect ? BONUS.quizPerfect : 0,
-    review,
-    retry: { used, max: RETRY_MAX, can: canMore, cost: canMore ? retryCost(used + 1) : null },
+    retry: { used, max: RETRY_MAX, can: openable, cost: openable ? nextCost : null },
     coin: await coinState(db, child.id),
-  });
+  };
 }
 
 /* GET /api/v1/children/{id}/quiz/stats — 분야별 정답률 (박사 뱃지의 근거) */
@@ -328,11 +376,14 @@ export async function handleQuizApi(request, db, env, url) {
   x = p.match(/^\/api\/v1\/children\/(\d+)\/quiz\/retry$/);
   if (x && m === "POST") return retryQuiz(request, db, env, x[1]);
 
+  x = p.match(/^\/api\/v1\/children\/(\d+)\/quiz\/answer$/);
+  if (x && m === "POST") return answerOne(request, db, env, x[1]);
+
   x = p.match(/^\/api\/v1\/children\/(\d+)\/quiz\/?$/);
   if (x) {
     if (m === "GET") return getQuiz(request, db, env, x[1]);
-    if (m === "POST") return submitQuiz(request, db, env, x[1]);
-    return apiErr("VALIDATION", null, "지원하지 않는 요청 방식이에요.");
+    // POST /quiz(한 번에 10개)는 폐기됐다 — /quiz/answer 로 한 문제씩 낸다
+    return apiErr("VALIDATION", null, "문제는 하나씩 내 주세요.");
   }
   return null;
 }

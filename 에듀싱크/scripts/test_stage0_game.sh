@@ -32,16 +32,17 @@ api() { # method path [body]
 }
 d1() { (cd "$(dirname "$0")/../workers/site-renderer" && npx wrangler d1 execute eduthink-db --local --command "$1" 2>/dev/null); }
 
-# 지금 판의 문제를 전부 정답으로 채운 body 를 만든다(DB 에서 답을 읽는다)
-perfect_body() {
-  local codes="$1" first=1 body='{"answers":['
+# 한 문제씩 낸다 — 「답안지를 몰아 주지 말고 그 자리에서 답이 나오게」(08-08).
+# 마지막 문제의 응답에 final(판 결과)이 들어 있다. 그것을 돌려준다.
+answer_all() {   # codes  mode(perfect|wrong)
+  local codes="$1" mode="${2:-perfect}" last=""
   for c in $codes; do
-    local a
+    local a pick
     a=$(d1 "SELECT answer FROM quiz_questions WHERE code='$c'" | grep -oE '"answer": *[0-9]+' | grep -oE '[0-9]+')
-    [ $first = 0 ] && body="$body,"; first=0
-    body="$body{\"code\":\"$c\",\"picked\":$a}"
+    if [ "$mode" = "wrong" ]; then pick=$(( a % 4 + 1 )); else pick="$a"; fi
+    last=$(api POST "/children/$CID/quiz/answer" "{\"code\":\"$c\",\"picked\":$pick}")
   done
-  echo "$body]}"
+  echo "$last"
 }
 codes_of() { echo "$1" | grep -oE '"code":"[^"]*"' | cut -d'"' -f4; }
 
@@ -74,7 +75,7 @@ eq   "문제 code 개수" "$N1" "10"
 
 echo
 echo "── ② 채점 — 만점을 만든다 (코인 + 리그 점수) ─────────────"
-R1=$(api POST "/children/$CID/quiz" "$(perfect_body "$C1")")
+R1=$(answer_all "$C1")
 want "만점이 나온다"       "$R1" '"perfect":true'
 COIN1=$(num "$R1" coins); PT1=$(num "$R1" points)
 eq   "코인 = 10 + 만점보너스 5" "$COIN1" "15"
@@ -84,8 +85,8 @@ eq   "DB 리그 점수도 같다" "${DBPT:-0}" "$PT1"
 
 echo
 echo "── ③ 끝낸 판은 다시 못 낸다 · 재도전 값을 알려준다 ───────"
-R2=$(api POST "/children/$CID/quiz" "$(perfect_body "$C1")")
-want "같은 판 재제출은 막힌다" "$R2" 'LIMIT_EXCEEDED'
+R2=$(api POST "/children/$CID/quiz/answer" "{\"code\":\"$(echo "$C1" | head -1)\",\"picked\":1}")
+want "끝낸 판에는 더 못 낸다" "$R2" 'LIMIT_EXCEEDED'
 Q2=$(api GET "/children/$CID/quiz")
 want "끝난 판은 문제를 다시 안 준다" "$Q2" '"items":[]'
 want "재도전 값이 3 이다"           "$Q2" '"cost":3'
@@ -111,17 +112,9 @@ eq   "2판째도 10문제" "$N2" "10"
 echo
 echo "── ⑥ 2판째는 «틀렸던 문제»가 먼저 온다 ───────────────────"
 # 1판을 만점냈으니 틀린 게 없다 → 2판을 일부러 틀려서 3판에 그게 오는지 본다
-WRONG='{"answers":['; first=1
-for c in $C2; do
-  A=$(d1 "SELECT answer FROM quiz_questions WHERE code='$c'" | grep -oE '"answer": *[0-9]+' | grep -oE '[0-9]+')
-  W=$(( A % 4 + 1 ))
-  [ $first = 0 ] && WRONG="$WRONG,"; first=0
-  WRONG="$WRONG{\"code\":\"$c\",\"picked\":$W}"
-done
-WRONG="$WRONG]}"
-R4=$(api POST "/children/$CID/quiz" "$WRONG")
+R4=$(answer_all "$C2" wrong)
 eq   "전부 틀렸다" "$(num "$R4" correct)" "0"
-want "틀린 문제는 정답을 알려준다" "$R4" '"answer_text"'
+want "틀린 그 자리에서 정답을 알려준다" "$R4" '"answer_text"'
 R5=$(api POST "/children/$CID/quiz/retry" '{}')
 want "3판째가 열린다" "$R5" '"attempt":3'
 C3=$(codes_of "$R5")
@@ -142,7 +135,7 @@ echo "── ⑦ 🔑 코인 상한에 걸려도 «리그 점수»는 그대로 
 d1 "DELETE FROM star_ledger WHERE child_id=$CID" >/dev/null
 d1 "INSERT INTO star_ledger (child_id, delta, reason, bucket, created_at) VALUES ($CID, 60, 'test-cap', 'base', '$NOW')" >/dev/null
 PT_BEFORE=$(d1 "SELECT points n FROM league_standing WHERE child_id=$CID" | grep -oE '"n": *[0-9]+' | grep -oE '[0-9]+')
-R6=$(api POST "/children/$CID/quiz" "$(perfect_body "$C3")")
+R6=$(answer_all "$C3")
 eq   "코인은 0 (상한 60 도달)" "$(num "$R6" coins)" "0"
 want "상한에 걸렸다고 알려준다"  "$R6" '"capped":true'
 PT6=$(num "$R6" points)
@@ -161,7 +154,7 @@ d1 "INSERT INTO star_ledger (child_id, delta, reason, bucket, created_at) VALUES
 for a in 4 5 6; do
   RR=$(api POST "/children/$CID/quiz/retry" '{}')
   CC=$(codes_of "$RR")
-  api POST "/children/$CID/quiz" "$(perfect_body "$CC")" >/dev/null
+  answer_all "$CC" >/dev/null
 done
 OVER=$(api POST "/children/$CID/quiz/retry" '{}')
 want "7판째는 막힌다"        "$OVER" 'LIMIT_EXCEEDED'
@@ -179,6 +172,33 @@ echo "── ⑩ 레벨은 «해낸 미션 수»로 오른다 ──────
 LV=$(d1 "SELECT level_missions n FROM children WHERE id=$CID" | grep -oE '"n": *[0-9]+' | grep -oE '[0-9]+')
 DONEQ=$(d1 "SELECT COUNT(*) n FROM quiz_session WHERE child_id=$CID AND finished_at IS NOT NULL AND correct > 0" | grep -oE '"n": *[0-9]+' | grep -oE '[0-9]+')
 eq   "레벨 카운터 = 한 문제라도 맞힌 판 수" "${LV:-0}" "${DONEQ:-0}"
+
+echo
+echo "── ⑪ 🔑 답안을 공개해도 «외운 답»으로 점수를 못 번다 ─────"
+#    판이 끝나면 답을 전부 공개한다(학습). 그대로 두면
+#    「답 보고 → 코인 내고 재도전 → 외운 답으로 만점」이 점수 자판기가 된다.
+#    코인은 주되 **리그 점수는 «그 문제를 처음 맞혔을 때»만** 준다.
+d1 "DELETE FROM quiz_session WHERE child_id=$CID" >/dev/null
+d1 "DELETE FROM star_ledger WHERE child_id=$CID" >/dev/null
+# 판 기록을 지웠으면 답 기록도 같이 지운다 — 안 그러면 같은 날 attempt=1 이 다시 만들어져
+# UNIQUE(child_id, ymd, attempt, code) 에 걸리고, 마지막 문제가 안 들어가 판이 안 닫힌다
+d1 "DELETE FROM quiz_answer_log WHERE child_id=$CID" >/dev/null
+QA=$(api GET "/children/$CID/quiz")
+CA=$(codes_of "$QA")
+RA=$(answer_all "$CA")
+want "답을 그 자리에서 알려준다"   "$RA" '"answer_text"'
+want "맞았는지 바로 알려준다"     "$RA" '"ok":true'
+PA=$(num "$RA" points)
+[ "${PA:-0}" -gt 0 ] && ok "처음 맞힌 판은 점수를 받는다 ($PA)" || bad "첫 판 점수" "points=$PA"
+
+# 같은 문제를 그대로 다시 낸다(재도전 판에 억지로 같은 codes 를 심는다)
+d1 "INSERT INTO quiz_session (child_id, ymd, attempt, codes, paid, created_at) VALUES ($CID, (SELECT ymd FROM quiz_session WHERE child_id=$CID LIMIT 1), 2, (SELECT codes FROM quiz_session WHERE child_id=$CID AND attempt=1), 3, '$NOW')" >/dev/null
+RB=$(answer_all "$CA")
+eq   "다시 만점을 맞혔다" "$(num "$RB" correct)" "10"
+CB=$(num "$RB" coins); PB=$(num "$RB" points)
+[ "${CB:-0}" -gt 0 ] && ok "코인은 그대로 준다 ($CB — 반복 학습의 보상)" || bad "재학습 코인" "coins=$CB"
+eq   "🔑 외운 답으로는 점수가 0" "${PB:-0}" "0"
+want "다시 풀어도 답은 알려준다"   "$RB" '"answer_text"'
 
 echo
 echo "════════════════════════════════════════════════════════"

@@ -5647,12 +5647,14 @@ body:has(#tabbar.hidden) #screen:has(.ib),
 
 /* 푸는 동안은 붉은 «보스전» 배경 — 배경색 5종과 무관하게 이 순간만은 같다 */
 .gm.qzp { background: linear-gradient(180deg, #FF8A3D, #FF4E7A); }
-/* 보기는 아래(엄지가 닿는 자리), **그림과 문제는 그 위 남는 공간의 한가운데**.
-   그림 문제가 이 자리를 쓴다 — 위아래 auto 여백이라 그림이 커져도 가운데가 유지된다. */
+/* 그림·문제·보기를 **한 덩어리로 묶어 세로 가운데**에 둔다.
+   보기를 바닥에 붙였더니 문제와 보기 사이가 텅 비어 보였다 — 답을 위로 올린다(지시 08-08). */
 .qz-play { flex: 1; display: flex; flex-direction: column; }
-.qz-mid { margin: auto 0; display: flex; flex-direction: column; justify-content: center;
-  min-height: 0; }
-.qz-play .qz-opts { margin-top: 0; padding-top: 4px; }
+/* 위쪽 진행 표시(1/10 · 남은 시간)는 **제자리**에 두고,
+   그림·문제·보기만 남는 공간의 가운데로 모은다 — 위아래 auto 가 그 일을 한다.
+   ⚠ .qz-play 에 justify-content:center 를 주면 진행 표시까지 같이 내려온다(08-08 실기). */
+.qz-mid { margin: auto 0 22px; display: flex; flex-direction: column; min-height: 0; }
+.qz-play .qz-opts { margin: 0 0 auto; }
 
 /* ══ 오늘의 미션(퀴즈) ══ */
 .qz-intro { margin-top: 30px; text-align: center; }
@@ -5673,7 +5675,7 @@ body:has(#tabbar.hidden) #screen:has(.ib),
 /* ⚠ 그림은 «다 받은 뒤» 타이머를 켠다 — 아니면 「안 늦었는데 틀렸다」가 된다 */
 .qz-img { border-radius: 18px; overflow: hidden; background: #fff; min-height: 0;
   box-shadow: 0 6px 0 rgba(0, 0, 0, .14); }
-.qz-img img { display: block; width: 100%; max-height: 260px; object-fit: contain; }
+.qz-img img { display: block; width: 100%; max-height: 168px; object-fit: cover; }
 .qz-img + .qz-q { margin-top: 18px; }
 /* 시험지처럼 «1) 문제» 로 읽히게 — 번호가 문장 앞에 붙는다(대표님 지시 08-08) */
 .qz-qn { margin-right: 9px; font-variant-numeric: tabular-nums; opacity: .8; }
@@ -5690,6 +5692,32 @@ body:has(#tabbar.hidden) #screen:has(.ib),
   border-radius: 9px; background: var(--g-panel2); color: var(--g-sub);
   font-size: 12px; font-weight: 900; }
 
+/* 답한 «직후» 보기에 붙는 표시 — 정답 초록, 내가 고른 오답 빨강, 나머지는 흐리게.
+   ⚠ 답하기 전에는 서버가 정답을 안 보내므로 여기서 칠할 방법 자체가 없다. */
+.qz-mk { margin-left: auto; font-size: 20px; font-weight: 900; }
+.qz-op.ok  { background: #E3F5EA; box-shadow: 0 5px 0 #23A94E; }
+.qz-op.ok .qz-k  { background: #C7ECD4; color: #1E7B43; }
+.qz-op.ok .qz-mk { color: #1E7B43; }
+.qz-op.no  { background: #FCE3E1; box-shadow: 0 5px 0 #C3352F; }
+.qz-op.no .qz-k  { background: #F6CFCC; color: #C3352F; }
+.qz-op.no .qz-mk { color: #C3352F; }
+.qz-op.dim { opacity: .5; }
+.qz-op[disabled] { pointer-events: none; }
+
+/* 「맞았어요 / 아쉬워요 + 정답」 — 마지막에 답안지를 몰아 주지 않는다.
+   틀린 «그 순간»에 답을 봐야 남는다(대표님 지시 08-08). */
+.qz-feed { margin-top: 12px; padding: 13px 15px; border-radius: 16px; text-align: center;
+  background: rgba(0, 0, 0, .3); color: #fff; }
+.qz-feed b { display: block; font-size: 18px; font-weight: 900; }
+.qz-feed em { display: block; margin-top: 4px; font-style: normal; font-size: 14px;
+  font-weight: 900; color: #FFD86B; }
+.qz-feed i { display: block; margin-top: 3px; font-style: normal; font-size: 12px;
+  font-weight: 700; color: rgba(255, 255, 255, .8); }
+.qz-next { display: block; margin-top: 8px; font-size: 12px; font-weight: 900;
+  color: rgba(255, 255, 255, .75); }
+.qz-feed.o { background: rgba(30, 123, 67, .55); }
+.qz-feed.x { background: rgba(0, 0, 0, .38); }
+
 .qz-done { margin-top: 22px; padding: 22px; border-radius: 20px; text-align: center;
   background: var(--g-panel); box-shadow: var(--g-shadow); }
 .qz-score { display: flex; align-items: baseline; justify-content: center; gap: 4px; }
@@ -5698,9 +5726,23 @@ body:has(#tabbar.hidden) #screen:has(.ib),
 .qz-perfect { margin-top: 8px; font-size: 15px; font-weight: 900; color: var(--g-gold-d); }
 .qz-coin { margin-top: 6px; font-size: 17px; font-weight: 900; color: var(--g-ink); }
 .qz-cap { margin: 8px 0 0; font-size: 12.5px; font-weight: 700; color: var(--g-sub); }
-.qz-rv { margin-top: 9px; padding: 13px 16px; border-radius: 14px; background: var(--g-panel); }
-.qz-rv b { display: block; font-size: 15px; font-weight: 800; color: var(--g-ink); }
-.qz-rv em { font-style: normal; font-size: 12.5px; font-weight: 700; color: var(--g-sub); }
+.qz-sheet { display: grid; gap: 8px; }
+.qz-rv { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px;
+  border-radius: 14px; background: var(--g-panel); box-shadow: var(--g-shadow); }
+.qz-rn { flex: none; width: 24px; height: 24px; display: grid; place-items: center;
+  border-radius: 8px; background: var(--g-panel2); color: var(--g-sub);
+  font-size: 12px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.qz-rb { flex: 1; min-width: 0; }
+.qz-rv b { display: block; font-size: 14px; font-weight: 800; color: var(--g-ink); line-height: 1.4; }
+.qz-rv em { display: block; margin-top: 3px; font-style: normal; font-size: 12px;
+  font-weight: 800; color: var(--g-sub); }
+.qz-rv em.ans { color: #1E7B43; }
+.qz-rv em.mine { color: #C3352F; }
+.qz-rv em.hint { color: var(--g-sub); font-weight: 700; }
+.qz-rm { flex: none; font-size: 19px; font-weight: 900; line-height: 1.2; }
+.qz-rv.o .qz-rm { color: var(--g-lime); }
+.qz-rv.x .qz-rm { color: #FF5A5A; }
+.qz-rv.o .qz-rn { background: #E3F5EA; color: #1E7B43; }
 
 /* ══ 클리어 연출 — 세트를 완주한 «순간»에만 1.2초 ══
    ⚠ 개별 미션 완료는 조용히 체크만. 매번 띄우면 3초 만에 성가신 것이 된다.

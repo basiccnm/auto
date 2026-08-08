@@ -820,6 +820,7 @@ const S = {
   gameTab: null,          // null=홈(2×2 타일) | morning | school | after | today | shop | profile
   gmTheme: null,          // 아이 배경색 (sky|lime|lav|sunset|mint) — 부모 테마와 무관
   clear: null,            // 클리어 연출 {icon,name,stars} — 1.2초만 산다
+  quizFeed: null,         // 문제 하나를 답한 «직후» 뜨는 정답 — 다음 문제로 넘어가면 사라진다
   verifyPending: null,    // 부모가 볼 «확인해 주세요» [{verify_id,mission_code,step1_data,...}]
   verifyBusy: null,
   step1For: null,         // 1차 제출 시트를 띄운 미션 code (아이 화면)
@@ -5145,6 +5146,7 @@ function boardView() {
      스크롤도 튄다. 전광판 마크업만 바꿔 끼운다. */
 let QUIZ_TIMER = null;   // 퀴즈 문제당 카운트다운(전체 렌더와 분리)
 let CLEAR_TIMER = null;  // 클리어 연출 자동 닫기(1.2초)
+let FEED_TIMER = null;   // 정답을 보여 주는 시간(맞으면 1.1초, 틀리면 2.2초)
 let BOARD_TIMER = null;
 function startBoard() {
   clearInterval(BOARD_TIMER);
@@ -5526,10 +5528,7 @@ function gameQuiz() {
         <div class="qz-coin">★ ${r.coins} 받았어요</div>
         ${r.capped ? `<p class="qz-cap">코인은 오늘 여기까지예요 — 그래도 기록은 쌓였어요</p>` : ""}
       </div>
-      ${!r.review || !r.review.length ? `<p class="gm-empty">다 맞혔어요!</p>` : `
-        <div class="gm-lab">틀린 문제 — 답을 보고 가요</div>
-        ${r.review.map((v) => `
-          <div class="qz-rv"><b>${esc(v.answer_text)}</b>${v.hint ? `<em>${esc(v.hint)}</em>` : ""}</div>`).join("")}`}
+
       ${quizRetryBtn(r.retry)}
       <button class="gm-go ghost" onclick="App.gameTab(null)">돌아가기</button>
     </div>`;
@@ -5579,11 +5578,59 @@ function gameQuiz() {
         <p class="qz-q"><span class="qz-qn">${S.quizIdx + 1})</span>${esc(item.q)}</p>
       </div>
       <div class="qz-opts${item.kind === "ox" ? " ox" : ""}">
-        ${item.options.map((o, i) => `
-          <button class="qz-op" onclick="App.quizPick(${i + 1})">
-            <span class="qz-k">${i + 1}</span>${esc(o)}</button>`).join("")}
+        ${item.options.map((o, i) => {
+          const f = S.quizFeed;
+          /* 답한 «직후»에만 색이 붙는다 — 정답은 초록, 내가 고른 오답은 빨강.
+             ⚠ 답하기 전에는 서버가 정답을 안 보내므로 여기서 칠할 방법 자체가 없다. */
+          const mark = !f ? "" : (i + 1) === f.answer ? " ok" : (i + 1) === f.picked ? " no" : " dim";
+          return `
+          <button class="qz-op${mark}" ${f ? "disabled" : `onclick="App.quizPick(${i + 1})"`}>
+            <span class="qz-k">${i + 1}</span>${esc(o)}
+            ${mark === " ok" ? `<span class="qz-mk">○</span>` : ""}
+            ${mark === " no" ? `<span class="qz-mk">✕</span>` : ""}</button>`;
+        }).join("")}
       </div>
+      ${quizFeedView()}
     </div>`;
+}
+
+/* 답안지 — **맞힌 것도 전부 보여 준다.**
+   「답을 알려줘야 학습이 된다」는 지시(08-08)라, 틀린 것만 보여주던 방식을 버렸다.
+   ⚠ 답이 새어도 이 판은 finished_at 이 찍혀 다시 못 낸다.
+     다음 판에서 «외운 답»으로 점수를 버는 구멍은 서버가 막는다 —
+     리그 점수는 «그 문제를 처음 맞혔을 때»에만 준다(api_quiz.js 의 seen). */
+function quizSheet(rv) {
+  if (!rv || !rv.length) return "";
+  return `
+    <div class="gm-lab">📝 답안지</div>
+    <div class="qz-sheet">
+      ${rv.map((v) => `
+        <div class="qz-rv ${v.ok ? "o" : "x"}">
+          <span class="qz-rn">${v.no}</span>
+          <div class="qz-rb">
+            <b>${esc(v.q || "")}</b>
+            <em class="ans">정답 ${v.answer}) ${esc(v.answer_text)}</em>
+            ${v.ok ? "" : `<em class="mine">${v.picked
+              ? `내 답 ${v.picked}) ${esc(v.picked_text || "")}` : "시간이 지났어요"}</em>`}
+            ${v.hint ? `<em class="hint">${esc(v.hint)}</em>` : ""}
+          </div>
+          <span class="qz-rm">${v.ok ? "○" : "✕"}</span>
+        </div>`).join("")}
+    </div>`;
+}
+
+/* 답한 직후 — «맞았다/틀렸다»와 정답을 그 자리에서 알려 준다(대표님 지시 08-08).
+   답안지를 마지막에 몰아 주지 않는다. 틀린 순간에 답을 봐야 남는다. */
+function quizFeedView() {
+  const f = S.quizFeed;
+  if (!f) return "";
+  return `
+  <div class="qz-feed ${f.ok ? "o" : "x"}" onclick="App.quizNext()">
+    <b>${f.ok ? "맞았어요!" : "아쉬워요"}</b>
+    ${f.ok ? "" : `<em>정답은 ${f.answer}) ${esc(f.answer_text)}</em>`}
+    ${f.hint ? `<i>${esc(f.hint)}</i>` : ""}
+    <span class="qz-next">${f.last ? "결과 보기 ▶" : "다음 문제 ▶"}</span>
+  </div>`;
 }
 
 function quizSub(q) {
@@ -9467,17 +9514,43 @@ const App = {
     }, 100);
   },
 
-  quizPick(n) {
+  /* 한 문제를 낸다 — **그 자리에서 채점되고 답이 온다**(대표님 지시 08-08).
+     ⚠ 서버가 그 문제를 잠근 뒤에 답을 주므로, 답을 보고 고쳐 낼 수 없다.
+       잠금은 quiz_answer_log 의 UNIQUE 가 DB 수준에서 강제한다. */
+  async quizPick(n) {
     const q = S.quiz;
-    if (!q?.items?.length || S.quizIdx < 0) return;
+    if (!q?.items?.length || S.quizIdx < 0 || S.quizFeed || S._answering) return;
     const item = q.items[S.quizIdx];
     if (!item) return;
-    S.quizPick[item.code] = n;          // null 이면 «시간초과 = 못 풀었다»
-    if (S.quizIdx + 1 >= q.items.length) {
-      clearInterval(QUIZ_TIMER);
-      this.quizSubmit();
-      return;
-    }
+    clearInterval(QUIZ_TIMER);
+    S._answering = true;
+    const c = cur();
+    try {
+      const r = await api(`/children/${c.server_id}/quiz/answer`,
+        { method: "POST", body: { code: item.code, picked: n } });
+      if (!r?.ok) { toast(r?.error?.message || "채점이 안 됐어요"); S._answering = false; this.render(); return; }
+      const d = r.data;
+      S.quizFeed = { ok: d.ok, answer: d.answer, answer_text: d.answer_text,
+                     picked: d.picked, hint: d.hint, last: !!d.final };
+      if (d.final) {
+        S.quizResult = d.final;                 // 마지막 문제였다 — 결과를 들고 있다가 보여 준다
+        if (d.final.coin) S.coin = d.final.coin;
+      }
+    } catch (_) { toast("채점이 안 됐어요"); }
+    S._answering = false;
+    this.render();
+    /* 아이가 답을 읽을 시간을 준다. 누르면 바로 넘어간다. */
+    clearTimeout(FEED_TIMER);
+    FEED_TIMER = setTimeout(() => App.quizNext(), S.quizFeed && S.quizFeed.ok ? 1100 : 2200);
+  },
+
+  /* 다음 문제로 — 피드백을 지우고 타이머를 다시 켠다 */
+  quizNext() {
+    clearTimeout(FEED_TIMER);
+    if (!S.quizFeed) return;
+    const last = S.quizFeed.last;
+    S.quizFeed = null;
+    if (last) { S.quizIdx = -1; this.render(); return; }   // 결과 화면으로
     S.quizIdx += 1;
     this.quizTick();
     this.render();
