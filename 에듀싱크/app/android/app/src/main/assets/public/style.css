@@ -5424,15 +5424,21 @@ body:has(#tabbar.hidden) #screen:has(.ib),
 /* 안쪽 화면들이 부모 테마 토큰으로 그려 놓은 것을 **여기서 갈아입힌다.**
    화면마다 클래스를 새로 만들지 않는다 — 그러면 화면 수만큼 규칙이 늘고 반드시 어긋난다. */
 .gmw .sub-top { background: none; padding-top: 0; }
-.gmw .sub-t, .gmw .sub-t em { color: #fff; text-shadow: 0 2px 6px rgba(0, 0, 0, .2); }
-.gmw .sub-back { background: rgba(255, 255, 255, .28); color: #fff; border-radius: 13px; }
-.gmw .sub-back i { color: #fff; }
+/* ⚠ 흰 글씨는 **그라데이션 위**일 때만 맞다. #mission 처럼 머리가 밝은 면 위에 앉는 화면에서는
+   1.62:1 이 되어 거의 안 보였다(08-08 실측). 진한 글씨로 두고, 어두운 면 위에서만 흰색으로. */
+.gmw .sub-t, .gmw .sub-t em { color: var(--g-ink); }
+.gmw .sub-back { background: color-mix(in srgb, var(--g-ink) 10%, transparent);
+  color: var(--g-ink); border-radius: 13px; }
+.gmw .sub-back i { color: var(--g-ink); }
 
 .gmw .card, .gmw .hv3-card, .gmw .daycard, .gmw .kd2-card, .gmw .kd3-card,
 .gmw .msc, .gmw .st-item, .gmw .tk, .gmw .tk-item, .gmw .dw-recent, .gmw .ms-row {
   background: var(--g-panel); color: var(--g-ink);
   border-radius: 18px; box-shadow: var(--g-shadow); border: none; }
-.gmw h2, .gmw h3, .gmw .sec-t, .gmw .lab { color: #fff; text-shadow: 0 2px 5px rgba(0, 0, 0, .2); }
+/* ⚠ 흰 글씨는 **바탕 위**에서만 맞다. 카드 안까지 칠했더니 흰 카드에 흰 글씨가 되어
+   1.62:1 이 됐다(08-08 실측). 그래서 «직계»만 칠한다. */
+.gmw > h2, .gmw > h3, .gmw > .sec-t, .gmw > .lab,
+.gmw > .gm-lab { color: #fff; text-shadow: 0 2px 5px rgba(0, 0, 0, .2); }
 /* 카드 «안»의 글자는 흰 카드 위라 진한 색이어야 읽힌다 — 바깥 글자와 반대다 */
 .gmw .tk b, .gmw .tk-bd b, .gmw .card b, .gmw .msc b { color: var(--g-ink); }
 .gmw .tk em, .gmw .tk-bd em, .gmw .card em { color: var(--g-sub); font-style: normal; }
@@ -5459,7 +5465,7 @@ body:has(#tabbar.hidden) #screen:has(.ib),
   border-radius: 12px; box-shadow: 0 3px 0 var(--g-gold-d); font-weight: 900; }
 .gmw .st-act button[disabled], .gmw .st-item button[disabled] {
   background: #DDE5F2; color: #95A3BC; box-shadow: none; }
-.gmw .sub, .gmw .quiet, .gmw .muted { color: rgba(255, 255, 255, .82); }
+.gmw > .sub, .gmw > .quiet, .gmw > .muted { color: rgba(255, 255, 255, .9); }
 .gmw .empty-mid, .gmw .empty { color: rgba(255, 255, 255, .9); font-weight: 800; }
 
 .gmw .btn-primary, .gmw .kd2-cta {
@@ -5469,7 +5475,7 @@ body:has(#tabbar.hidden) #screen:has(.ib),
   background: rgba(255, 255, 255, .26); color: #fff; border: none; border-radius: 15px; }
 
 /* 아이 화면 안의 «글자만 있는» 줄도 바탕 위라 흰색이어야 읽힌다 */
-.gmw > p, .gmw > .row > b { color: #fff; }
+.gmw > p { color: #fff; }
 
 /* 게임과 같은 바탕이되 **스크롤이 되는** 껍데기(.gm 은 fixed 라 안 된다) */
 .gmp { --g-panel: #FFFFFF; --g-panel2: #F2F6FF;
@@ -6104,3 +6110,28 @@ body:has(#tabbar.hidden) #screen:has(.ib),
   font-weight: 800; color: var(--muted); letter-spacing: -.01em;
 }
 .dw-none { font-size: 13px; }
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   🔤 보조 글자 대비 (2026-08-08 실측)
+
+   대표님: 「글씨 색상이 어두운 게 아닌 거 같은데?」 — **맞았다.**
+   기기에서 재 보니 보조 글자가 **3.60:1** 이었다(필요 4.5:1).
+   날짜 · 학기 · 안내문 같은 «읽어야 하는» 글자가 전부 그 색이다.
+
+   ⚠ 읽을 수 없는 글자는 **취향이 아니라 결함**이다. 8/4 색 정본이어도 이건 고친다.
+   ⚠ 대신 **색조(hue)는 그대로** 두고 명도만 낮춘다 — 테마의 분위기는 안 바뀐다.
+   ⚠ 이 규칙은 테마 블록보다 **뒤**에 있어야 먹는다. 그래서 파일 끝이다.
+   ══════════════════════════════════════════════════════════════════════ */
+/* ⚠ 테마 블록이 [data-art="theme_13"] 이라 [data-art] 만으로는 **특정성이 같아** 못 이긴다.
+   html 을 붙여 한 단계 올린다(0,1,1). 이게 없으면 고쳐도 그대로 3.60:1 이다(08-08 실측). */
+/* ⚠ 커스텀 속성 안의 color-mix 는 이 웹뷰에서 **무효 처리**된다 — 값이 안 바뀐다(08-08 실측).
+   그래서 계산식이 아니라 **값**으로 적는다. 색조는 기존 회갈색을 유지하고 명도만 낮췄다.
+     밝은 테마  #6B6459 → #514B40   (3.60:1 → 4.5:1 이상)
+     어두운 테마는 이미 밝은 글씨라 그대로 둔다. */
+/* ⚠ 테마는 `:root[data-theme="warmgray"]`(0,2,0)로 정의된다 — `html[data-art]`(0,1,1)로는 **진다.**
+   한 단계 더 올려 (0,2,1)로 만든다. 특정성을 안 맞추면 고쳐도 값이 그대로다(08-08 두 번 겪음). */
+html:root[data-theme] { --muted: #514B40; --card-sub: #514B40; }
+html:root[data-theme="dark"], html:root[data-theme="navy"],
+html:root[data-theme="charcoal"], html:root[data-theme="lavender"] {
+  --muted: #B9B2A6; --card-sub: #B9B2A6; }
