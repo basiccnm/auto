@@ -822,6 +822,7 @@ const S = {
   clear: null,            // 클리어 연출 {icon,name,stars} — 1.2초만 산다
   quizFeed: null,         // 문제 하나를 답한 «직후» 뜨는 정답 — 다음 문제로 넘어가면 사라진다
   schoolMs: null,         // 학교 «미션» 오늘 상태 — 서버 school_missions.js 가 정본
+  msets: null,            // 아침·방과후 «세트 완주» 상태 {morning:{done,all,taken},after:{…}}
                           // ⚠ 전역 SCHOOL(급식·시간표)과 다른 것이다. 이름을 섞지 말 것
   verifyPending: null,    // 부모가 볼 «확인해 주세요» [{verify_id,mission_code,step1_data,...}]
   verifyBusy: null,
@@ -5389,12 +5390,19 @@ function gameCard(catKey) {
   /* 세트 보너스 — 다 하면 얹어 준다. «몇 개 남았는지»가 보여야 마지막 하나를 하게 된다.
      ⚠ 학교 세트는 **서버가** 준다(school_missions.js). 화면이 별을 세지 않는다. */
   const left = Math.max(0, all - done);
-  const taken = catKey === "school" && !!(S.schoolMs && S.schoolMs.bonus_taken);
-  const ready = left === 0 && !taken;
+  /* 「받았나」는 **서버가** 안다. 화면이 기억하면 앱을 껐다 켤 때 어긋난다.
+     학교 세트는 school_missions.js, 아침·방과후 세트는 api_mission.js 가 맡는다
+     — 학교는 해외판에서 통째로 빠져야 해서 파일을 나눴다. */
+  const taken = catKey === "school"
+    ? !!(S.schoolMs && S.schoolMs.bonus_taken)
+    : !!(S.msets && S.msets[catKey] && S.msets[catKey].taken);
+  const ready = all > 0 && left === 0 && !taken;
+  const act = !ready ? null
+    : catKey === "school" ? "App.schoolBonus()" : `App.setBonus('${catKey}')`;
   const bonus = all > 1 ? gameTile({ key: "bonus", icon: "🎁", name: "세트 보너스",
     note: `${all}개 다 하면`, c: "gold", done: taken ? all : done, all,
-    stars: (S.schoolMs && S.schoolMs.bonus) || 2,
-    act: (catKey === "school" && ready) ? "App.schoolBonus()" : null,
+    stars: (catKey === "school" ? (S.schoolMs && S.schoolMs.bonus) : (S.msets && S.msets.bonus)) || 2,
+    act,
     foot: taken ? "받았어요" : ready ? "눌러서 받기!" : `${left}개 남음` }) : "";
 
   return `
@@ -8959,6 +8967,7 @@ const App = {
     /* 자녀 화면에선 토스트 대신 **축하 오버레이** — 완료 순간이 이 앱의 봉우리다(테마 시안 확정). */
     if (isChildToken() || S.childView) { S.kidHooray = { title: m?.title || "", stars: d.got }; this.render(); }
     else toast(`★${d.got} 받았어요!`);
+    this.loadMissionSets(true);   // 세트가 완주됐는지는 **서버가** 판단한다
   },
   /* 다음 장으로. 마지막이면 처음으로 돌아온다 — 막다른 끝을 만들지 않는다. */
   deckNext() { const n = deckCards().length; if (n > 1) S.deckIdx = (S.deckIdx + 1) % n; this.render(); },
@@ -9413,7 +9422,10 @@ const App = {
     S.gameTab = k || null;
     if (k === "today" && S.quiz === null) this.loadQuiz();
     if (k === "shop" && S.store === null) this.loadStore();
-    if ((k === "morning" || k === "after") && S.missions === null) this.loadMissions();
+    if (k === "morning" || k === "after") {
+      if (S.missions === null) this.loadMissions();
+      if (S.msets === null) this.loadMissionSets();
+    }
     if (k === "school" && S.schoolMs === null) this.loadSchoolMissions();
     this.render();
   },
@@ -9446,6 +9458,36 @@ const App = {
       else if (r?.status === 404) S.schoolMs = { available: false, items: [], done: 0, all: 0 };
     } catch (_) {}
     S._schoolBusy = false;
+    this.render();
+  },
+
+  /* 아침·방과후 세트 완주 — 학교 세트와 같은 규칙이되 파일이 다르다(위 주석 참조) */
+  async loadMissionSets(force) {
+    const c = cur();
+    if (!TOKENS.access || !c?.server_id) return;
+    if (S.msets && !force) return;
+    try {
+      const r = await api(`/children/${c.server_id}/mission-sets`);
+      if (r?.ok) S.msets = { ...r.data.sets, bonus: r.data.sets?.morning?.bonus || 2 };
+    } catch (_) {}
+    this.render();
+  },
+
+  async setBonus(slot) {
+    const c = cur();
+    if (!c?.server_id) return;
+    try {
+      const r = await api(`/children/${c.server_id}/mission-sets/bonus`, { method: "POST", body: { slot } });
+      if (r?.ok && r.data.granted > 0) {
+        if (r.data.coin) S.coin = r.data.coin;
+        await this.loadMissionSets(true);
+        this.clearShow(slot === "morning" ? "🌅" : "📚",
+                       slot === "morning" ? "아침 미션" : "방과후 미션", r.data.granted);
+        return;
+      }
+      if (r?.ok && r.data.already) toast("이미 받았어요");
+      else if (!r?.ok) toast(r?.error?.message || "지금은 받을 수 없어요");
+    } catch (_) { toast("지금은 받을 수 없어요"); }
     this.render();
   },
 
@@ -9522,6 +9564,7 @@ const App = {
     this.loadCoin();
     if (S.missions === null) this.loadMissions();
     if (S.schoolMs === null) this.loadSchoolMissions();
+    if (S.msets === null) this.loadMissionSets();
     if (S.store === null) this.loadStore();
   },
 

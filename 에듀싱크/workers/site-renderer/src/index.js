@@ -2567,6 +2567,7 @@ export default {
            «그 아이인지»는 각 파일의 gate() 가 한 번 더 본다 — 여기서는 경로 모양만 본다. */
         /^\/api\/v1\/children\/\d+\/quiz(\/(retry|answer|stats))?\/?$/,
         /^\/api\/v1\/children\/\d+\/school-missions(\/bonus)?\/?$/,
+        /^\/api\/v1\/children\/\d+\/mission-sets(\/bonus)?\/?$/,
         /* 상점 — 아이는 «바꾸기»만 한다(진열대 편집·티켓 처리는 부모 것이라 gate 가 막는다) */
         /^\/api\/v1\/children\/\d+\/store\/?$/,
         /^\/api\/v1\/children\/\d+\/store\/buy\/?$/,

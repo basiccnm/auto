@@ -670,6 +670,71 @@ async function marks(request, db, env, childId) {
   return apiOk({ month, days });
 }
 
+/* ══ 세트 완주 보너스 (2026-08-08, 기획서 v2 §01) ══════════════════════
+   아침·방과후 «세트»를 다 깨면 얹어 준다. 학교 세트는 school_missions.js 가 따로 맡는다
+   (그건 국내 전용이라 해외판에서 통째로 빠져야 하기 때문이다).
+
+   ⚠ 「한 번만」의 근거는 **원장의 reason 문자열**이다 — `set:<slot>:<ymd>`.
+     상태 칼럼을 새로 만들지 않는다. 칼럼과 원장이 어긋나면 되돌릴 근거가 사라진다.
+   ⚠ 화면이 «다 했다»고 말해도 믿지 않는다. **여기서 다시 센다.**
+   ⚠ 오늘 배정된 미션이 0개면 «완주»가 아니다 — 아무것도 안 하고 보너스를 먹는 길을 막는다. */
+const SET_SLOTS = { morning: ["morning"], after: ["after", "evening", "any"] };
+
+async function setState(db, childId, ymd) {
+  const { results } = await db.prepare(
+    `SELECT m.slot, a.status FROM mission_assign a
+       JOIN missions m ON m.code = a.mission_code
+      WHERE a.child_id = ? AND a.ymd = ?`
+  ).bind(childId, ymd).all();
+  const out = {};
+  for (const key of Object.keys(SET_SLOTS)) {
+    const want = SET_SLOTS[key];
+    const rows = (results || []).filter((r) => want.indexOf(r.slot || "any") >= 0);
+    out[key] = { done: rows.filter((r) => r.status === "done").length, all: rows.length };
+  }
+  return out;
+}
+
+async function missionSets(request, db, env, childId) {
+  const g = await gate(request, db, env, childId);
+  if (g.err) return g.err;
+  const ymd = ymdKst();
+  const st = await setState(db, g.child.id, ymd);
+  for (const key of Object.keys(st)) {
+    const had = await db.prepare("SELECT 1 x FROM star_ledger WHERE child_id = ? AND reason = ?")
+      .bind(g.child.id, "set:" + key + ":" + ymd).first();
+    st[key].taken = !!had;
+    st[key].bonus = BONUS.setComplete;
+  }
+  return apiOk({ ymd, sets: st });
+}
+
+async function claimSetBonus(request, db, env, childId) {
+  const g = await gate(request, db, env, childId);
+  if (g.err) return g.err;
+  if (g.auth.role !== "child") return apiErr("FORBIDDEN", null, "아이만 받을 수 있어요.");
+  const b = await readJson(request);
+  const key = String(b?.slot || "");
+  if (!SET_SLOTS[key]) return apiErr("VALIDATION", null, "그런 세트는 없어요.");
+
+  const ymd = ymdKst();
+  const st = (await setState(db, g.child.id, ymd))[key];
+  if (!st.all) return apiErr("VALIDATION", { done: 0, all: 0 }, "오늘은 그 세트가 없어요.");
+  if (st.done < st.all) {
+    return apiErr("VALIDATION", { done: st.done, all: st.all },
+      (st.all - st.done) + "개 더 하면 받을 수 있어요.");
+  }
+
+  const reason = "set:" + key + ":" + ymd;
+  const had = await db.prepare("SELECT 1 x FROM star_ledger WHERE child_id = ? AND reason = ?")
+    .bind(g.child.id, reason).first();
+  if (had) return apiOk({ granted: 0, already: true, coin: await coinState(db, g.child.id) });
+
+  const got = await grantStars(db, g.child.id, BONUS.setComplete, reason);
+  return apiOk({ granted: got.granted, capped: got.capped, slot: key,
+                 coin: await coinState(db, g.child.id) });
+}
+
 export async function handleMissionApi(request, db, env, url) {
   const p = url.pathname, m = request.method;
 
@@ -683,6 +748,12 @@ export async function handleMissionApi(request, db, env, url) {
 
   x = p.match(/^\/api\/v1\/children\/(\d+)\/marks\/?$/);
   if (x && m === "GET") return marks(request, db, env, x[1]);
+
+  // 세트 완주 보너스 — ⚠ `/missions/?$` 보다 **먼저**(더 긴 경로가 앞)
+  x = p.match(/^\/api\/v1\/children\/(\d+)\/mission-sets\/?$/);
+  if (x && m === "GET") return missionSets(request, db, env, x[1]);
+  x = p.match(/^\/api\/v1\/children\/(\d+)\/mission-sets\/bonus$/);
+  if (x && m === "POST") return claimSetBonus(request, db, env, x[1]);
 
   // 🎲 리롤 — ⚠ 아래 `/missions/?$` 보다 **먼저** 잡아야 한다(더 긴 경로가 앞)
   x = p.match(/^\/api\/v1\/children\/(\d+)\/missions\/reroll$/);

@@ -222,6 +222,16 @@ python scripts/d1_apply.py scripts/migrate_xxx.sql --remote   # 원격
 ⚠ 앞으로 아이 화면에 API 를 붙이면 **이 목록에 올렸는지 반드시 확인**할 것.
    `test_school_missions.sh` ⑥ 이 그것을 지킨다.
 
+### ✅ 세트 완주 보너스 — 화면이 약속한 ★2 를 서버가 준다
+
+타일이 「＋★2」를 약속하는데 **주는 곳이 없었다**(학교 세트만 있었다). 붙였다.
+
+- `GET /children/{id}/mission-sets` · `POST …/bonus {slot}` (api_mission.js)
+- 학교 세트는 `school_missions.js` 가 따로 맡는다 — **해외판에서 통째로 빠져야 해서 파일을 나눴다**
+- 「한 번만」의 근거는 원장의 `reason='set:<slot>:<ymd>'`
+- ⚠ **오늘 배정된 미션이 0개면 완주가 아니다** — 아무것도 안 하고 먹는 길을 막는다
+- ⚠ 화면이 「다 했다」고 말해도 안 믿는다. 서버가 다시 센다
+
 **남은 STAGE 0** — 언어팩 키 정리 · 원격 마이그레이션 + 워커 배포 · APK 빌드/실기 몽타주 ·
 미션 완주 시 클리어 연출을 실제 완료 흐름에 연결(`clearShow` 호출 지점)
 

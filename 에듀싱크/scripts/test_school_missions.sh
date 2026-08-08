@@ -137,6 +137,39 @@ AK=$(ka POST "/children/$CID/store" '{"title":"몰래","stars_required":1}')
 want "진열대 편집은 아이가 못 한다" "$AK" 'FORBIDDEN'
 
 echo
+echo "── ⑦ 아침·방과후 세트 완주 보너스 ────────────────────────"
+#    학교 세트와 «같은 규칙, 다른 파일»이다(학교는 해외판에서 통째로 빠져야 하므로).
+#    ⚠ 오늘 배정된 미션이 0개면 «완주»가 아니다 — 아무것도 안 하고 먹는 길을 막는다.
+MS0=$(pa GET "/children/$CID/mission-sets")
+want "세트 상태가 온다"        "$MS0" '"morning"'
+E0=$(ka POST "/children/$CID/mission-sets/bonus" '{"slot":"morning"}')
+want "배정이 없으면 못 받는다" "$E0" '오늘은 그 세트가 없어요'
+E1=$(ka POST "/children/$CID/mission-sets/bonus" '{"slot":"없는것"}')
+want "없는 세트는 거절"        "$E1" '그런 세트는 없어요'
+
+# 아침 미션 2개를 배정하고 하나만 끝낸 상태를 만든다
+YMD=$(echo "$MS0" | grep -oE '"ymd":"[0-9]+"' | cut -d'"' -f4)
+# 로컬 D1 에는 카탈로그가 비어 있을 수 있다 — 시험이 쓸 미션 2개를 직접 심는다
+d1 "INSERT OR IGNORE INTO missions (code, band, season, title, area, minutes, cycle, verify, slot, stars, active, created_at) VALUES ('T-MORN-1','all','weekday','시험 아침미션1','body',0,'daily','self','morning',1,1,'$NOW')" >/dev/null
+d1 "INSERT OR IGNORE INTO missions (code, band, season, title, area, minutes, cycle, verify, slot, stars, active, created_at) VALUES ('T-MORN-2','all','weekday','시험 아침미션2','body',0,'daily','self','morning',1,1,'$NOW')" >/dev/null
+MC=$(d1 "SELECT code FROM missions WHERE slot='morning' AND active=1 LIMIT 2" | grep -oE '"code": *"[^"]*"' | cut -d'"' -f4)
+i=0
+for c in $MC; do
+  i=$((i+1))
+  d1 "INSERT OR IGNORE INTO mission_assign (child_id, mission_code, ymd, status, stars, created_at) VALUES ($CID,'$c','$YMD','$([ $i = 1 ] && echo done || echo open)',1,'$NOW')" >/dev/null
+done
+E2=$(ka POST "/children/$CID/mission-sets/bonus" '{"slot":"morning"}')
+want "덜 했으면 «몇 개 더»로 막는다" "$E2" '개 더 하면'
+d1 "UPDATE mission_assign SET status='done' WHERE child_id=$CID AND ymd='$YMD'" >/dev/null
+E3=$(ka POST "/children/$CID/mission-sets/bonus" '{"slot":"morning"}')
+G3=$(num "$E3" granted)
+[ "${G3:-0}" -gt 0 ] && ok "다 하면 세트 보너스 (★$G3)" || bad "아침 세트 보너스" "$E3"
+E4=$(ka POST "/children/$CID/mission-sets/bonus" '{"slot":"morning"}')
+want "두 번은 안 준다" "$E4" '"already":true'
+MS1=$(pa GET "/children/$CID/mission-sets")
+want "받았다고 표시된다" "$MS1" '"taken":true'
+
+echo
 echo "════════════════════════════════════════════════════════"
 echo "  통과 $PASS · 실패 $FAIL"
 [ "$FAIL" -eq 0 ] || exit 1
