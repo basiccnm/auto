@@ -821,6 +821,8 @@ const S = {
   gmTheme: null,          // 아이 배경색 (sky|lime|lav|sunset|mint) — 부모 테마와 무관
   clear: null,            // 클리어 연출 {icon,name,stars} — 1.2초만 산다
   quizFeed: null,         // 문제 하나를 답한 «직후» 뜨는 정답 — 다음 문제로 넘어가면 사라진다
+  schoolMs: null,         // 학교 «미션» 오늘 상태 — 서버 school_missions.js 가 정본
+                          // ⚠ 전역 SCHOOL(급식·시간표)과 다른 것이다. 이름을 섞지 말 것
   verifyPending: null,    // 부모가 볼 «확인해 주세요» [{verify_id,mission_code,step1_data,...}]
   verifyBusy: null,
   step1For: null,         // 1차 제출 시트를 띄운 미션 code (아이 화면)
@@ -5315,28 +5317,20 @@ function gmSec(q) {
   return (it && it.sec) || 5;
 }
 
-/* 학교 미션 — 「제공자」. 미션 시스템은 이 함수가 무엇을 읽는지 모른다.
-   ⚠ 해외판에서는 이 함수를 통째로 안 끼운다(그러면 `null` 을 돌려 카드가 사라진다). */
+/* 학교 미션 — 「제공자」. **서버의 school_missions.js 하나가 정본이다.**
+   ⚠ 목록·아이콘·문구를 여기에 또 적지 않는다 — 나라를 늘릴 때 두 곳을 고쳐야 한다.
+   ⚠ 해외판은 서버에서 그 파일을 빼면 `available:false`(또는 404)가 오고,
+     그러면 아래가 null 을 돌려 **홈이 3칸이 된다.** 앱은 고칠 것이 없다. */
 function schoolMissionsSummary() {
-  const c = curView();
-  /* ⚠ 아이 객체는 `school_id` 가 아니라 **`school.id`** 다(BLANK_CHILD 도 `school:{}`).
-     `school_id` 로 보면 카드가 조용히 사라진다 — 실기에서 3칸만 뜨는 걸로 잡았다(08-08). */
-  const sid = c && (c.school?.id || c.school_id);
-  if (!sid) return null;                    // 학교가 없으면 이 갈래 자체가 없다
-  const list = schoolMissionList();
-  return { done: list.filter((x) => x.done).length, all: list.length,
-           stars: list.reduce((a, x) => a + x.stars, 0) };
+  const s = S.schoolMs;
+  if (!s || s.available === false || !s.items?.length) return null;
+  return { done: s.done, all: s.all,
+           stars: s.items.reduce((a, x) => a + (x.stars || 0), 0) };
 }
 function schoolMissionList() {
-  const t = S.today || {};
-  return [
-    { key: "meal",    icon: "🍚", name: "오늘 급식",   note: "별점만 누르면 끝",  stars: 1,
-      done: !!t.meal_rated,   go: "#childmealrate" },
-    { key: "friend",  icon: "🙌", name: "오늘 누구랑", note: "친구 이름 고르기",  stars: 1,
-      done: !!t.friend_logged, go: "#childfriend" },
-    { key: "subject", icon: "✏️", name: "재밌던 수업", note: "시간표에서 고르기", stars: 1,
-      done: !!t.subject_logged, go: "#childsubject" },
-  ];
+  const s = S.schoolMs;
+  if (!s || !s.items?.length) return [];
+  return s.items.map((x) => ({ ...x, go: "#" + x.go }));
 }
 
 /* 타일 하나 — 홈에서도 카드 안에서도 이 함수 하나를 쓴다 */
@@ -5345,9 +5339,10 @@ function gameTile(t) {
   const clear = t.all > 0 && t.done >= t.all;
   return `
   <button class="gm-tile c-${t.c}${clear ? " clear" : t.done < t.all ? " todo" : ""}${t.boss ? " boss" : ""}"
-    ${t.go ? `onclick="location.hash='${t.go}'"`
+    ${t.act ? `onclick="${t.act}"`
+    : t.go ? `onclick="location.hash='${t.go}'"`
     : t.tap ? `onclick="App.missionDone(${t.tap})"`
-    : t.key === "bonus" ? ""
+    : t.key === "bonus" ? "disabled"
     : `onclick="App.gameTab('${t.key}')"`}>
     ${t.kr ? `<span class="gm-kr">학교정보</span>` : ""}
     ${clear ? `<span class="gm-stamp">CLEAR</span>` : ""}
@@ -5391,11 +5386,16 @@ function gameCard(catKey) {
     })).join("");
   }
 
-  /* 세트 보너스 — 다 하면 얹어 준다. «몇 개 남았는지»가 보여야 마지막 하나를 하게 된다 */
+  /* 세트 보너스 — 다 하면 얹어 준다. «몇 개 남았는지»가 보여야 마지막 하나를 하게 된다.
+     ⚠ 학교 세트는 **서버가** 준다(school_missions.js). 화면이 별을 세지 않는다. */
   const left = Math.max(0, all - done);
+  const taken = catKey === "school" && !!(S.schoolMs && S.schoolMs.bonus_taken);
+  const ready = left === 0 && !taken;
   const bonus = all > 1 ? gameTile({ key: "bonus", icon: "🎁", name: "세트 보너스",
-    note: `${all}개 다 하면`, c: "gold", done, all, stars: 2,
-    foot: left ? `${left}개 남음` : "받았어요" }) : "";
+    note: `${all}개 다 하면`, c: "gold", done: taken ? all : done, all,
+    stars: (S.schoolMs && S.schoolMs.bonus) || 2,
+    act: (catKey === "school" && ready) ? "App.schoolBonus()" : null,
+    foot: taken ? "받았어요" : ready ? "눌러서 받기!" : `${left}개 남음` }) : "";
 
   return `
     ${gmHead(icon, name, `오늘 ${done} / ${all} · 모으면 ★${stars}`)}
@@ -7371,6 +7371,8 @@ const App = {
     if (["game"].includes(name) && S.loggedIn) { this.loadCoin(); if (S.missions === null) this.loadMissions(); }
     if (["store", "home", "game", "childview"].includes(name) && S.loggedIn && S.store === null) this.loadStore();
     if (["tickets", "store"].includes(name) && S.loggedIn && S.rewards === null) this.loadRewards();
+    // 게임 화면 — 카드가 하나씩 뒤늦게 뜨면 «고장»으로 읽힌다. 들어올 때 한 번에 부른다
+    if (name === "game" && S.loggedIn) this.gameEnter();
     if (["mission", "home"].includes(name) && S.loggedIn && S.verifyPending === null) this.loadVerify();
     if (name === "childmode" && S.loggedIn && S.pinHas === null) this.loadPinState();
     if ((isChildToken() || S.childView || S.kidMode) && ["childview", "home", "store"].includes(name)
@@ -9002,6 +9004,7 @@ const App = {
 
     noteMark(TODAY, { meal: d.stars });   // 달력 «아이 흔적»에 남긴다(§3) — 실제로 준 별점 그대로
     S.mealRated = true;
+    App.loadSchoolMissions(true);   // 학교 미션 카드를 새로 받는다(1/3 → 2/3)
     S.mealDraft = { stars: 0, best: null };
     S.kidHooray = { title: "급식 평가", stars: got };
     location.hash = "#childview";
@@ -9023,6 +9026,7 @@ const App = {
       S.missionStars = (S.missionStars || 0) + 1;   // 목업 전용
     }
     S.subjectLogged = true;
+    App.loadSchoolMissions(true);   // 학교 미션 카드를 새로 받는다(1/3 → 2/3)
     S.subjectBest = null;
     S.kidHooray = { title: "오늘 재밌었던 것", stars: got };
     location.hash = "#childview";
@@ -9073,6 +9077,7 @@ const App = {
       S.missionStars = (S.missionStars || 0) + 1;   // 목업 전용
     }
     S.friendLogged = true;
+    App.loadSchoolMissions(true);   // 학교 미션 카드를 새로 받는다(1/3 → 2/3)
     S.friendDraft = { picked: [], alone: false, adding: null };
     S.kidHooray = { title: "오늘 논 친구", stars: got };
     location.hash = "#childview";
@@ -9409,6 +9414,7 @@ const App = {
     if (k === "today" && S.quiz === null) this.loadQuiz();
     if (k === "shop" && S.store === null) this.loadStore();
     if ((k === "morning" || k === "after") && S.missions === null) this.loadMissions();
+    if (k === "school" && S.schoolMs === null) this.loadSchoolMissions();
     this.render();
   },
 
@@ -9425,6 +9431,46 @@ const App = {
   },
 
   clearClose() { S.clear = null; this.render(); },
+
+  /* 학교 미션 오늘 상태 — **서버가 정본**이다. 화면이 «했나»를 스스로 세지 않는다.
+     ⚠ 실패하면 null 로 두어 다시 묻는다. `[]` 로 굳히면 카드가 영영 안 뜬다(08-07 사고). */
+  async loadSchoolMissions(force) {
+    const c = cur();
+    if (!TOKENS.access || !c?.server_id) return;
+    if (S.schoolMs && !force) return;
+    if (S._schoolBusy) return;
+    S._schoolBusy = true;
+    try {
+      const r = await api(`/children/${c.server_id}/school-missions`);
+      if (r?.ok) S.schoolMs = r.data;
+      else if (r?.status === 404) S.schoolMs = { available: false, items: [], done: 0, all: 0 };
+    } catch (_) {}
+    S._schoolBusy = false;
+    this.render();
+  },
+
+  /* 세트 완주 보너스 — 셋 다 했을 때만 서버가 준다. 화면은 «달라고» 할 뿐이다.
+     주고 나면 클리어 연출을 띄운다(기획서 v2 §01.3 — 세트를 완주한 «순간»에만). */
+  async schoolBonus() {
+    const c = cur();
+    if (!c?.server_id || S._schoolBusy) return;
+    S._schoolBusy = true;
+    try {
+      const r = await api(`/children/${c.server_id}/school-missions/bonus`, { method: "POST", body: {} });
+      if (r?.ok && r.data.granted > 0) {
+        if (r.data.coin) S.coin = r.data.coin;
+        S._schoolBusy = false;
+        await this.loadSchoolMissions(true);
+        this.clearShow("🏫", "학교 미션", r.data.granted);
+        return;
+      }
+      if (r?.ok && r.data.already) toast("이미 받았어요");
+      else if (r?.ok && !r.data.cleared) toast("아직 다 못 했어요");
+      else if (!r?.ok) toast(r?.error?.message || "지금은 받을 수 없어요");
+    } catch (_) { toast("지금은 받을 수 없어요"); }
+    S._schoolBusy = false;
+    this.render();
+  },
 
   /* 세트를 완주한 «순간»에만 연출한다. 개별 완료는 조용히 — 매번 띄우면 성가신 것이 된다.
      1.2초 뒤 저절로 닫힌다(누르면 즉시). 딱지는 타일에 하루 종일 남는다. */
@@ -9469,6 +9515,14 @@ const App = {
       }
     } catch (_) {}
     this.render();
+  },
+
+  /* 게임 화면에 들어올 때 한 번에 불러온다 — 카드가 하나씩 뒤늦게 뜨면 «고장»으로 읽힌다 */
+  gameEnter() {
+    this.loadCoin();
+    if (S.missions === null) this.loadMissions();
+    if (S.schoolMs === null) this.loadSchoolMissions();
+    if (S.store === null) this.loadStore();
   },
 
   async loadQuiz(force) {

@@ -40,7 +40,10 @@ import { handleOrdersApi, confirmOrderByAdmin, cancelOrderByAdmin } from "./api_
 import { handleSupportApi, answerInquiry, closeInquiry } from "./api_support.js";
 import { handleMissionApi, missionCron } from "./api_mission.js";
 import { handleRewardApi } from "./api_reward.js";
-import { handleQuizApi } from "./api_quiz.js";       // 데일리 퀴즈 (2026-08-08)   // 별도장 상점·2단계 보상 (2026-08-07)
+import { handleQuizApi } from "./api_quiz.js";
+/* 🏫 학교 미션 «제공자» — 이 import 하나가 국내판과 해외판을 가른다(기획서 v2 §09).
+   빼면 홈이 4칸에서 3칸이 되고, 나머지 미션 시스템은 그대로 돈다. */
+import { handleSchoolMissionApi } from "./school_missions.js";
 import { deleteChildCascade, deleteRecordAssets } from "./data_children.js";
 import { withdrawAccount } from "./data_accounts.js";
 import { findAccountByToken } from "./auth_core.js";
@@ -2558,6 +2561,18 @@ export default {
         /^\/api\/v1\/missions\/meal-rate\/?$/,
         /^\/api\/v1\/missions\/play-log\/?$/,
         /^\/api\/v1\/missions\/subject-log\/?$/,
+        /* 🎮 미션 게임 (2026-08-08) — **아이 폰이 게임의 집이다.**
+           여기 안 올리면 아이 토큰으로는 퀴즈도 상점도 안 열린다. 실측으로 잡았다:
+           서버는 멀쩡한데 아이 화면에서만 «권한이 없어요»가 떴다.
+           «그 아이인지»는 각 파일의 gate() 가 한 번 더 본다 — 여기서는 경로 모양만 본다. */
+        /^\/api\/v1\/children\/\d+\/quiz(\/(retry|answer|stats))?\/?$/,
+        /^\/api\/v1\/children\/\d+\/school-missions(\/bonus)?\/?$/,
+        /* 상점 — 아이는 «바꾸기»만 한다(진열대 편집·티켓 처리는 부모 것이라 gate 가 막는다) */
+        /^\/api\/v1\/children\/\d+\/store\/?$/,
+        /^\/api\/v1\/children\/\d+\/store\/buy\/?$/,
+        /^\/api\/v1\/children\/\d+\/rewards\/?$/,
+        /* 2단계 검증 — 1차(아이가 냄)는 아이 것이다. 보너스(2차)는 부모 것이라 gate 가 막는다 */
+        /^\/api\/v1\/children\/\d+\/verify\/?$/,
       ];
       let res = null;
       if (path === "/api/v1/auth/child-claim" && request.method === "POST") {
@@ -2617,6 +2632,8 @@ export default {
         if (!res) res = await handleRewardApi(request, db, env, url);
         // 데일리 퀴즈도 /children/{id}/* 를 나눠 쓴다 (2026-08-08)
         if (!res) res = await handleQuizApi(request, db, env, url);
+        // 학교 미션 제공자 — 국내판에서만 끼운다(기획서 v2 §09)
+        if (!res) res = await handleSchoolMissionApi(request, db, env, url);
         // 서류·대화·커뮤니티가 그다음(자녀 하위 경로를 공유). 자기 것이 아니면 null을 주고 넘긴다.
         if (!res) res = await handleLifeApi(request, db, env, url, a);
         if (!res) res = await handleRecordsApi(request, db, env, url);

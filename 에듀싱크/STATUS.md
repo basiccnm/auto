@@ -192,6 +192,36 @@ python scripts/d1_apply.py scripts/migrate_xxx.sql --remote   # 원격
 
 마이그레이션 `scripts/migrate_quiz_perq_2026-08-08.sql`(+rollback) · 실측 **41/41**.
 
+### ✅ 🏫 학교정보 연결 — 「제공자」로 물리적으로 잘랐다 (2026-08-08 밤)
+
+**`workers/site-renderer/src/school_missions.js` 이 파일 하나가 「자르는 선」이다.**
+
+```
+미션 시스템 ──(school_missions.js)──> 학교정보(급식·친구·시간표)
+```
+
+- 미션 시스템은 `meal_ratings`·`play_days`·`subject_log` 를 **직접 조회하지 않는다**
+- **해외판 = `index.js` 의 import 한 줄을 뺀다** → 경로가 404 가 되고 홈이 4칸에서 3칸이 된다.
+  앱은 고칠 것이 없다(`available:false` 또는 404 를 같은 길로 처리)
+- 제목·아이콘·이동 경로도 **서버가 준다** — 앱에 또 적으면 나라를 늘릴 때 두 곳을 고쳐야 한다
+- 세트 완주 보너스(★2)는 **원장의 `reason='school-set:YYYYMMDD'`** 로 한 번만.
+  상태 칼럼을 새로 만들지 않았다 — 칼럼과 원장이 어긋나면 되돌릴 근거가 사라진다
+
+`GET /children/{id}/school-missions` (부모도 읽기 가능) ·
+`POST …/bonus` (아이만). 실측 `scripts/test_school_missions.sh` **27/27**.
+
+### 🔴🔴 출시 막던 진짜 결함 — 아이 토큰이 게임에 못 들어갔다
+
+`index.js` 의 **자녀 토큰 관문**(경로 화이트리스트)에 게임 경로가 하나도 없었다.
+**아이 폰이 게임의 집인데** 퀴즈·상점·티켓·학교미션이 전부 「권한이 없어요」로 막혔다.
+서버는 멀쩡해서 로그로는 안 보이고, **아이 토큰으로 실제로 불러 봐야** 나온다.
+
+올린 경로 — `/children/{id}/quiz(/retry|/answer|/stats)` · `/school-missions(/bonus)` ·
+`/store` · `/store/buy` · `/rewards` · `/verify`
+⚠ 진열대 편집·티켓 처리·2차 보너스는 **일부러 안 올렸다** — 그건 부모 것이고 각 `gate()` 가 또 막는다.
+⚠ 앞으로 아이 화면에 API 를 붙이면 **이 목록에 올렸는지 반드시 확인**할 것.
+   `test_school_missions.sh` ⑥ 이 그것을 지킨다.
+
 **남은 STAGE 0** — 언어팩 키 정리 · 원격 마이그레이션 + 워커 배포 · APK 빌드/실기 몽타주 ·
 미션 완주 시 클리어 연출을 실제 완료 흐름에 연결(`clearShow` 호출 지점)
 
