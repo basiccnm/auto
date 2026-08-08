@@ -491,35 +491,54 @@ async function pinClear(request, db, env) {
 //  ⚠ index.js 의 **접두어 화이트리스트**에 경로를 안 넣으면 여기까지 오지도 못하고
 //    HTML 404 로 새어나간다(2026-07-27 supplies 에서 실측). 반드시 같이 등록할 것.
 // ════════════════════════════════════════════════════════════
-/* ══ 부모가 스탬프를 직접 준다 (2026-08-08, 대표님 지시) ══════════════
-   「추가 스탬프를 줄 수 있는 확인하는 곳이 없잖아」 — 관리 화면에서 부르는 자리다.
-   미션·퀴즈 말고도 부모가 «오늘 정말 잘했어»로 얹어 줄 길이 필요하다.
+/* ══ 미션 «추가 증정» (2026-08-08, 대표님 지시) ═══════════════════════
+   「자녀한테 스탬프를 주면 안 돼. 이건 **미션에서 추가 증정으로 1개씩만** 줄 수 있게 해야지」
 
-   ⚠ **하루 상한을 탄다.** 상한이 있는 이유가 «부모가 늘려도 코인 가치가 안 무너지게»인데
-     이 길만 무제한이면 그 이유가 통째로 사라진다. 걸리면 깎아서 주고 그렇다고 말해 준다.
-   ⚠ **리그 점수는 안 준다.** 부모가 아이 순위를 사 줄 수 있으면 리그가 성립하지 않는다
-     (같은 이유로 부모 미션 점수도 고정이다 — 기획서 v2 §02.3).
-   ⚠ 사유를 원장에 남긴다. 나중에 «왜 늘었지»를 되짚을 근거가 그것뿐이다. */
-async function giveStars(request, db, env, childId) {
+   ⚠ 부모가 아무 때나 원하는 만큼 주는 길은 **없앴다.** 그렇게 두면
+     코인의 값어치가 그날 부모 기분이 되고, 「무엇을 잘해서 받았는지」가 안 남는다.
+     이제는 **해낸 미션 하나를 지목해서 ＋1** 이다 — 이유가 미션에 붙어 남는다.
+
+   규칙
+     · 한 번에 **＋1** (금액을 안 받는다)
+     · **그 미션당 한 번만** — 근거는 원장의 `reason='bonus:<assignId>'`
+     · 오늘 것이고 **끝낸 미션**이어야 한다
+     · 하루 상한을 탄다(상한이 있는 이유가 여기서도 같다)
+     · 리그 점수는 안 준다 — 부모가 순위를 사 줄 수 없어야 한다 */
+async function bonusOne(request, db, env, childId) {
   const { child, isChild, err } = await gate(request, db, env, childId);
   if (err) return err;
-  if (isChild) return apiErr("FORBIDDEN", null, "스탬프는 부모님만 줄 수 있어요.");
+  if (isChild) return apiErr("FORBIDDEN", null, "부모님만 줄 수 있어요.");
 
   const b = await readJson(request);
-  const n = parseInt(b?.amount, 10);
-  if (!(n >= 1 && n <= 20)) {
-    return apiErr("VALIDATION", null, "한 번에 1~20개까지 줄 수 있어요.");
-  }
-  const why = String(b?.reason || "").trim().slice(0, 30);
+  const id = parseInt(b?.assign_id, 10);
+  if (!(id > 0)) return apiErr("VALIDATION", null, "어떤 미션인지 골라 주세요.");
 
-  const g = await grantStars(db, child.id, n, "parent:" + (why || "칭찬"));
-  return apiOk({
-    granted: g.granted,
-    capped: g.capped,          // 상한에 걸려 깎였으면 화면이 «오늘은 여기까지»를 말한다
-    asked: n,
-    reason: why || "칭찬",
-    coin: await coinState(db, child.id),
-  });
+  const a = await db.prepare(
+    "SELECT id, status, ymd, mission_code FROM mission_assign WHERE id = ? AND child_id = ?"
+  ).bind(id, child.id).first();
+  if (!a) return apiErr("NOT_FOUND", null, "그 미션이 없어요.");
+  if (a.status !== "done") return apiErr("VALIDATION", null, "아직 끝내지 않은 미션이에요.");
+  if (a.ymd !== ymdKst()) return apiErr("VALIDATION", null, "오늘 미션에만 줄 수 있어요.");
+
+  const reason = "bonus:" + a.id;
+  const had = await db.prepare("SELECT 1 x FROM star_ledger WHERE child_id = ? AND reason = ?")
+    .bind(child.id, reason).first();
+  if (had) return apiOk({ granted: 0, already: true, assign_id: a.id,
+                          coin: await coinState(db, child.id) });
+
+  const g = await grantStars(db, child.id, 1, reason);
+  return apiOk({ granted: g.granted, capped: g.capped, assign_id: a.id,
+                 coin: await coinState(db, child.id) });
+}
+
+/* 오늘 «추가 증정»을 이미 준 미션이 무엇인지 — 화면이 버튼을 끄는 근거 */
+async function bonusGiven(request, db, env, childId) {
+  const { child, err } = await gate(request, db, env, childId);
+  if (err) return err;
+  const { results } = await db.prepare(
+    "SELECT reason FROM star_ledger WHERE child_id = ? AND reason LIKE 'bonus:%'"
+  ).bind(child.id).all();
+  return apiOk({ given: (results || []).map((r) => parseInt(String(r.reason).slice(6), 10)) });
 }
 
 export async function handleRewardApi(request, db, env, url) {
@@ -527,9 +546,10 @@ export async function handleRewardApi(request, db, env, url) {
   let x;
 
   // 진열대
-  // 부모가 스탬프를 직접 주는 자리 — ⚠ /store 보다 먼저 잡을 필요는 없지만 위쪽에 둔다
-  x = p.match(/^\/api\/v1\/children\/(\d+)\/stars\/?$/);
-  if (x && m === "POST") return giveStars(request, db, env, x[1]);
+  // 미션 «추가 증정» — 해낸 미션 하나에 ＋1. 자유 지급은 없다(위 주석 참조)
+  x = p.match(/^\/api\/v1\/children\/(\d+)\/mission-bonus\/?$/);
+  if (x && m === "POST") return bonusOne(request, db, env, x[1]);
+  if (x && m === "GET") return bonusGiven(request, db, env, x[1]);
 
   x = p.match(/^\/api\/v1\/children\/(\d+)\/store\/?$/);
   if (x) {

@@ -135,6 +135,12 @@ no   "학교 미션이 막히지 않는다" "$SMK" 'FORBIDDEN'
 #    반대로 «부모 것»은 아이가 못 건드려야 한다
 AK=$(ka POST "/children/$CID/store" '{"title":"몰래","stars_required":1}')
 want "진열대 편집은 아이가 못 한다" "$AK" 'FORBIDDEN'
+#    ⚠ GET 만 보면 안 된다 — «바꾸기»는 /store/{상품id}/buy 라 경로 모양이 다르다.
+#      한때 화이트리스트에 /store/buy 로 적어 두어 아이가 못 바꿨다(08-08 두 폰 실측).
+SI=$(pa POST "/children/$CID/store" '{"title":"시험간식","stars_required":1}' | grep -oE '"item_id":"[^"]*"' | cut -d'"' -f4)
+BUY=$(ka POST "/children/$CID/store/$SI/buy" '{}')
+no   "아이가 «바꾸기»를 할 수 있다" "$BUY" 'FORBIDDEN'
+want "바꾸면 티켓이 생긴다"        "$BUY" '"reward_order_id"'
 
 echo
 echo "── ⑦ 아침·방과후 세트 완주 보너스 ────────────────────────"

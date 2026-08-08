@@ -4152,7 +4152,8 @@ body:has(#tabbar.hidden) #screen:has(.hv3-star),
 #screen:has(.hv3-star) { padding-bottom: 112px; }
 
 .hv3-dim { position: fixed; inset: 0; background: rgba(0, 0, 0, .38); z-index: 300; }
-.hv3-drawer { position: absolute; top: 0; bottom: 0; left: 0; width: min(78vw, 300px);
+/* ⚠ 좁으면 메뉴 글자가 두 줄로 접힌다 — 오른쪽으로 늘렸다(대표님 지시 08-08) */
+.hv3-drawer { position: absolute; top: 0; bottom: 0; left: 0; width: min(88vw, 344px);
   background: var(--drawer-a); box-shadow: 8px 0 30px rgba(0, 0, 0, .25);
   animation: hv3in .18s ease-out; display: flex; flex-direction: column; }
 @keyframes hv3in { from { transform: translateX(-30%); opacity: .5; } to { transform: none; opacity: 1; } }
@@ -4867,7 +4868,7 @@ body:has(#tabbar.hidden) #screen:has(.ib),
    «메뉴가 너무 떨어져 있다 · 한 화면에 다 보였으면 · 지금보다 적게 열렸으면»
    ⚠ 항목 높이는 줄이되 **터치 최소 44px 은 지킨다** — 여기서 더 조이면 잘못 눌린다.
    ⚠ 폭을 줄이면 「내 정보 · 설정」 같은 긴 줄이 두 줄로 접힌다 → nowrap 으로 막는다. */
-.hv3-drawer { width: min(68vw, 258px); }
+.hv3-drawer { width: min(80vw, 300px); }
 .hv3-drlogo { padding: calc(env(safe-area-inset-top) + 14px) 18px 8px; font-size: 17px; }
 .hv3-drwho { padding: 12px 18px 12px; gap: 10px; }
 .hv3-drwho .nm b { font-size: 15.5px; }
@@ -4898,7 +4899,7 @@ body:has(#tabbar.hidden) #screen:has(.ib),
 .hv3-art { margin-top: 0; }
 /* 서랍 폭 — 가장 긴 줄(「내 정보 · 설정」 155px) 기준으로 **남는 공간을 반으로**(2026-08-04 지시).
    245px 이던 것이 빈 자리 90px 이었다 → 200px. 여기서 더 줄이면 글자가 접힌다. */
-.hv3-drawer { width: min(58vw, 200px); }
+.hv3-drawer { width: min(72vw, 250px); }
 
 /* ── 상단 줄 마무리 (2026-08-04) ──────────────────────────────────
    ⚠ 원형 버튼이 **38×44 타원**이었다. 폭만 줄이고 높이를 안 막았더니 flex 가
@@ -5377,52 +5378,67 @@ body:has(#tabbar.hidden) #screen:has(.ib),
 .dy-big em { font-style: normal; font-size: 14.5px; font-weight: 800; color: var(--ink); }
 .dy-big i { font-style: normal; font-size: 12px; font-weight: 700; color: var(--muted); }
 
-/* ═══ 🧭 부모 관리 화면 (2026-08-08) ═══════════════════════════════════
-   ⚠ **부모 테마 토큰을 쓴다**(--card-a/--ink/--accent). 여기는 관리자 화면이고,
-     게임 팔레트(--g-*)는 아이 세계 전용이다. 섞으면 부모 앱이 갑자기 아이 것처럼 보인다.
-   ⚠ 화려할 필요가 없다. **알아보기 쉬우면 된다.** */
+/* ═══ 🧭 부모 미션 관리 화면 (2026-08-08) ═══════════════════════════════
+   대표님 지시(08-08): 「부모페이지도 아이와 같은 느낌으로 — 어차피 이건 별도잖아」
+
+   그래서 **색과 질감은 게임과 같이**, **구조는 관리자 화면 그대로** 간다.
+   미션·보상은 부모 앱의 다른 화면들과 «다른 구획»이라 테마 18종을 따라갈 이유가 없다.
+   ⚠ 대신 2×2 타일은 안 쓴다 — 부모는 «보고 누르는» 사람이라 줄이 읽기 쉽다.
+   ⚠ 부모 앱의 나머지 화면(홈·기록·설정)은 그대로 테마를 탄다. 여기만 별도다. */
+
+/* 게임과 같은 바탕이되 **스크롤이 되는** 껍데기(.gm 은 fixed 라 안 된다) */
+.gmp { --g-panel: #FFFFFF; --g-panel2: #F2F6FF;
+  --g-ink: #16203A; --g-sub: #5B6B8C;
+  --g-gold: #FFC531; --g-gold-d: #E8930B; --g-gold-ink: #7A4E00;
+  --g-lime: #38D46A; --g-shadow: 0 5px 0 rgba(0, 0, 0, .12);
+  min-height: 100vh; margin: 0 -20px -24px;
+  padding: 4px 14px calc(env(safe-area-inset-bottom) + 24px);
+  background: linear-gradient(180deg, #4A9BFF, #7C5CFF); }
 .pm-top { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 4px; }
-.pm-big { padding: 13px 8px; border-radius: 16px; background: var(--card-a); text-align: center; }
-.pm-big b { display: block; font-size: 19px; font-weight: 900; color: var(--card-ink);
+.pm-big { padding: 13px 8px; border-radius: 16px; background: var(--g-panel);
+  box-shadow: var(--g-shadow); text-align: center; }
+.pm-big b { display: block; font-size: 19px; font-weight: 900; color: var(--g-ink);
   font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
 .pm-big em { display: block; margin-top: 3px; font-style: normal; font-size: 11px;
-  font-weight: 800; color: var(--card-sub); }
+  font-weight: 800; color: var(--g-sub); }
 
 .pm-h { display: flex; align-items: center; gap: 8px; margin: 22px 0 9px;
-  font-size: 15px; font-weight: 900; color: var(--ink); }
+  font-size: 15px; font-weight: 900; color: #fff;
+  text-shadow: 0 2px 5px rgba(0, 0, 0, .2); }
 .pm-h em { font-style: normal; min-width: 22px; padding: 2px 8px; border-radius: 999px;
-  background: var(--accent); color: var(--on-accent); font-size: 12px; font-weight: 900; }
-.pm-none { margin: 0; padding: 16px; border-radius: 14px; background: var(--card-a);
-  font-size: 13.5px; font-weight: 700; color: var(--card-sub); text-align: center; }
+  background: #FF6BAA; color: #fff; font-size: 12px; font-weight: 900; }
+.pm-none { margin: 0; padding: 16px; border-radius: 14px; background: rgba(255,255,255,.26);
+  font-size: 13.5px; font-weight: 800; color: #fff; text-align: center; }
 
 .pm-go { display: flex; align-items: center; gap: 11px; width: 100%; margin-top: 8px;
   min-height: 56px; padding: 0 15px; border: none; border-radius: 16px;
-  background: var(--card-a); color: var(--card-ink); font-family: inherit; text-align: left; }
+  background: var(--g-panel); color: var(--g-ink); box-shadow: var(--g-shadow);
+  font-family: inherit; text-align: left; }
 .pm-go b { flex: 1; min-width: 0; font-size: 15px; font-weight: 800; }
 .pm-i { flex: none; font-size: 21px; }
 .pm-cnt { flex: none; min-width: 26px; padding: 4px 10px; border-radius: 999px;
-  background: var(--accent); color: var(--on-accent); font-size: 13px; font-weight: 900;
+  background: #FF6BAA; color: #fff; font-size: 13px; font-weight: 900;
   font-variant-numeric: tabular-nums; }
-.pm-arw { flex: none; font-size: 19px; font-weight: 900; color: var(--card-sub); }
+.pm-arw { flex: none; font-size: 19px; font-weight: 900; color: #C3CEE2; }
 
-/* 스탬프 주기 — 숫자 버튼 셋. 「몇 개 들어갔는지」는 서버가 말한다 */
-.pm-give { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
-.pm-amt { min-height: 58px; border: none; border-radius: 16px; font-family: inherit;
-  background: var(--accent); color: var(--on-accent); font-size: 20px; font-weight: 900;
-  font-variant-numeric: tabular-nums; }
-.pm-amt[disabled] { opacity: .5; }
-.pm-fine { margin: 8px 0 0; font-size: 11.5px; font-weight: 700; color: var(--muted);
+/* 추가 증정 — 해낸 미션 줄 오른쪽의 ＋1. 「몇 개 들어갔는지」는 서버가 말한다 */
+.pm-plus { flex: none; min-width: 56px; min-height: 40px; border: none; border-radius: 12px;
+  font-family: inherit; background: var(--g-gold); color: var(--g-gold-ink);
+  font-size: 15px; font-weight: 900; box-shadow: 0 3px 0 var(--g-gold-d); }
+.pm-plus[disabled] { opacity: .5; }
+.pm-fine { margin: 8px 0 0; font-size: 11.5px; font-weight: 800; color: rgba(255,255,255,.8);
   text-align: center; }
 
 /* 오늘 한 것 — 읽기 전용 줄 */
 .pm-row { display: flex; align-items: center; gap: 11px; margin-top: 8px;
-  padding: 13px 15px; border-radius: 15px; background: var(--card-a); }
-.pm-row b { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 800; color: var(--card-ink); }
-.pm-n { flex: none; font-size: 13.5px; font-weight: 900; color: var(--card-sub);
+  padding: 13px 15px; border-radius: 15px; background: var(--g-panel);
+  box-shadow: var(--g-shadow); }
+.pm-row b { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 800; color: var(--g-ink); }
+.pm-n { flex: none; font-size: 13.5px; font-weight: 900; color: var(--g-sub);
   font-variant-numeric: tabular-nums; }
 .pm-ok { flex: none; padding: 3px 9px; border-radius: 999px; background: #D6F7E2;
   color: #1E7B43; font-size: 11px; font-weight: 900; }
-.pm-sub { flex: none; font-size: 11.5px; font-weight: 800; color: var(--card-sub); }
+.pm-sub { flex: none; font-size: 11.5px; font-weight: 800; color: var(--g-sub); }
 
 /* ═══════════════════════════════════════════════════════════════════════
    🎮 미션 게임 — 아이의 세계 (2026-08-08, 기획서 v2 §01 · 시안 v4 「B안」)

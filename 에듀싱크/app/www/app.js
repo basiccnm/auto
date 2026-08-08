@@ -824,7 +824,8 @@ const S = {
   schoolMs: null,         // 학교 «미션» 오늘 상태 — 서버 school_missions.js 가 정본
   msets: null,            // 아침·방과후 «세트 완주» 상태 {morning:{done,all,taken},after:{…}}
   gamePreview: false,     // 부모가 «아이 화면»을 일부러 들여다보는 중
-  giveBusy: false,        // 스탬프 주기 중복 누름 방지
+  giveBusy: false,        // 추가 증정 중복 누름 방지
+  bonusGiven: null,       // 오늘 «추가 증정»을 이미 준 미션 id 들 — 서버가 정본
                           // ⚠ 전역 SCHOOL(급식·시간표)과 다른 것이다. 이름을 섞지 말 것
   verifyPending: null,    // 부모가 볼 «확인해 주세요» [{verify_id,mission_code,step1_data,...}]
   verifyBusy: null,
@@ -2576,10 +2577,10 @@ const Screens = {
            ⚠ 여기에 「가입하기」 버튼을 뒀다가 걷어냈다. 들어오자마자 가입을 들이밀면
              «구경하러 왔는데 문 앞에서 붙잡는» 꼴이다. 가입 길은 서랍(☰)에 있으면 족하다.
            ⚠ 빈 알약은 그리지 않는다 — «내 아이가 사라졌나»로 읽힌다. -->
-      ${c ? `<button class="hd-who" onclick="location.hash='#switch'">
-        ${childFace(c, "hd-face")}<b>${esc(c.nickname)}</b><i aria-hidden="true" class="ti ti-chevron-down"></i>
-      </button>`
-        : `<span class="hd-gap"></span>`}
+      <!-- ⚠ 자녀 «프로필 칩»을 걷어냈다(대표님 지시 08-08).
+           아이를 바꾸는 길은 **서랍 안**에 그대로 있다(hv3-drwho) — 입구가 둘일 이유가 없고,
+           맨 위 줄이 비면 그림이 더 크게 보인다. -->
+      <span class="hd-gap"></span>
       <!-- 서랍은 저빈도지만 «이 앱이 뭐 하는 앱인가»를 말하는 자리다 — 항상 보이게 둔다(§1) -->
       <button class="hd-box" onclick="location.hash='#timeline'" aria-label="서랍">
         <i aria-hidden="true" class="ti ti-archive"></i>
@@ -2676,7 +2677,7 @@ const Screens = {
       const kid = isChildToken() || S.childView || S.kidMode;
       const n = kid ? 0 : (S.verifyPending || []).length;
       if (!n) return "";
-      return `<button class="hv3-card need" onclick="location.hash='#mission'">
+      return `<button class="hv3-card need" onclick="location.hash='#game'">
         <div class="hv3-hdrow">
           <span class="ic"><i aria-hidden="true" class="ti ti-eye"></i></span>
           <b>확인해 주세요</b><span class="cnt">${n}</span>
@@ -2696,7 +2697,7 @@ const Screens = {
          «회원이 보는 진짜 홈 그대로»가 원칙이므로 빈 상태 카드를 그대로 보여 준다. */
       const done = (list || []).filter((x) => x.status === "done").length;
       if (!list || !list.length) {
-        return `<button class="hv3-card" onclick="location.hash='#mission'">
+        return `<button class="hv3-card" onclick="location.hash='#game'">
           <div class="hv3-hdrow">
             <span class="ic"><i aria-hidden="true" class="ti ti-target"></i></span>
             <b>오늘 미션</b><em class="val">아직 없어요</em>
@@ -2705,7 +2706,7 @@ const Screens = {
           /* ⚠ 설명 한 줄을 덧붙이지 않는다(2026-08-07 지시). 다른 카드는 «제목 + 값 + ›» 한 줄인데
              여기만 «골라 주면 아이가…» 를 달아 두면 그 카드만 튀고, 매번 읽을 말도 아니다. */
       }
-      return `<button class="hv3-card" onclick="location.hash='#mission'">
+      return `<button class="hv3-card" onclick="location.hash='#game'">
         <div class="hv3-hdrow">
           <span class="ic"><i aria-hidden="true" class="ti ti-target"></i></span>
           <b>오늘 미션</b><em class="val">${done}/${list.length}</em>
@@ -5289,6 +5290,7 @@ function parentMissionAdmin(c, coin) {
 
   return `
   ${subHeader(nm + " 미션 관리")}
+  <div class="gmp">
 
   <!-- 오늘 한눈에 -->
   <div class="pm-top">
@@ -5307,13 +5309,26 @@ function parentMissionAdmin(c, coin) {
     ${!waitTicket ? "" : `<button class="pm-go" onclick="location.hash='#tickets'">
       <span class="pm-i">🎟</span><b>바꿔 달라고 한 것</b><span class="pm-cnt">${waitTicket}</span></button>`}`}
 
-  <!-- ② 스탬프 주기 — 미션 말고 부모가 직접 -->
-  <h3 class="pm-h">스탬프 주기</h3>
-  <div class="pm-give">
-    ${[1, 3, 5].map((n) => `
-      <button class="pm-amt" ${S.giveBusy ? "disabled" : ""} onclick="App.giveStars(${n})">＋${n}</button>`).join("")}
-  </div>
-  <p class="pm-fine">오늘 받은 것이 ${coin.limit}개를 넘으면 넘는 만큼은 안 들어가요</p>
+  <!-- ② 추가 증정 — **해낸 미션 하나에 ＋1**. 자유 지급은 없다(대표님 지시 08-08).
+       그렇게 두면 코인 값어치가 그날 부모 기분이 되고 «무엇을 잘해서 받았는지»가 안 남는다. -->
+  <h3 class="pm-h">추가 증정</h3>
+  ${(() => {
+    const done = (S.missions || []).filter((x) => x.status === "done");
+    if (!done.length) return `<p class="pm-none">아이가 미션을 끝내면 여기서 ＋1을 얹어 줄 수 있어요</p>`;
+    const given = S.bonusGiven || [];
+    return done.map((x) => {
+      const had = given.indexOf(x.id) >= 0;
+      return `
+      <div class="pm-row">
+        <span class="pm-i">⭐</span>
+        <b>${esc(x.title)}</b>
+        ${had ? `<span class="pm-ok">＋1 줬어요</span>`
+              : `<button class="pm-plus" ${S.giveBusy ? "disabled" : ""}
+                   onclick="App.missionBonus(${x.id})">＋1</button>`}
+      </div>`;
+    }).join("");
+  })()}
+  <p class="pm-fine">한 미션에 한 번만 · 오늘 받은 것이 ${coin.limit}개를 넘으면 안 들어가요</p>
 
   <!-- ③ 오늘 아이가 한 것 (읽기) -->
   <h3 class="pm-h">오늘 아이가 한 것</h3>
@@ -5331,7 +5346,7 @@ function parentMissionAdmin(c, coin) {
     <span class="pm-i">🎯</span><b>미션 고르기</b><span class="pm-arw">›</span></button>
   <button class="pm-go" onclick="App.gamePreviewOn()">
     <span class="pm-i">👀</span><b>아이 화면 미리보기</b><span class="pm-arw">›</span></button>
-  `;
+  </div>`;
 }
 
 /* ═══ 🎮 아이 화면 조각 (2026-08-08, 기획서 v2 §01 · 시안 v4 B안) ═══════
@@ -7443,13 +7458,22 @@ const App = {
        #home 으로 떨어졌고 라우터는 그걸 그대로 부모 홈으로 그렸다.
        주소도 같이 되돌린다 — 안 그러면 뒤로가기가 계속 부모 화면을 두드린다. */
     if (isChildToken() && !CHILD_SCREENS.includes(name)) {
-      name = "childview";
-      if (location.hash !== "#childview") history.replaceState(null, "", "#childview");
+      name = "game";
+      if (location.hash !== "#game") history.replaceState(null, "", "#game");
+    }
+    /* 🎮 **아이 폰의 홈은 게임이다**(대표님 지적 08-08: 「아이폰 화면을 봐봐 이거 아니잖아」).
+       옛 자녀 홈(childview — 카드 덱)이 홈으로 남아 있어서, 아이가 앱을 켜면
+       게임이 아니라 예전 화면을 봤다. 급식·친구·수업 입력 화면은 그대로 살아 있고,
+       이제 «학교 미션» 카드를 눌러 들어간다.
+       ⚠ 부모의 «아이 화면 미리보기»(S.kidMode)도 같은 길로 게임을 본다. */
+    if ((isChildToken() || S.kidMode) && (name === "childview" || name === "home")) {
+      name = "game";
+      if (location.hash !== "#game") history.replaceState(null, "", "#game");
     }
     /* 🔒 아이 모드 — 열어 줄 화면은 넷뿐(§5④). 서랍만 감추면 주소·뒤로가기로 샌다 */
-    if (S.kidMode && !["home", "game", "mission", "store", "tickets"].includes(name)) {
-      name = "home";
-      if (location.hash !== "#home") history.replaceState(null, "", "#home");
+    if (S.kidMode && !["game", "mission", "store", "tickets"].includes(name)) {
+      name = "game";                       // 아이 모드의 홈도 게임이다(위 주석 참조)
+      if (location.hash !== "#game") history.replaceState(null, "", "#game");
     }
     // 연결이 끝난 자녀폰 — 로그인으로 조용히 튕기지 않는다(2026-08-02 구멍 2-2)
     if (S.childLinkEnded && !["childexpired", "childlink", "terms", "policy"].includes(name)) {
@@ -7457,7 +7481,7 @@ const App = {
       if (location.hash !== "#childexpired") history.replaceState(null, "", "#childexpired");
     }
     // 자녀 앱 첫 실행(연결 직후) — 테마를 먼저 고른다. 고르기 전엔 홈이 없다.
-    if (isChildToken() && name === "childview" && !S.kidTheme) {
+    if (isChildToken() && (name === "game" || name === "childview") && !S.kidTheme) {
       name = "childtheme";
       if (location.hash !== "#childtheme") history.replaceState(null, "", "#childtheme");
     }
@@ -7465,7 +7489,7 @@ const App = {
     applyKidTheme((isChildToken() || S.childView) && CHILD_SCREENS.includes(name) && name !== "login");
     /* 자녀 토큰인데 «내가 누군지»를 모르면 자녀 화면이 통째로 죽는다(빈 화면 — 2026-08-02 실측).
        앱을 지웠다 깔거나 저장이 날아간 경우다. 흰 화면 대신 **코드 다시 넣는 화면**으로 보낸다. */
-    if (isChildToken() && name === "childview" && !cur()) {
+    if (isChildToken() && (name === "game" || name === "childview") && !cur()) {
       name = "childlink";
       if (location.hash !== "#childlink") history.replaceState(null, "", "#childlink");
     }
@@ -7477,7 +7501,7 @@ const App = {
       // 자녀폰에 결제·내정보·로그아웃을 열어주면 안 된다(2026-08-03 에뮬 실기에서 잡음)
       name = isChildToken() ? "childlocked" : "locked";
     }
-    if (name !== "home" && name !== "childview") S.chatOpen = false;   // 대화창은 홈·자녀 뷰에만 산다
+    if (name !== "home" && name !== "childview" && name !== "game") S.chatOpen = false;
     /* 고객센터에 들어올 때 내 문의를 한 번 받아온다. 앱 시작마다 받아오면 쓰지도 않을 요청이
        하나 늘어 첫 화면이 늦어진다 — 필요한 자리에서만 부른다(체감속도 작업과 같은 규칙). */
     if ((name === "help" || name === "asks") && S.loggedIn && S.inquiries === null) this.loadInquiries();
@@ -9558,23 +9582,35 @@ const App = {
   gamePreviewOn() { S.gamePreview = true; S.gameTab = null; this.gameEnter(); this.render(); },
   gamePreviewOff() { S.gamePreview = false; S.gameTab = null; this.render(); },
 
-  /* 부모가 스탬프를 직접 준다. ⚠ 몇 개가 실제로 들어갔는지는 **서버가** 말한다 —
-     하루 상한에 걸리면 깎여서 들어가고, 화면이 미리 세어 두면 거짓말이 된다. */
-  async giveStars(n) {
+  /* 해낸 미션 하나에 ＋1 을 얹어 준다. ⚠ 몇 개가 실제로 들어갔는지는 **서버가** 말한다 —
+     하루 상한에 걸리면 깎여서 들어가고, 화면이 미리 세어 두면 거짓말이 된다.
+     ⚠ 자유 지급(＋3·＋5)은 없앴다 — 대표님 지시(08-08). */
+  async missionBonus(assignId) {
     const c = cur();
     if (!c?.server_id || S.giveBusy) return;
     S.giveBusy = true; this.render();
     try {
-      const r = await api(`/children/${c.server_id}/stars`, { method: "POST", body: { amount: n } });
-      if (!r?.ok) toast(r?.error?.message || "스탬프를 못 줬어요");
+      const r = await api(`/children/${c.server_id}/mission-bonus`, { method: "POST", body: { assign_id: assignId } });
+      if (!r?.ok) toast(r?.error?.message || "못 줬어요");
       else {
         if (r.data.coin) S.coin = r.data.coin;
-        toast(r.data.capped
-          ? `★${r.data.granted}만 들어갔어요 — 오늘은 여기까지예요`
-          : `★${r.data.granted} 줬어요!`);
+        S.bonusGiven = [...(S.bonusGiven || []), assignId];
+        toast(r.data.already ? "이미 줬어요"
+          : r.data.capped ? "오늘은 여기까지예요" : "★1 얹어 줬어요!");
       }
-    } catch (_) { toast("스탬프를 못 줬어요"); }
+    } catch (_) { toast("못 줬어요"); }
     S.giveBusy = false;
+    this.render();
+  },
+
+  async loadBonusGiven(force) {
+    const c = cur();
+    if (!TOKENS.access || !c?.server_id) return;
+    if (S.bonusGiven && !force) return;
+    try {
+      const r = await api(`/children/${c.server_id}/mission-bonus`);
+      if (r?.ok) S.bonusGiven = r.data.given || [];
+    } catch (_) {}
     this.render();
   },
 
@@ -9703,6 +9739,7 @@ const App = {
     if (S.rewards === null) this.loadRewards();   // 티켓 개수가 «…» 로 남지 않게
     if (S.quiz === null) this.loadQuiz();         // 관리 화면의 «오늘의 미션» 줄
     if (S.verifyPending === null) this.loadVerify();
+    if (S.bonusGiven === null) this.loadBonusGiven();
   },
 
   async loadQuiz(force) {

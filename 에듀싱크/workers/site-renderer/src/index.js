@@ -2570,7 +2570,11 @@ export default {
         /^\/api\/v1\/children\/\d+\/mission-sets(\/bonus)?\/?$/,
         /* 상점 — 아이는 «바꾸기»만 한다(진열대 편집·티켓 처리는 부모 것이라 gate 가 막는다) */
         /^\/api\/v1\/children\/\d+\/store\/?$/,
-        /^\/api\/v1\/children\/\d+\/store\/buy\/?$/,
+        // ⚠ 실제 경로는 /store/{상품id}/buy 다. 한때 /store/buy 로 적어 두어
+        //   아이가 «바꾸기»를 누르면 FORBIDDEN 이 났다(08-08 두 폰 실측으로 잡음).
+        //   경로 모양을 손으로 적을 때는 **라우터의 정규식과 나란히 놓고** 확인할 것.
+        //   ⚠ 블록 주석(/* … */) 안에 경로를 쓰지 말 것 — `**/buy` 의 `*/` 가 주석을 거기서 닫는다.
+        /^\/api\/v1\/children\/\d+\/store\/[\w-]+\/buy\/?$/,
         /^\/api\/v1\/children\/\d+\/rewards\/?$/,
         /* 2단계 검증 — 1차(아이가 냄)는 아이 것이다. 보너스(2차)는 부모 것이라 gate 가 막는다 */
         /^\/api\/v1\/children\/\d+\/verify\/?$/,
