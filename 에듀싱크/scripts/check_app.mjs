@@ -57,7 +57,9 @@ console.log("\n② 색이 테마를 따르나");
   let depth = 0, inDef = false, inGame = false;
   const hits = [];
   lines.forEach((ln, i) => {
-    if (ln.includes("--g-sky1")) inGame = true;   // 게임 전용 팔레트 시작(아래 주석)
+    /* 게임 전용 팔레트 구역 — ⚠ `--g-sky1` 하나만 보면 `.gmw`·`.gmp` 의 정의를 놓친다.
+       그쪽은 `--g-panel` 부터 시작해서 자기 정의가 통째로 «오탐»으로 잡혔다(08-08). */
+    if (/--g-[a-z]/.test(ln)) inGame = true;
     if (depth === 0 && defRe.test(ln) && ln.includes("{")) inDef = true;
     depth += (ln.match(/\{/g) || []).length - (ln.match(/\}/g) || []).length;
     // 닫는 줄을 먼저 빼면 안 된다 — 테마 블록은 마지막 줄에 선언과 } 가 같이 있어서
@@ -69,8 +71,32 @@ console.log("\n② 색이 테마를 따르나");
     // 무관한 «다른 세계»라, 여기를 테마 토큰으로 «고치면» 8/4 처럼 부모 카드색까지
     // 물들어 전부 퍼음해진다. 건드리지 말 것.
     if (inGame) return;
+    /* ══ 「테마를 타면 안 되는 색」은 통과시킨다 (2026-08-08 전수 확인) ══
+       96곳을 하나씩 본 결과 **거의 전부 의도적**이었다. 종류가 넷이다 —
+
+         ① 의미색   완료 초록(#2F9E6E) · 별 노랑(#FFC531) 같은 «뜻이 있는» 색.
+                    테마마다 「완료」가 다른 색이면 뜻이 흐려진다.
+         ② 아이콘색 급식=초록 · 사진=보라 처럼 **종류를 알려주는** 색(--ic-a/b/f).
+         ③ 브랜드색 카카오(#FEE500) · 네이버(#03C75A) — 규정상 바꾸면 안 된다.
+         ④ 견본색   .ka-* · .sw-* 는 **색 자체가 내용**이다(고르라고 늘어놓은 칩).
+
+       이걸 매번 실패로 잡으면 검사기를 아무도 안 보게 된다 — 그게 더 나쁘다.
+       ⚠ 목록에 색을 더할 때는 **왜 테마를 타면 안 되는지**를 여기 같이 적을 것. */
+    const MEANING = new Set(["2F9E6E","1F7A55","17603F","FFC531","F0B429","E0A93E","E8A100",
+      "F0AE10","FFD87A","9A6B00","8A6400","7A5200","5A3D00","3A2A00","3A2708","8A5B00","8A6200",
+      "9A4B10","FEE500","03C75A","C9EBE1","0B6B57","E2F5EF","FFEDDD","FBDCC2","E1D3FB","5B3AA6",
+      "F0E7FF","FBD0DE","A32250","FFE6EE","E8EAF0","3D465C","FFF3D6","FAE6B4","3A506F","2C4E80",
+      "BFD6FF","E3C089","8B4223","2F9E6E",
+      "8A6A00","E89B00",   // 로그인 — 테마를 «고르기 전» 화면이라 고정색이 맞다
+      "FFEFC2","8A5A00","D6F7E2","1E7B43"]);   // 티켓 상태 배지(기다림·받음) — 의미색
+    // 색 견본 줄(.ka-* · .sw-*)은 색이 곧 내용이다 — 통째로 건너뛴다
+    if (/\.(ka|sw)-[a-z]/i.test(ln)) return;
+    /* 그라데이션은 «한 색»이 아니라 **그림**이다 — 토큰 하나로 대체할 수 없다.
+       ★ 버튼의 3D 노랑, 온보딩 일러스트 배경 같은 것들이다(08-08 전수 확인 44곳). */
+    if (/gradient\(/.test(ln)) return;
     // 토큰이 있는데도 박아 쓴 색 — 채도 있는 것만(흰·검·회는 그림자·선이라 뺀다)
     for (const m of ln.matchAll(/#([0-9a-fA-F]{6})\b/g)) {
+      if (MEANING.has(m[1].toUpperCase())) continue;
       const [r, g, b] = [0, 2, 4].map((k) => parseInt(m[1].slice(k, k + 2), 16));
       const max = Math.max(r, g, b), min = Math.min(r, g, b);
       if (max - min < 28) continue;                 // 무채색 — 그림자·경계선

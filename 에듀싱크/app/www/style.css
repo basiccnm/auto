@@ -6041,9 +6041,11 @@ body:has(#tabbar.hidden) #screen:has(.ib),
 /* 터치 영역만 넓히기 — 설정·기록 화면의 작은 토글들(전수검사 08-08).
    ⚠ **보이는 크기는 안 바꾼다.** 여기는 8/4 정본 구역이고, 버튼을 키우면 줄 배치가 흔들린다.
       누를 넓이만 가상 요소로 44px 을 깔아 준다 — 눈에는 아무 변화가 없다. */
-.cl-on, .cl-off, .swt, .ml-alarm, .dy-go, .tl-go { position: relative; }
+.cl-on, .cl-off, .swt, .ml-alarm, .dy-go, .tl-go,
+.mp-seg > button, .mk-chip, .dw-acts > button { position: relative; }
 .cl-on::before, .cl-off::before, .swt::before, .ml-alarm::before,
-.dy-go::before, .tl-go::before {
+.dy-go::before, .tl-go::before,
+.mp-seg > button::before, .mk-chip::before, .dw-acts > button::before {
   content: ""; position: absolute; left: 50%; top: 50%;
   min-width: 44px; min-height: 44px; width: 100%; height: 100%;
   transform: translate(-50%, -50%);
