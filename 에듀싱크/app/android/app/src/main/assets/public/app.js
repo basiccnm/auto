@@ -817,7 +817,13 @@ const S = {
   quizLeft: 0,            // 남은 초
   quizResult: null,       // 채점 결과 {correct, coins, review, ...}
   quizStats: null,        // 분야별 정답률 (박사 뱃지)
-  gameTab: "today",       // today | quiz | shop
+  gameTab: null,          // null=홈(2×2 타일) | morning | school | after | today | shop | profile
+  gmTheme: null,          // 아이 배경색 (sky|lime|lav|sunset|mint) — 부모 테마와 무관
+  clear: null,            // 클리어 연출 {icon,name,stars} — 1.2초만 산다
+  quizFeed: null,         // 문제 하나를 답한 «직후» 뜨는 정답 — 다음 문제로 넘어가면 사라진다
+  schoolMs: null,         // 학교 «미션» 오늘 상태 — 서버 school_missions.js 가 정본
+  msets: null,            // 아침·방과후 «세트 완주» 상태 {morning:{done,all,taken},after:{…}}
+                          // ⚠ 전역 SCHOOL(급식·시간표)과 다른 것이다. 이름을 섞지 말 것
   verifyPending: null,    // 부모가 볼 «확인해 주세요» [{verify_id,mission_code,step1_data,...}]
   verifyBusy: null,
   step1For: null,         // 1차 제출 시트를 띄운 미션 code (아이 화면)
@@ -2146,41 +2152,52 @@ const Screens = {
      ⚠ 코인·리밋은 **서버가 준 값만** 쓴다. 화면이 더하거나 세지 않는다. */
   game: () => {
     const c = curView();
-    const coin = S.coin || { stars: 0, earned_today: 0, limit: 30, room: 30 };
+    const coin = S.coin || { stars: 0, earned_today: 0, limit: COIN_LIMIT, room: COIN_LIMIT, level: 1 };
+
+    /* 안쪽 화면(카드를 열었거나 상점·프로필)이면 그쪽을 그린다.
+       ⚠ 탭이 아니다 — 탭은 부모 앱의 문법이고, 아이 화면은 «들어갔다 나오는» 문법이다. */
+    const inner = { morning: 1, school: 1, after: 1, today: 1, shop: 1, profile: 1 }[S.gameTab];
+    if (inner) {
+      /* 문제를 푸는 «동안»에는 배경이 붉어진다 — 보스전이라는 신호이자,
+         배경색 5종 중 무엇을 골랐든 이 순간만은 같은 긴장감이 되게 한다(시안 v4 ②). */
+      const playing = S.gameTab === "today" && !S.quizResult && S.quiz
+                   && !S.quiz.done && S.quizIdx >= 0;
+      return `<div class="gm ${playing ? "qzp" : gmTheme()}">${
+        S.gameTab === "shop"    ? gameShop()
+      : S.gameTab === "profile" ? gameProfile(c, coin)
+      : S.gameTab === "today"   ? gameQuiz()
+      :                           gameCard(S.gameTab)
+      }</div>${stickerView()}${clearView()}`;
+    }
+
     const pct = coin.limit ? Math.min(100, Math.round((coin.earned_today / coin.limit) * 100)) : 0;
-
-    /* 칭호 — 누적이 아니라 «지금 가진 것»으로 매긴다(쓰면 내려간다면 모으는 재미가 죽는다).
-       ⚠ 서버가 누적을 따로 주기 전까지는 잔액으로 대신한다. 구간은 기획서 확정 대기. */
-    const RANK = [[0,"새싹"],[50,"견습"],[200,"일꾼"],[500,"장인"],[1500,"달인"],[5000,"마스터"]];
-    const rank = RANK.filter(([n]) => coin.stars >= n).pop()[1];
-
-    const TABS = [["today","오늘"],["quiz","퀴즈"],["shop","상점"]];
+    const tiles = gameCats().map((t) => gameTile(t)).join("");
 
     return `
-    <div class="gm">
-      <!-- 상태창 — 아바타가 없다. 아이 본인이 캐릭터다(기획서 §08) -->
-      <div class="gm-top">
-        <button class="gm-out" onclick="location.hash='#home'" aria-label="나가기">
-          <i aria-hidden="true" class="ti ti-chevron-left"></i></button>
-        <div class="gm-who"><b>${esc(c.nickname || "나")}</b><em>${rank}</em></div>
+    <div class="gm ${gmTheme()}">
+      <!-- 캐릭터 시트 — 아바타 자리는 비워 둔다(캐릭터는 업데이트 분, 기획서 v2 §01.4) -->
+      <div class="gm-hero">
+        <button class="gm-ava" onclick="App.gameTab('profile')" aria-label="내 프로필">${gmAvatar(c)}</button>
+        <div class="gm-me">
+          <span class="gm-lv">Lv.${coin.level || 1} ${gmRank(coin.level || 1)}</span>
+          <b class="gm-nm">${esc(c.nickname || "나")}</b>
+        </div>
         <div class="gm-purse"><i aria-hidden="true">★</i><b>${coin.stars}</b></div>
       </div>
 
-      <!-- 오늘 얼마나 벌었나 — 리밋이 게임의 시계다(기획서 §02) -->
-      <div class="gm-lim">
-        <div class="gm-limbar"><span style="width:${pct}%"></span></div>
-        <div class="gm-limtx">오늘 <b>${coin.earned_today}</b> / ${coin.limit}
-          ${coin.room > 0 ? `<em>${coin.room}개 더 벌 수 있어요</em>` : `<em class="full">오늘은 여기까지예요</em>`}</div>
+      <!-- 오늘 얼마나 벌었나 — 상한이 게임의 시계다(기획서 v2 §02) -->
+      <div class="gm-xp">
+        <div class="gm-xpb"><span style="width:${pct}%"></span></div>
+        <div class="gm-xpt">오늘 ${coin.earned_today} / ${coin.limit}
+          ${coin.room > 0 ? `<em>${coin.room}개 더!</em>` : `<em class="full">오늘은 여기까지</em>`}</div>
       </div>
 
-      <div class="gm-tabs">
-        ${TABS.map(([k, n]) => `
-          <button class="${S.gameTab === k ? "on" : ""}" onclick="App.gameTab('${k}')">${n}</button>`).join("")}
-      </div>
+      <!-- 2×2 타일 — 홈이든 카드 안이든 «같은 문법»이라 아이가 배울 것이 없다 -->
+      <div class="gm-grid">${tiles}</div>
 
-      ${S.gameTab === "quiz" ? gameQuiz() : S.gameTab === "shop" ? gameShop() : gameToday()}
+      ${gmShopBar(true)}
     </div>
-    ${stickerView()}`;
+    ${stickerView()}${clearView()}`;
   },
 
   /* ── 별도장 상점 (2026-08-07 지시서 §5③) ────────────────────────────
@@ -2705,8 +2722,10 @@ const Screens = {
     ${(() => {
       const wait = (S.missions || []).filter((x) => x.status === "waiting").length;
       const done = (S.missions || []).filter((x) => x.status === "done").length;
-      /* ⚠ ★ 는 부모의 미션 관리(#mission)가 아니라 **아이의 게임 세계**(#game)로 간다(2026-08-08 지시).
-           부모가 미션을 관리하는 길은 드로어와 게임 안 «부모» 버튼에 있다. */
+      /* ★ = **미션 게임**으로 들어간다(2026-08-08 대표님 지시).
+           ⚠ «아이 전용 화면»이 아니다 — 부모도 아이도 이 안으로 들어오고, 안에서 역할만 갈린다
+             (부모는 내주고·승인하고, 아이는 해내고 받는다).
+           ⚠ 한 번 #mission 으로 되돌렸다가 다시 고쳤다. 지시는 «노란 별 = 게임 미션»이다. */
       return `<button class="hv3-star" onclick="location.hash='#game'" aria-label="미션 게임">
         <span class="st">★</span>${wait ? `<em class="bdg">${wait}</em>` : ""}</button>`;
     })()}
@@ -5129,6 +5148,8 @@ function boardView() {
    ⚠ 화면 전체를 다시 그리면 안 된다 — 입력 중이던 칸이 날아가고(한글 조합 깨짐),
      스크롤도 튄다. 전광판 마크업만 바꿔 끼운다. */
 let QUIZ_TIMER = null;   // 퀴즈 문제당 카운트다운(전체 렌더와 분리)
+let CLEAR_TIMER = null;  // 클리어 연출 자동 닫기(1.2초)
+let FEED_TIMER = null;   // 정답을 보여 주는 시간(맞으면 1.1초, 틀리면 2.2초)
 let BOARD_TIMER = null;
 function startBoard() {
   clearInterval(BOARD_TIMER);
@@ -5225,94 +5246,355 @@ function nowSlot() {
 }
 const SLOT_KO = { morning: "아침", after: "방과후", evening: "저녁", any: "아무 때나" };
 
-// ── 오늘 탭 ────────────────────────────────────────────────
-function gameToday() {
-  const slot = nowSlot();
-  const list = S.missions;
-  if (list === null) return `<p class="gm-empty">불러오는 중…</p>`;
+/* ═══ 🎮 아이 화면 조각 (2026-08-08, 기획서 v2 §01 · 시안 v4 B안) ═══════
+   홈도 카드 안도 **같은 타일**이다. 화면마다 다른 규칙을 배울 필요가 없어야 한다.
+   ⚠ 색은 **게임 전용 팔레트**를 쓴다 — 부모 테마 18종의 색 토큰을 건드리지 않는다.
+     아이 테마는 배경 그라데이션 한 쌍만 바뀌고 카드는 항상 흰색이다.
+   ⚠ 아이콘은 전부 이모지다. 서브셋 폰트에 없는 `ti-*` 를 쓰면 빈 네모가 뜬다(08-07 사고). */
 
-  /* 지금 시간대 것을 위로, 나머지는 접어 둔다.
-     ⚠ 아예 숨기지 않는다 — 아침에 못 한 걸 저녁에 하려는 아이를 막으면 그건 벌이다. */
-  const now = list.filter((x) => (x.slot || "any") === slot || (x.slot || "any") === "any");
-  const later = list.filter((x) => !now.includes(x));
-  const done = list.filter((x) => x.status === "done").length;
+/* 하루 코인 상한 — 서버(star_core.DAILY_COIN_LIMIT)가 정본이고 여기는 «아직 못 받았을 때»의 기본값이다.
+   🔴 대표님 확정 대기(60 제안). 두 곳이 갈리면 화면이 거짓말을 하므로 서버 값이 오면 그걸 쓴다. */
+const COIN_LIMIT = 60;
 
-  const card = (x) => {
-    const busy = S.missionBusy === x.id;
-    const st = x.status;
-    return `
-    <button class="gm-ms ${st}" ${st === "open" && !busy ? `onclick="App.missionDone(${x.id})"` : ""}>
-      <span class="gm-msk">${st === "done" ? "✓" : st === "waiting" ? "…" : ""}</span>
-      <span class="gm-msb"><b>${esc(x.title)}</b>
-        ${x.minutes ? `<em>${x.minutes}분</em>` : ""}</span>
-      <span class="gm-msc">★${x.stars}</span>
-    </button>`;
-  };
+/* 배경 테마 5종 — 실제로 바뀌는 것은 CSS 변수 두 개뿐이다(§01.1) */
+const GM_THEMES = [
+  ["sky", "하늘"], ["lime", "라임"], ["lav", "라벤더"], ["sunset", "선셋"], ["mint", "민트"],
+];
+function gmTheme() {
+  const c = curView();
+  const t = (c && c.kid_theme) || S.gmTheme || "sky";
+  return "gt-" + (GM_THEMES.some(([k]) => k === t) ? t : "sky");
+}
+
+/* 캐릭터가 들어올 자리. 지금은 이모지 — 업데이트 때 **이 칸만** 갈아끼우면 화면을 다시 안 짠다 */
+const GM_FACES = ["🦊", "🐻", "🐼", "🐯", "🐸", "🐧", "🦁", "🐨"];
+function gmAvatar(c) {
+  if (c && c.avatar_slot) return esc(c.avatar_slot);
+  const n = String((c && c.nickname) || "나");
+  let h = 0; for (let i = 0; i < n.length; i++) h = (h * 31 + n.charCodeAt(i)) % 997;
+  return GM_FACES[h % GM_FACES.length];
+}
+
+/* 칭호 — **레벨**로 매긴다. 레벨은 「해낸 미션 수」로 오르니 꾸준한 아이는 무조건 오른다.
+   ⚠ 잔액으로 매기면 «쓰면 칭호가 내려가서» 모으는 재미가 죽는다(v1 의 실수). */
+function gmRank(lv) {
+  const R = [[1,"새싹"],[3,"견습"],[6,"일꾼"],[10,"장인"],[16,"달인"],[24,"영웅"],[34,"마스터"]];
+  return R.filter(([n]) => lv >= n).pop()[1];
+}
+
+/* ── 미션 갈래 ───────────────────────────────────────────────────────
+   아침 · 학교 · 방과후는 **항상 있는 기본 틀**이고, 변동하는 건 「오늘의 미션」 하나다.
+   그래서 홈은 언제나 4칸이고 매일 같은 자리에 같은 칸이 있다.
+
+   ⚠ 「학교」 칸은 **국내 전용**이다 — 급식·친구·시간표는 학교정보 모듈이 있어야 돈다.
+     해외판은 `schoolMissions()` 를 안 끼우면 이 칸만 빠지고 나머지는 그대로 돈다.
+     이것이 기획서 v2 §09 가 말하는 «자르는 선 한 곳»의 앱 쪽 구현이다. */
+function gameCats() {
+  const ms = S.missions || [];
+  const at = (slots) => ms.filter((x) => slots.indexOf(x.slot || "any") >= 0);
+  const cnt = (list) => ({ done: list.filter((x) => x.status === "done").length, all: list.length,
+                           stars: list.reduce((a, x) => a + (x.stars || 0), 0) });
+
+  const morning = cnt(at(["morning"]));
+  const after = cnt(at(["after", "evening", "any"]));
+  const school = schoolMissionsSummary();
+  const q = S.quiz;
+  const qDone = !!(q && q.done);
+
+  const out = [
+    { key: "morning", icon: "🌅", name: "아침 미션", c: "orange", ...morning },
+    // 국내 전용 — 이 한 줄만 빼면 해외판이 된다
+    school ? { key: "school", icon: "🏫", name: "학교 미션", c: "cyan", kr: true, ...school } : null,
+    { key: "after", icon: "📚", name: "방과후 미션", c: "violet", ...after },
+    { key: "today", icon: "⚔️", name: "오늘의 미션", c: "red", boss: true,
+      done: qDone ? 1 : 0, all: 1, stars: (q && q.total ? q.total : 10) + 5,
+      note: q ? `${q.total || 10}문제 · 한 문제 ${gmSec(q)}초` : "10문제 · 한 문제 5초",
+      foot: qDone ? "오늘 다 함" : "아직 안 함" },
+  ].filter(Boolean);
+  return out;
+}
+function gmSec(q) {
+  const it = (q && q.items && q.items[0]) || null;
+  return (it && it.sec) || 5;
+}
+
+/* 학교 미션 — 「제공자」. **서버의 school_missions.js 하나가 정본이다.**
+   ⚠ 목록·아이콘·문구를 여기에 또 적지 않는다 — 나라를 늘릴 때 두 곳을 고쳐야 한다.
+   ⚠ 해외판은 서버에서 그 파일을 빼면 `available:false`(또는 404)가 오고,
+     그러면 아래가 null 을 돌려 **홈이 3칸이 된다.** 앱은 고칠 것이 없다. */
+function schoolMissionsSummary() {
+  const s = S.schoolMs;
+  if (!s || s.available === false || !s.items?.length) return null;
+  return { done: s.done, all: s.all,
+           stars: s.items.reduce((a, x) => a + (x.stars || 0), 0) };
+}
+function schoolMissionList() {
+  const s = S.schoolMs;
+  if (!s || !s.items?.length) return [];
+  return s.items.map((x) => ({ ...x, go: "#" + x.go }));
+}
+
+/* 타일 하나 — 홈에서도 카드 안에서도 이 함수 하나를 쓴다 */
+function gameTile(t) {
+  const pct = t.all ? Math.round((t.done / t.all) * 100) : 0;
+  const clear = t.all > 0 && t.done >= t.all;
+  return `
+  <button class="gm-tile c-${t.c}${clear ? " clear" : t.done < t.all ? " todo" : ""}${t.boss ? " boss" : ""}"
+    ${t.act ? `onclick="${t.act}"`
+    : t.go ? `onclick="location.hash='${t.go}'"`
+    : t.tap ? `onclick="App.missionDone(${t.tap})"`
+    : t.key === "bonus" ? "disabled"
+    : `onclick="App.gameTab('${t.key}')"`}>
+    ${t.kr ? `<span class="gm-kr">학교정보</span>` : ""}
+    ${clear ? `<span class="gm-stamp">CLEAR</span>` : ""}
+    <span class="gm-ti">${t.icon}</span>
+    <b class="gm-tt">${esc(t.name)}</b>
+    ${t.note ? `<em class="gm-tn">${esc(t.note)}</em>` : ""}
+    <span class="gm-bar"><i style="width:${pct}%"></i></span>
+    <span class="gm-tb"><em>${esc(t.foot || (clear ? `${t.done} / ${t.all} 완료` : `${t.done} / ${t.all}`))}</em>
+      <span class="gm-co">★${t.stars}</span></span>
+  </button>`;
+}
+
+/* ── 카드를 열면 — 그 갈래의 미션이 «같은 타일»로 ────────────────── */
+function gameCard(catKey) {
+  const meta = { morning: ["🌅", "아침 미션", ["morning"]],
+                 after: ["📚", "방과후 미션", ["after", "evening", "any"]],
+                 school: ["🏫", "학교 미션", null] }[catKey];
+  if (!meta) return `<p class="gm-empty">없는 화면이에요</p>`;
+  const [icon, name, slots] = meta;
+
+  let tiles, done = 0, all = 0, stars = 0;
+  if (catKey === "school") {
+    const list = schoolMissionList();
+    all = list.length; done = list.filter((x) => x.done).length;
+    stars = list.reduce((a, x) => a + x.stars, 0);
+    tiles = list.map((x) => gameTile({ key: x.key, icon: x.icon, name: x.name, note: x.note,
+      c: "cyan", done: x.done ? 1 : 0, all: 1, stars: x.stars, go: x.go,
+      foot: x.done ? "했어요" : "30초면 끝" })).join("");
+  } else {
+    const list = (S.missions || []).filter((x) => slots.indexOf(x.slot || "any") >= 0);
+    all = list.length; done = list.filter((x) => x.status === "done").length;
+    stars = list.reduce((a, x) => a + (x.stars || 0), 0);
+    if (S.missions === null) return gmHead(icon, name, "불러오는 중…") + `<p class="gm-empty">잠시만요…</p>`;
+    tiles = list.map((x) => gameTile({
+      key: x.id, icon: gmMissionIcon(x), name: x.title,
+      note: x.minutes ? `${x.minutes}분` : "",
+      c: catKey === "morning" ? "orange" : "violet",
+      done: x.status === "done" ? 1 : 0, all: 1, stars: x.stars || 1,
+      foot: x.status === "done" ? "했어요" : x.status === "waiting" ? "확인 기다리는 중" : "눌러서 완료",
+      tap: x.status === "open" ? x.id : null,
+    })).join("");
+  }
+
+  /* 세트 보너스 — 다 하면 얹어 준다. «몇 개 남았는지»가 보여야 마지막 하나를 하게 된다.
+     ⚠ 학교 세트는 **서버가** 준다(school_missions.js). 화면이 별을 세지 않는다. */
+  const left = Math.max(0, all - done);
+  /* 「받았나」는 **서버가** 안다. 화면이 기억하면 앱을 껐다 켤 때 어긋난다.
+     학교 세트는 school_missions.js, 아침·방과후 세트는 api_mission.js 가 맡는다
+     — 학교는 해외판에서 통째로 빠져야 해서 파일을 나눴다. */
+  const taken = catKey === "school"
+    ? !!(S.schoolMs && S.schoolMs.bonus_taken)
+    : !!(S.msets && S.msets[catKey] && S.msets[catKey].taken);
+  const ready = all > 0 && left === 0 && !taken;
+  const act = !ready ? null
+    : catKey === "school" ? "App.schoolBonus()" : `App.setBonus('${catKey}')`;
+  const bonus = all > 1 ? gameTile({ key: "bonus", icon: "🎁", name: "세트 보너스",
+    note: `${all}개 다 하면`, c: "gold", done: taken ? all : done, all,
+    stars: (catKey === "school" ? (S.schoolMs && S.schoolMs.bonus) : (S.msets && S.msets.bonus)) || 2,
+    act,
+    foot: taken ? "받았어요" : ready ? "눌러서 받기!" : `${left}개 남음` }) : "";
 
   return `
-    <div class="gm-body">
-      <div class="gm-sec"><b>${SLOT_KO[slot]} 미션</b><em>${done}/${list.length} 끝냄</em></div>
-      ${!now.length ? `<p class="gm-empty">지금 할 미션이 없어요</p>` : now.map(card).join("")}
-      ${!later.length ? "" : `
-        <div class="gm-sec later"><b>다른 시간 미션</b></div>
-        ${later.map(card).join("")}`}
-    </div>`;
+    ${gmHead(icon, name, `오늘 ${done} / ${all} · 모으면 ★${stars}`)}
+    <div class="gm-grid">${tiles || `<p class="gm-empty">오늘 할 게 없어요</p>`}${bonus}</div>
+    ${gmShopBar()}`;
+}
+function gmMissionIcon(x) {
+  const a = String(x.area || "");
+  return { body: "🧼", things: "🧺", family: "💛", digital: "📵", study: "📖",
+           manner: "🙇", talent: "🎨" }[a] || "⭐";
+}
+function gmHead(icon, title, sub) {
+  return `
+  <div class="gm-head">
+    <button class="gm-back" onclick="App.gameTab(null)" aria-label="뒤로">‹</button>
+    <span class="gm-hi">${icon}</span>
+    <div><b class="gm-ht">${esc(title)}</b><em class="gm-hs">${esc(sub)}</em></div>
+  </div>`;
+}
+
+/* ── 프로필 — 배경색 · 뱃지. 캐릭터 자리는 비워 둔다 ───────────────── */
+function gameProfile(c, coin) {
+  const lv = coin.level || 1;
+  // ⚠ `cur` 로 두면 전역 함수 cur() 를 가린다 — 이 파일에서 실제로 겪은 종류의 사고다
+  const curTheme = (c && c.kid_theme) || S.gmTheme || "sky";
+  return `
+    ${gmHead("🙂", "내 프로필", `Lv.${lv} ${gmRank(lv)}`)}
+    <div class="gm-pf">
+      <div class="gm-big">${gmAvatar(c)}<span class="gm-soon">곧 캐릭터</span></div>
+      <b class="gm-pnm">${esc((c && c.nickname) || "나")}</b>
+      <span class="gm-lv2">Lv.${lv} ${gmRank(lv)}</span>
+      <div class="gm-stats">
+        <div><b>${coin.stars}</b><em>모은 코인</em></div>
+        <div><b>${coin.streak || 0}</b><em>연속 출석</em></div>
+        <div><b>${coin.earned_today} / ${coin.limit}</b><em>오늘 획득</em></div>
+      </div>
+    </div>
+
+    <div class="gm-lab">🎨 배경 바꾸기</div>
+    <div class="gm-sw">
+      ${GM_THEMES.map(([k, n]) => `
+        <button class="gm-swb sw-${k}${curTheme === k ? " on" : ""}" title="${n}"
+          onclick="App.gmTheme('${k}')" aria-label="${n}"></button>`).join("")}
+    </div>
+
+    <div class="gm-lab">🏅 모은 뱃지</div>
+    ${gmBadges(coin)}
+    ${gmShopBar()}`;
+}
+
+/* 뱃지 — **가진 것만 채우고 나머지는 «조건»을 보여 준다.**
+   ⚠ 없는 것을 있는 척 채우지 않는다. 잠긴 칸에 조건을 적어야 «뭘 하면 되는지»가 되고,
+     빈 칸으로 두면 그냥 «만들다 만 화면»이다.
+   ⚠ 리그 뱃지는 STAGE 2 에서 켠다 — 그때까지는 잠긴 채로 둔다(기획서 v2 §07). */
+function gmBadges(coin) {
+  const list = [
+    { icon: "🔥", name: "연속 30일", on: (coin.streak || 0) >= 30, need: `${Math.max(0, 30 - (coin.streak || 0))}일 더` },
+    { icon: "⭐", name: "코인 1000", on: (coin.stars || 0) >= 1000, need: `${Math.max(0, 1000 - (coin.stars || 0))}개 더` },
+    { icon: "🎖", name: `Lv.10`, on: (coin.level || 1) >= 10, need: `Lv.${Math.max(0, 10 - (coin.level || 1))} 더` },
+    { icon: "🏆", name: "리그 1등", on: false, need: "곧 열려요" },
+  ];
+  return `
+  <div class="gm-bgs">
+    ${list.map((b) => `
+      <div class="gm-bg2${b.on ? "" : " off"}">
+        <span class="gm-bgi">${b.on ? b.icon : "🔒"}</span>
+        <em>${esc(b.on ? b.name : b.need)}</em>
+      </div>`).join("")}
+  </div>`;
+}
+
+/* 진열대 그림 — **이름에서 고른다.**
+   store_items 에 그림 칸이 없고, 부모에게 이모지를 고르라고 시키면 진열대 세팅이 길어진다
+   (첫 설정에서 손을 놓으면 아이 화면이 텅 빈다 — 기획서 v2 §04).
+   ⚠ 못 찾으면 🎁 다. 억지로 맞히지 않는다.
+   ⚠ 나중에 부모가 직접 고르게 하면 그 값이 이것보다 우선이다. */
+const SHOP_ICONS = [
+  [/아이스크림|하드|빙수|아이스/, "🍦"], [/치킨|닭/, "🍗"], [/피자/, "🍕"],
+  [/햄버거|버거/, "🍔"], [/과자|간식|젤리|사탕|초콜|초코/, "🍬"], [/음료|콜라|주스|음료수/, "🥤"],
+  [/떡볶이|분식/, "🌶"], [/라면/, "🍜"], [/케이크|생일/, "🎂"],
+  [/게임|플스|닌텐도|로블록스|마크/, "🎮"], [/유튜브|영상|티비|TV|만화|웹툰/, "📺"], [/영화/, "🎬"],
+  [/자전거|킥보드/, "🚲"], [/장난감|레고|인형/, "🧸"], [/책|도서|만화책/, "📚"],
+  [/용돈|돈|현금/, "💰"], [/문구|스티커|펜/, "✏️"], [/놀이공원|워터파크|키즈카페/, "🎡"],
+  [/외식|식당|고기/, "🍖"], [/여행|캠핑/, "⛺"], [/축구|야구|운동/, "⚽"],
+  [/폰|핸드폰|스마트폰/, "📱"], [/늦게|자정|밤샘|취침/, "🌙"], [/친구|초대/, "👫"],
+];
+function shopIcon(title) {
+  const t = String(title || "");
+  for (const [re, ic] of SHOP_ICONS) if (re.test(t)) return ic;
+  return "🎁";
+}
+
+/* 상점 바 — 홈과 카드 안이 **같은 것**을 쓴다. 둘로 나누면 반드시 어긋난다.
+   withTicket 이면 티켓 줄까지 얹는다(홈에서만). */
+function gmShopBar(withTicket) {
+  const stars = (S.coin && S.coin.stars) || 0;
+  return `
+  <div class="gm-shopwrap">
+    ${withTicket ? gmTicketBar() : ""}
+    <button class="gm-shopbar" onclick="App.gameTab('shop')">
+      <span class="gm-si">🏪</span>
+      <span class="gm-sb"><b>스타코인 상점</b><em>모은 ★로 바꾸기</em></span>
+      <span class="gm-sc">★${stars}</span>
+    </button>
+  </div>`;
+}
+
+/* 기다리는 티켓 — 「바꿔놓고 어디서 받나」가 화면에 있어야 한다 */
+function gmTicketBar() {
+  const list = S.rewards;
+  const wait = list ? list.filter((o) => o.status === "requested").length : 0;
+  return `
+  <button class="gm-tkbar" onclick="location.hash='#tickets'">
+    <span class="gm-si">🎟</span><b>내 티켓</b>
+    <span class="gm-tkn${wait ? "" : " zero"}">${list === null ? "…" : wait ? `${wait}장 기다리는 중` : "없어요"}</span>
+  </button>`;
+}
+
+/* ── 클리어 연출 — 세트를 완주한 «순간»에만 (기획서 v2 §01.3) ────────
+   개별 미션 완료는 조용히 체크만 한다. 매번 연출하면 3초 만에 성가신 것이 된다.
+   ⚠ 연출은 1.2초면 사라지지만 **딱지는 타일에 하루 종일 남는다**(gameTile 의 gm-stamp). */
+function clearView() {
+  const v = S.clear;
+  if (!v) return "";
+  return `
+  <div class="gm-veil" onclick="App.clearClose()">
+    <div class="gm-vin">
+      <div class="gm-ring">${v.icon}</div>
+      <div class="gm-big2">CLEAR</div>
+      <div class="gm-sub2">${esc(v.name)} 완주!</div>
+      ${v.stars ? `<div class="gm-gain">＋★${v.stars}</div>` : ""}
+      <div class="gm-tap">아무 데나 누르면 넘어가요</div>
+    </div>
+  </div>`;
 }
 
 // ── 퀴즈 탭 ────────────────────────────────────────────────
 function gameQuiz() {
   const q = S.quiz;
-  if (q === null) return `<p class="gm-empty">불러오는 중…</p>`;
+  const head = gmHead("⚔️", "오늘의 미션", quizSub(q));
+  if (q === null) return head + `<p class="gm-empty">불러오는 중…</p>`;
 
-  // ① 채점 결과 화면
+  // ① 채점 결과
   if (S.quizResult) {
     const r = S.quizResult;
-    return `
+    return head + `
     <div class="gm-body">
       <div class="qz-done">
         <div class="qz-score"><b>${r.correct}</b><span>/ ${r.total}</span></div>
         ${r.perfect ? `<div class="qz-perfect">만점! 보너스 ★${r.perfect_bonus}</div>` : ""}
         <div class="qz-coin">★ ${r.coins} 받았어요</div>
-        ${r.capped ? `<p class="qz-cap">오늘 벌 수 있는 만큼 다 벌었어요</p>` : ""}
+        ${r.capped ? `<p class="qz-cap">코인은 오늘 여기까지예요 — 그래도 기록은 쌓였어요</p>` : ""}
       </div>
-      ${!r.review?.length ? `<p class="gm-empty">다 맞혔어요!</p>` : `
-        <div class="gm-sec"><b>틀린 문제</b><em>답을 보고 가요</em></div>
-        ${r.review.map((v) => `
-          <div class="qz-rv"><b>${esc(v.answer_text)}</b>${v.hint ? `<em>${esc(v.hint)}</em>` : ""}</div>`).join("")}`}
-      <button class="gm-go" onclick="App.gameTab('today')">오늘 미션 보러 가기</button>
+
+      ${quizRetryBtn(r.retry)}
+      <button class="gm-go ghost" onclick="App.gameTab(null)">돌아가기</button>
     </div>`;
   }
 
-  // ② 이미 오늘 푼 경우
+  // ② 이번 판을 이미 끝냈다
   if (q.done) {
-    return `
+    return head + `
     <div class="gm-body">
       <div class="qz-done">
         <div class="qz-score"><b>${q.correct}</b><span>/ ${q.total}</span></div>
         <div class="qz-coin">★ ${q.coins} 받았어요</div>
       </div>
-      <p class="gm-empty">오늘 퀴즈는 끝! 내일 또 만나요</p>
+      ${quizRetryBtn(q.retry)}
+      <button class="gm-go ghost" onclick="App.gameTab(null)">돌아가기</button>
     </div>`;
   }
 
   // ③ 시작 전
-  if (!q.items?.length) return `<p class="gm-empty">문제를 준비하지 못했어요</p>`;
+  if (!q.items || !q.items.length) return head + `<p class="gm-empty">문제를 준비하지 못했어요</p>`;
   if (S.quizIdx < 0) {
-    return `
+    return head + `
     <div class="gm-body">
       <div class="qz-intro">
-        <b>오늘의 퀴즈</b>
-        <p>${q.total}문제 · 한 문제에 ${q.sec_per_q}초</p>
-        <p class="quiet">맞힌 만큼 ★ · 다 맞히면 보너스 ★${q.perfect_bonus}</p>
-        <button class="gm-go" onclick="App.quizStart()">시작하기</button>
+        <b>맞힌 만큼 ★</b>
+        <p>${q.total}문제 · 한 문제 ${gmSec(q)}초</p>
+        <p class="quiet">다 맞히면 보너스 ★${q.perfect_bonus}</p>
+        <button class="gm-go" onclick="App.quizStart()">시작하기 ▶</button>
       </div>
     </div>`;
   }
 
   // ④ 푸는 중
   const item = q.items[S.quizIdx];
-  if (!item) return `<p class="gm-empty">…</p>`;
-  const ratio = Math.max(0, Math.min(100, (S.quizLeft / q.sec_per_q) * 100));
+  if (!item) return head + `<p class="gm-empty">…</p>`;
+  const per = item.sec || 5;
+  const ratio = Math.max(0, Math.min(100, (S.quizLeft / per) * 100));
   return `
     <div class="gm-body qz-play">
       <div class="qz-hd">
@@ -5320,13 +5602,91 @@ function gameQuiz() {
         <span class="qz-field">${esc(QUIZ_FIELD_KO[item.field] || "")}</span>
       </div>
       <div class="qz-timer"><span style="width:${ratio}%"></span></div>
-      <p class="qz-q">${esc(item.q)}</p>
-      <div class="qz-opts">
-        ${item.options.map((o, i) => `
-          <button class="qz-op" onclick="App.quizPick(${i + 1})">${esc(o)}</button>`).join("")}
+      <div class="qz-mid">
+        ${item.image ? `<div class="qz-img"><img src="${esc(item.image)}" alt=""></div>` : ""}
+        <p class="qz-q"><span class="qz-qn">${S.quizIdx + 1})</span>${esc(item.q)}</p>
       </div>
+      <div class="qz-opts${item.kind === "ox" ? " ox" : ""}">
+        ${item.options.map((o, i) => {
+          const f = S.quizFeed;
+          /* 답한 «직후»에만 색이 붙는다 — 정답은 초록, 내가 고른 오답은 빨강.
+             ⚠ 답하기 전에는 서버가 정답을 안 보내므로 여기서 칠할 방법 자체가 없다. */
+          const mark = !f ? "" : (i + 1) === f.answer ? " ok" : (i + 1) === f.picked ? " no" : " dim";
+          return `
+          <button class="qz-op${mark}" ${f ? "disabled" : `onclick="App.quizPick(${i + 1})"`}>
+            <span class="qz-k">${i + 1}</span>${esc(o)}
+            ${mark === " ok" ? `<span class="qz-mk">○</span>` : ""}
+            ${mark === " no" ? `<span class="qz-mk">✕</span>` : ""}</button>`;
+        }).join("")}
+      </div>
+      ${quizFeedView()}
     </div>`;
 }
+
+/* 답안지 — **맞힌 것도 전부 보여 준다.**
+   「답을 알려줘야 학습이 된다」는 지시(08-08)라, 틀린 것만 보여주던 방식을 버렸다.
+   ⚠ 답이 새어도 이 판은 finished_at 이 찍혀 다시 못 낸다.
+     다음 판에서 «외운 답»으로 점수를 버는 구멍은 서버가 막는다 —
+     리그 점수는 «그 문제를 처음 맞혔을 때»에만 준다(api_quiz.js 의 seen). */
+function quizSheet(rv) {
+  if (!rv || !rv.length) return "";
+  return `
+    <div class="gm-lab">📝 답안지</div>
+    <div class="qz-sheet">
+      ${rv.map((v) => `
+        <div class="qz-rv ${v.ok ? "o" : "x"}">
+          <span class="qz-rn">${v.no}</span>
+          <div class="qz-rb">
+            <b>${esc(v.q || "")}</b>
+            <em class="ans">정답 ${v.answer}) ${esc(v.answer_text)}</em>
+            ${v.ok ? "" : `<em class="mine">${v.picked
+              ? `내 답 ${v.picked}) ${esc(v.picked_text || "")}` : "시간이 지났어요"}</em>`}
+            ${v.hint ? `<em class="hint">${esc(v.hint)}</em>` : ""}
+          </div>
+          <span class="qz-rm">${v.ok ? "○" : "✕"}</span>
+        </div>`).join("")}
+    </div>`;
+}
+
+/* 답한 직후 — «맞았다/틀렸다»와 정답을 그 자리에서 알려 준다(대표님 지시 08-08).
+   답안지를 마지막에 몰아 주지 않는다. 틀린 순간에 답을 봐야 남는다. */
+function quizFeedView() {
+  const f = S.quizFeed;
+  if (!f) return "";
+  return `
+  <div class="qz-feed ${f.ok ? "o" : "x"}" onclick="App.quizNext()">
+    <b>${f.ok ? "맞았어요!" : "아쉬워요"}</b>
+    ${f.ok ? "" : `<em>정답은 ${f.answer}) ${esc(f.answer_text)}</em>`}
+    ${f.hint ? `<i>${esc(f.hint)}</i>` : ""}
+    <span class="qz-next">${f.last ? "결과 보기 ▶" : "다음 문제 ▶"}</span>
+  </div>`;
+}
+
+function quizSub(q) {
+  if (!q) return "불러오는 중";
+  const a = q.attempt || 1;
+  return a > 1 ? `${a}판째 · 틀렸던 문제부터` : `${q.total || 10}문제 · 하루 첫 판은 공짜`;
+}
+
+/* 재도전 — 값은 **서버가 준 것만** 쓴다. 화면이 값표를 알고 있으면 반드시 어긋난다.
+   ⚠ 5번을 다 쓰려면 3+6+12+24+48 = 93 인데 하루 상한은 60 이다 —
+     «모아둔 코인»이 있어야 끝까지 간다. 의도한 설계다. */
+function quizRetryBtn(rt) {
+  if (!rt) return "";
+  if (!rt.can) {
+    return rt.used >= rt.max
+      ? `<p class="gm-empty">오늘 몴은 다 썼어요 · 내일 또 만나요</p>` : "";
+  }
+  const have = (S.coin && S.coin.stars) || 0;
+  const poor = have < rt.cost;
+  return `
+    <button class="gm-go retry" ${poor ? "disabled" : ""} onclick="App.quizRetry()">
+      한 판 더 · ★${rt.cost}</button>
+    <p class="gm-fine">${poor
+      ? `★${rt.cost}개가 필요해요 (지금 ${have}개)`
+      : `오늘 ${rt.used} / ${rt.max}판 · 할수록 값이 올라가요`}</p>`;
+}
+
 const QUIZ_FIELD_KO = { kor: "국어", math: "수학", sci: "과학", world: "나라",
   proverb: "속담", life: "상식", sports: "스포츠", ent: "연예" };
 
@@ -5334,25 +5694,50 @@ const QUIZ_FIELD_KO = { kor: "국어", math: "수학", sci: "과학", world: "�
 function gameShop() {
   const list = S.store;
   if (list === null) return `<p class="gm-empty">불러오는 중…</p>`;
-  if (!list.length) return `
-    <div class="gm-body"><p class="gm-empty">엄마아빠가 무엇과 바꿀 수 있는지<br>정해 주면 여기에 나와요</p></div>`;
+
+  /* 부모가 보고 있으면 «진열대 꾸미기» 길을 준다 (2026-08-08 지적: 등록할 데가 없었다).
+     ⚠ 아이에게는 안 보인다 — 진열대를 정하는 건 부모의 일이다(기획서 §06).
+       아이 토큰·아이 모드·부모의 아이 미리보기 셋 다 아이로 친다.
+     ⚠ 등록 화면은 #store 에 이미 있다. 게임 안에 폼을 또 만들지 않는다 — 입구가 둘이면 갈린다. */
+  const kid = isChildToken() || S.childView || S.kidMode;
+  const setup = kid ? "" : `
+      <button class="gm-go ghost" onclick="location.hash='#store'">
+        진열대 꾸미기</button>`;
+
+  const stars = (S.coin && S.coin.stars) || 0;
+  const head = gmHead("🏪", "스타코인 상점", `내 코인 ★${stars}`);
+
+  if (!list.length) return `${head}
+    <div class="gm-body">
+      <p class="gm-empty">${kid
+        ? "엄마아빠가 무엇과 바꿀 수 있는지<br>정해 주면 여기에 나와요"
+        : "아직 바꿀 수 있는 게 없어요<br>무엇과 바꿔 줄지 정해 주세요"}</p>
+      ${setup}
+    </div>`;
 
   const why = { limit: "이번엔 다 바꿨어요", stars: "★이 모자라요" };
-  return `
-    <div class="gm-body">
+  /* 진열대 — 2×2 격자. 못 사는 것은 숨기지 않고 «몇 개 더»로 남겨 **목표**로 만든다.
+     ⚠ 목표 게이지를 따로 만들지 않는 이유가 이것이다(기획서 v2 §04). */
+  return `${head}
+    <div class="gm-grid cap">
       ${list.map((it) => {
         const busy = S.storeBusy === it.item_id;
+        const short = Math.max(0, (it.stars_required || 0) - stars);
         return `
         <div class="gm-item ${it.can_buy ? "" : "off"}">
-          <div class="gm-itb"><b>${esc(it.title)}</b>
-            ${it.limit_type ? `<em>${it.limit_type === "weekly" ? "주" : "달"} ${it.limit_count}번 중 ${it.used}번</em>` : ""}
-            ${it.can_buy ? "" : `<em class="no">${why[it.reason] || ""}</em>`}</div>
+          <div class="gm-ph">${esc(it.emoji || shopIcon(it.title))}</div>
+          <b class="gm-inm">${esc(it.title)}</b>
+          ${it.limit_type ? `<em class="gm-ilm">${it.limit_type === "weekly" ? "주" : "달"} ${it.limit_count}번 중 ${it.used}번</em>` : ""}
           <button class="gm-buy" ${it.can_buy && !busy ? "" : "disabled"}
             onclick="App.storeBuy('${it.item_id}')">★${it.stars_required}</button>
+          ${it.can_buy ? "" : `<em class="gm-need">${
+            it.reason === "stars" && short ? `${short}개 더!` : (why[it.reason] || "")}</em>`}
         </div>`;
       }).join("")}
-      <button class="gm-go ghost" onclick="location.hash='#tickets'">내 티켓 보기</button>
-    </div>`;
+    </div>
+    <div class="gm-lab">🎟 내 티켓</div>
+    <button class="gm-go ghost" onclick="location.hash='#tickets'">티켓 보러 가기</button>
+    ${setup}`;
 }
 
 /* ═══ 별도장 상점 · 칭찬 · PIN 의 보조 뷰 (2026-08-07) ═══════════════════
@@ -6974,7 +7359,7 @@ const App = {
       if (location.hash !== "#childview") history.replaceState(null, "", "#childview");
     }
     /* 🔒 아이 모드 — 열어 줄 화면은 넷뿐(§5④). 서랍만 감추면 주소·뒤로가기로 샌다 */
-    if (S.kidMode && !["home", "mission", "store", "tickets"].includes(name)) {
+    if (S.kidMode && !["home", "game", "mission", "store", "tickets"].includes(name)) {
       name = "home";
       if (location.hash !== "#home") history.replaceState(null, "", "#home");
     }
@@ -7015,6 +7400,8 @@ const App = {
     if (["game"].includes(name) && S.loggedIn) { this.loadCoin(); if (S.missions === null) this.loadMissions(); }
     if (["store", "home", "game", "childview"].includes(name) && S.loggedIn && S.store === null) this.loadStore();
     if (["tickets", "store"].includes(name) && S.loggedIn && S.rewards === null) this.loadRewards();
+    // 게임 화면 — 카드가 하나씩 뒤늦게 뜨면 «고장»으로 읽힌다. 들어올 때 한 번에 부른다
+    if (name === "game" && S.loggedIn) this.gameEnter();
     if (["mission", "home"].includes(name) && S.loggedIn && S.verifyPending === null) this.loadVerify();
     if (name === "childmode" && S.loggedIn && S.pinHas === null) this.loadPinState();
     if ((isChildToken() || S.childView || S.kidMode) && ["childview", "home", "store"].includes(name)
@@ -8601,6 +8988,7 @@ const App = {
     /* 자녀 화면에선 토스트 대신 **축하 오버레이** — 완료 순간이 이 앱의 봉우리다(테마 시안 확정). */
     if (isChildToken() || S.childView) { S.kidHooray = { title: m?.title || "", stars: d.got }; this.render(); }
     else toast(`★${d.got} 받았어요!`);
+    this.loadMissionSets(true);   // 세트가 완주됐는지는 **서버가** 판단한다
   },
   /* 다음 장으로. 마지막이면 처음으로 돌아온다 — 막다른 끝을 만들지 않는다. */
   deckNext() { const n = deckCards().length; if (n > 1) S.deckIdx = (S.deckIdx + 1) % n; this.render(); },
@@ -8646,6 +9034,7 @@ const App = {
 
     noteMark(TODAY, { meal: d.stars });   // 달력 «아이 흔적»에 남긴다(§3) — 실제로 준 별점 그대로
     S.mealRated = true;
+    App.loadSchoolMissions(true);   // 학교 미션 카드를 새로 받는다(1/3 → 2/3)
     S.mealDraft = { stars: 0, best: null };
     S.kidHooray = { title: "급식 평가", stars: got };
     location.hash = "#childview";
@@ -8667,6 +9056,7 @@ const App = {
       S.missionStars = (S.missionStars || 0) + 1;   // 목업 전용
     }
     S.subjectLogged = true;
+    App.loadSchoolMissions(true);   // 학교 미션 카드를 새로 받는다(1/3 → 2/3)
     S.subjectBest = null;
     S.kidHooray = { title: "오늘 재밌었던 것", stars: got };
     location.hash = "#childview";
@@ -8717,6 +9107,7 @@ const App = {
       S.missionStars = (S.missionStars || 0) + 1;   // 목업 전용
     }
     S.friendLogged = true;
+    App.loadSchoolMissions(true);   // 학교 미션 카드를 새로 받는다(1/3 → 2/3)
     S.friendDraft = { picked: [], alone: false, adding: null };
     S.kidHooray = { title: "오늘 논 친구", stars: got };
     location.hash = "#childview";
@@ -9046,10 +9437,130 @@ const App = {
   /* ═══ 🎮 미션 게임 동작 (2026-08-08) ═══════════════════════════════
      ⚠ 코인·채점은 전부 서버가 한다. 여기서는 «받은 값을 보여주는 것»만 한다. */
 
+  /* 카드를 연다/닫는다. `null` 이면 홈(2×2 타일)이다.
+     ⚠ 탭이 아니라 «들어갔다 나오는» 문법이라 뒤로가기가 곧 홈이다. */
   gameTab(k) {
-    S.gameTab = k;
-    if (k === "quiz" && S.quiz === null) this.loadQuiz();
+    S.gameTab = k || null;
+    if (k === "today" && S.quiz === null) this.loadQuiz();
     if (k === "shop" && S.store === null) this.loadStore();
+    if (k === "morning" || k === "after") {
+      if (S.missions === null) this.loadMissions();
+      if (S.msets === null) this.loadMissionSets();
+    }
+    if (k === "school" && S.schoolMs === null) this.loadSchoolMissions();
+    this.render();
+  },
+
+  /* 배경색 — 아이 화면에서 실제로 바뀌는 것은 CSS 변수 두 개뿐이다.
+     ⚠ 부모 테마(--surf/--card-a)는 **건드리지 않는다**. 8/4 사고의 재발 방지선이다. */
+  async gmTheme(k) {
+    S.gmTheme = k;
+    const c = cur();
+    if (c) c.kid_theme = k;                       // 화면은 즉시 바뀐다
+    this.render();
+    if (!TOKENS.access || !c?.server_id) return;  // 서버에 못 남겨도 화면은 이미 바뀌었다
+    try { await api(`/children/${c.server_id}`, { method: "PATCH", body: { kid_theme: k } }); }
+    catch (_) {}
+  },
+
+  clearClose() { S.clear = null; this.render(); },
+
+  /* 학교 미션 오늘 상태 — **서버가 정본**이다. 화면이 «했나»를 스스로 세지 않는다.
+     ⚠ 실패하면 null 로 두어 다시 묻는다. `[]` 로 굳히면 카드가 영영 안 뜬다(08-07 사고). */
+  async loadSchoolMissions(force) {
+    const c = cur();
+    if (!TOKENS.access || !c?.server_id) return;
+    if (S.schoolMs && !force) return;
+    if (S._schoolBusy) return;
+    S._schoolBusy = true;
+    try {
+      const r = await api(`/children/${c.server_id}/school-missions`);
+      if (r?.ok) S.schoolMs = r.data;
+      else if (r?.status === 404) S.schoolMs = { available: false, items: [], done: 0, all: 0 };
+    } catch (_) {}
+    S._schoolBusy = false;
+    this.render();
+  },
+
+  /* 아침·방과후 세트 완주 — 학교 세트와 같은 규칙이되 파일이 다르다(위 주석 참조) */
+  async loadMissionSets(force) {
+    const c = cur();
+    if (!TOKENS.access || !c?.server_id) return;
+    if (S.msets && !force) return;
+    try {
+      const r = await api(`/children/${c.server_id}/mission-sets`);
+      if (r?.ok) S.msets = { ...r.data.sets, bonus: r.data.sets?.morning?.bonus || 2 };
+    } catch (_) {}
+    this.render();
+  },
+
+  async setBonus(slot) {
+    const c = cur();
+    if (!c?.server_id) return;
+    try {
+      const r = await api(`/children/${c.server_id}/mission-sets/bonus`, { method: "POST", body: { slot } });
+      if (r?.ok && r.data.granted > 0) {
+        if (r.data.coin) S.coin = r.data.coin;
+        await this.loadMissionSets(true);
+        this.clearShow(slot === "morning" ? "🌅" : "📚",
+                       slot === "morning" ? "아침 미션" : "방과후 미션", r.data.granted);
+        return;
+      }
+      if (r?.ok && r.data.already) toast("이미 받았어요");
+      else if (!r?.ok) toast(r?.error?.message || "지금은 받을 수 없어요");
+    } catch (_) { toast("지금은 받을 수 없어요"); }
+    this.render();
+  },
+
+  /* 세트 완주 보너스 — 셋 다 했을 때만 서버가 준다. 화면은 «달라고» 할 뿐이다.
+     주고 나면 클리어 연출을 띄운다(기획서 v2 §01.3 — 세트를 완주한 «순간»에만). */
+  async schoolBonus() {
+    const c = cur();
+    if (!c?.server_id || S._schoolBusy) return;
+    S._schoolBusy = true;
+    try {
+      const r = await api(`/children/${c.server_id}/school-missions/bonus`, { method: "POST", body: {} });
+      if (r?.ok && r.data.granted > 0) {
+        if (r.data.coin) S.coin = r.data.coin;
+        S._schoolBusy = false;
+        await this.loadSchoolMissions(true);
+        this.clearShow("🏫", "학교 미션", r.data.granted);
+        return;
+      }
+      if (r?.ok && r.data.already) toast("이미 받았어요");
+      else if (r?.ok && !r.data.cleared) toast("아직 다 못 했어요");
+      else if (!r?.ok) toast(r?.error?.message || "지금은 받을 수 없어요");
+    } catch (_) { toast("지금은 받을 수 없어요"); }
+    S._schoolBusy = false;
+    this.render();
+  },
+
+  /* 세트를 완주한 «순간»에만 연출한다. 개별 완료는 조용히 — 매번 띄우면 성가신 것이 된다.
+     1.2초 뒤 저절로 닫힌다(누르면 즉시). 딱지는 타일에 하루 종일 남는다. */
+  clearShow(icon, name, stars) {
+    S.clear = { icon, name, stars };
+    this.render();
+    clearTimeout(CLEAR_TIMER);
+    CLEAR_TIMER = setTimeout(() => { if (S.clear) { S.clear = null; App.render(); } }, 1200);
+  },
+
+  /* 한 판 더 — 코인을 내고 문제를 다시 받는다.
+     ⚠ 금액을 보내지 않는다. **값은 서버가 매긴다** — 화면이 값을 정하면 우회된다. */
+  async quizRetry() {
+    const c = cur();
+    if (!c?.server_id || S._quizBusy) return;
+    S._quizBusy = true;
+    try {
+      const r = await api(`/children/${c.server_id}/quiz/retry`, { method: "POST", body: {} });
+      if (!r?.ok) { toast(r?.error?.message || "한 판 더 열지 못했어요"); }
+      else {
+        S.quiz = { ...r.data, done: false, correct: 0, coins: 0,
+                   perfect_bonus: S.quiz?.perfect_bonus ?? 5 };
+        S.quizResult = null; S.quizIdx = -1; S.quizPick = {};
+        if (r.data.coin) S.coin = r.data.coin;
+      }
+    } catch (_) { toast("한 판 더 열지 못했어요"); }
+    S._quizBusy = false;
     this.render();
   },
 
@@ -9062,10 +9573,21 @@ const App = {
       const r = await api(`/children/${c.server_id}/store`);
       if (r?.ok && typeof r.data.stars === "number") {
         S.coin = { stars: r.data.stars, earned_today: S.coin?.earned_today || 0,
-                   limit: S.coin?.limit || 30, room: S.coin?.room ?? 30 };
+                   limit: S.coin?.limit || COIN_LIMIT, room: S.coin?.room ?? COIN_LIMIT,
+                   level: S.coin?.level || 1, streak: S.coin?.streak || 0 };
       }
     } catch (_) {}
     this.render();
+  },
+
+  /* 게임 화면에 들어올 때 한 번에 불러온다 — 카드가 하나씩 뒤늦게 뜨면 «고장»으로 읽힌다 */
+  gameEnter() {
+    this.loadCoin();
+    if (S.missions === null) this.loadMissions();
+    if (S.schoolMs === null) this.loadSchoolMissions();
+    if (S.msets === null) this.loadMissionSets();
+    if (S.store === null) this.loadStore();
+    if (S.rewards === null) this.loadRewards();   // 티켓 개수가 «…» 로 남지 않게
   },
 
   async loadQuiz(force) {
@@ -9111,17 +9633,43 @@ const App = {
     }, 100);
   },
 
-  quizPick(n) {
+  /* 한 문제를 낸다 — **그 자리에서 채점되고 답이 온다**(대표님 지시 08-08).
+     ⚠ 서버가 그 문제를 잠근 뒤에 답을 주므로, 답을 보고 고쳐 낼 수 없다.
+       잠금은 quiz_answer_log 의 UNIQUE 가 DB 수준에서 강제한다. */
+  async quizPick(n) {
     const q = S.quiz;
-    if (!q?.items?.length || S.quizIdx < 0) return;
+    if (!q?.items?.length || S.quizIdx < 0 || S.quizFeed || S._answering) return;
     const item = q.items[S.quizIdx];
     if (!item) return;
-    S.quizPick[item.code] = n;          // null 이면 «시간초과 = 못 풀었다»
-    if (S.quizIdx + 1 >= q.items.length) {
-      clearInterval(QUIZ_TIMER);
-      this.quizSubmit();
-      return;
-    }
+    clearInterval(QUIZ_TIMER);
+    S._answering = true;
+    const c = cur();
+    try {
+      const r = await api(`/children/${c.server_id}/quiz/answer`,
+        { method: "POST", body: { code: item.code, picked: n } });
+      if (!r?.ok) { toast(r?.error?.message || "채점이 안 됐어요"); S._answering = false; this.render(); return; }
+      const d = r.data;
+      S.quizFeed = { ok: d.ok, answer: d.answer, answer_text: d.answer_text,
+                     picked: d.picked, hint: d.hint, last: !!d.final };
+      if (d.final) {
+        S.quizResult = d.final;                 // 마지막 문제였다 — 결과를 들고 있다가 보여 준다
+        if (d.final.coin) S.coin = d.final.coin;
+      }
+    } catch (_) { toast("채점이 안 됐어요"); }
+    S._answering = false;
+    this.render();
+    /* 아이가 답을 읽을 시간을 준다. 누르면 바로 넘어간다. */
+    clearTimeout(FEED_TIMER);
+    FEED_TIMER = setTimeout(() => App.quizNext(), S.quizFeed && S.quizFeed.ok ? 1100 : 2200);
+  },
+
+  /* 다음 문제로 — 피드백을 지우고 타이머를 다시 켠다 */
+  quizNext() {
+    clearTimeout(FEED_TIMER);
+    if (!S.quizFeed) return;
+    const last = S.quizFeed.last;
+    S.quizFeed = null;
+    if (last) { S.quizIdx = -1; this.render(); return; }   // 결과 화면으로
     S.quizIdx += 1;
     this.quizTick();
     this.render();

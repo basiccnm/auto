@@ -5402,9 +5402,20 @@ body:has(#tabbar.hidden) #screen:has(.ib),
   --g-orange: #FF8A3D; --g-red: #FF4E7A;
   --g-shadow: 0 6px 0 rgba(0, 0, 0, .13);
 
-  min-height: 100vh;
-  margin: calc(env(safe-area-inset-top) * -1 - 18px) -20px -24px;
-  padding: calc(env(safe-area-inset-top) + 12px) 14px calc(env(safe-area-inset-bottom) + 22px);
+  /* ⚠ 위로 끌어올리지 않는다. 부모 홈은 위쪽에 그림이 꽉 차서 «상태바 밑까지» 밀어 올리지만,
+     게임 화면은 맨 위가 캐릭터 줄이다 — 끌어올리면 **이름·레벨·지갑이 상태바에 먹힌다**.
+     노치가 없는 기기에서는 env(safe-area-inset-top) 가 0 이라 그대로 -18px 만큼 잘렸다(08-08 실기). */
+  /* 게임 화면은 «화면 전체를 쓰는 다른 세계»다. #screen 의 안쪽 여백(위 18·아래 20)을
+     타면 그만큼 넘쳐서 상점 바가 잘린다 — 음수 마진으로 상쇄하면 그 숫자가 바뀔 때 또 깨진다.
+     그래서 부모 상자에서 아예 빠져나온다. 이러면 어느 기기에서도 딱 맞는다(08-08 실기).
+     ⚠ z-index 1 — 서랍·시트·클리어 연출(90)보다 아래여야 한다. */
+  position: fixed; inset: 0; z-index: 1; box-sizing: border-box;
+  overflow: hidden;
+  /* ⚠ 노치가 없는 안드로이드는 env(safe-area-inset-top) 가 0 이다. 그대로 두면
+     캐릭터 줄이 상태바(약 24px) 밑에 깔린다 — 실기에서 이름·레벨이 안 보였다(08-08).
+     그래서 «둘 중 큰 값»으로 최소 높이를 보장한다. */
+  padding: max(calc(env(safe-area-inset-top) + 12px), 40px) 14px
+           calc(env(safe-area-inset-bottom) + 16px);
   background: linear-gradient(180deg, var(--g-sky1), var(--g-sky2));
   color: var(--g-ink);
   display: flex; flex-direction: column;
@@ -5416,7 +5427,7 @@ body:has(#tabbar.hidden) #screen:has(.ib),
 .gm.gt-mint   { --g-sky1: #3ED6D2; --g-sky2: #3A79E8; }
 
 /* ── 캐릭터 시트 ── */
-.gm-hero { display: flex; align-items: center; gap: 10px; }
+.gm-hero { display: flex; align-items: center; gap: 10px; flex: none; }
 .gm-ava { width: 46px; height: 46px; flex: none; display: grid; place-items: center;
   border: none; border-radius: 15px; background: rgba(255, 255, 255, .32); font-size: 25px;
   box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .5); }
@@ -5434,7 +5445,7 @@ body:has(#tabbar.hidden) #screen:has(.ib),
 .gm-purse b { font-size: 18px; font-weight: 900; font-variant-numeric: tabular-nums; }
 
 /* ── 오늘 얼마나 벌었나 ── */
-.gm-xp { margin-top: 12px; padding: 10px 12px; border-radius: 14px;
+.gm-xp { margin-top: 10px; padding: 9px 12px; border-radius: 14px; flex: none;
   background: rgba(255, 255, 255, .22); }
 .gm-xpb { height: 13px; padding: 3px; border-radius: 8px; overflow: hidden;
   background: rgba(0, 0, 0, .18); }
@@ -5452,7 +5463,15 @@ body:has(#tabbar.hidden) #screen:has(.ib),
    «만들다 만 화면»으로 읽힌다(대표님이 여러 번 지적한 그 문제, 08-08 실기 확인).
    grid-auto-rows: 1fr 이라 줄이 몇 개든 남는 높이를 고르게 나눠 갖는다. */
 .gm-grid { margin-top: 13px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
-  flex: 1; align-content: stretch; grid-auto-rows: minmax(158px, 1fr); }
+  /* ⚠ 최소값을 크게 잡으면 **한 화면에 안 들어간다.** 세로가 짧은 기기에서 밀려 내려가
+     아래 상점 바가 잘린다(08-08 실기: 616px 화면에서 687px 이 됐다).
+     작게 줄 수 있게 열어 두고, 큰 화면에서는 상한까지만 커진다. 남는 높이는 위아래로 나눈다. */
+  /* ⚠ min-height: 0 이 없으면 **줄어들지 않는다.** flex 자식의 기본 min-height 는 auto 라
+     내용 높이 밑으로 못 내려가고, 그래서 616px 화면에서 717px 이 됐다(08-08 실기). */
+  /* ⚠ 상한을 «길이»(172px 같은 것)로 주면 줄이 그 값 그대로 고정돼 **컨테이너를 넘긴다.**
+     1fr 이어야 남는 높이에 맞춰 늘고 줄어든다. 최소값만 지키면 된다(08-08 실기로 두 번 잡음). */
+  flex: 1; min-height: 0; align-content: stretch;
+  grid-auto-rows: minmax(112px, 1fr); }
 /* 홈은 아래에 상점·티켓 줄이 있어 남는 높이를 타일이 먹어야 딱 맞는다.
    안쪽 화면(카드·상점)은 아래에 아무것도 없어서 같은 규칙을 쓰면 타일이 늘어나 휑해진다.
    → 안쪽에서는 높이에 상한을 두고 위로 붙인다. */
@@ -5461,7 +5480,7 @@ body:has(#tabbar.hidden) #screen:has(.ib),
 .gm-tile { --c: #B9C6DD;
   position: relative; overflow: hidden; width: 100%; text-align: left;
   border: none; font-family: inherit; color: var(--g-ink);
-  padding: 13px 12px 12px; border-radius: 18px;
+  padding: 11px 11px 10px; border-radius: 18px;
   background: var(--g-panel); box-shadow: var(--g-shadow); }
 .gm-tile::before { content: ""; position: absolute; left: 0; right: 0; top: 0;
   height: 6px; background: var(--c); }
@@ -5471,13 +5490,13 @@ body:has(#tabbar.hidden) #screen:has(.ib),
 .gm-tile.c-gold   { --c: var(--g-gold); }   .gm-tile.c-lime   { --c: var(--g-lime); }
 
 .gm-tile { display: flex; flex-direction: column; }
-.gm-ti { position: relative; display: grid; place-items: center; width: 58px; height: 58px;
-  margin-top: 4px; border-radius: 18px; font-size: 32px; flex: none;
+.gm-ti { position: relative; display: grid; place-items: center; width: 46px; height: 46px;
+  margin-top: 2px; border-radius: 15px; font-size: 25px; flex: none;
   background: color-mix(in srgb, var(--c) 16%, #fff); }
 /* 내용을 한 덩어리로 모아 세로 가운데에 둔다. 바를 바닥에 붙이면(margin-top:auto)
    카드 가운데가 휑해지고, 이름을 아래로 밀면 아이콘이 떠 보인다 — 둘 다 08-08 실기에서 확인. */
 .gm-tile { justify-content: center; }
-.gm-tt { display: block; margin-top: 11px; font-size: 16px; font-weight: 900;
+.gm-tt { display: block; margin-top: 8px; font-size: 15px; font-weight: 900;
   letter-spacing: -.02em; }
 .gm-tn { display: block; margin-top: 3px; font-size: 11px; font-weight: 700;
   font-style: normal; color: var(--g-sub);
@@ -5486,9 +5505,10 @@ body:has(#tabbar.hidden) #screen:has(.ib),
   background: var(--g-panel2); }
 .gm-bar i { display: block; height: 100%; border-radius: 6px; background: var(--c);
   transition: width .3s ease; }
-.gm-tb { display: flex; align-items: center; margin-top: 7px; }
+.gm-tb { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
 .gm-tb em { font-style: normal; font-size: 11.5px; font-weight: 900; color: var(--g-sub);
-  font-variant-numeric: tabular-nums; }
+  font-variant-numeric: tabular-nums; min-width: 0; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; }
 .gm-co { margin-left: auto; padding: 4px 8px; border-radius: 9px;
   background: var(--g-gold); color: var(--g-gold-ink);
   font-size: 12px; font-weight: 900; box-shadow: 0 2px 0 var(--g-gold-d);
@@ -5526,7 +5546,7 @@ body:has(#tabbar.hidden) #screen:has(.ib),
 .gm-tile.boss .gm-bar { background: rgba(0, 0, 0, .2); }
 
 /* ══ 상점 — 맨 아래 길게 하나 ══ */
-.gm-shopwrap { margin-top: auto; padding-top: 13px; display: grid; gap: 9px; }
+.gm-shopwrap { margin-top: auto; padding-top: 11px; display: grid; gap: 8px; flex: none; }
 /* 티켓 줄 — 상점 바 위에 얇게. 남는 높이를 «빈 판»으로 두지 않고 실제 정보로 채운다.
    티켓이 갈 곳이 상점 안에만 있으면 아이가 «바꿔놓고 어디서 받나»를 못 찾는다. */
 .gm-tkbar { display: flex; align-items: center; gap: 11px; width: 100%; border: none;

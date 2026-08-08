@@ -5378,124 +5378,414 @@ body:has(#tabbar.hidden) #screen:has(.ib),
 .dy-big i { font-style: normal; font-size: 12px; font-weight: 700; color: var(--muted); }
 
 /* ═══════════════════════════════════════════════════════════════════════
-   🎮 미션 게임 — 아이의 세계 (2026-08-08, 기획서 §01·§04·§08)
+   🎮 미션 게임 — 아이의 세계 (2026-08-08, 기획서 v2 §01 · 시안 v4 「B안」)
 
-   부모 앱 위에 얹힌 화면이 아니라 **다른 세계**로 읽혀야 한다.
-   그래서 홈의 카드 문법(hv3-card)을 쓰지 않고 상태창으로 시작한다.
-   ⚠ 색은 테마 토큰을 그대로 쓴다 — 테마를 바꾸면 게임도 같이 바뀌어야 한 앱으로 읽힌다.
-   ⚠ 연출은 **퀴즈에만** 몰아준다. 습관 미션까지 화려하면 매일 보기 피곤해진다(기획서 §08).
+   ⚠⚠ **부모 테마 토큰(--surf/--card-a/--card-ink/--accent)을 여기서 쓰지 않는다.**
+      아이 화면은 «다른 세계»이고, 부모 앱은 테마 18종이 그 토큰을 갈아끼운다.
+      섞어 쓰면 8/4 처럼 «아이 화면을 고치다 부모 테마를 망가뜨리는» 사고가 난다.
+
+   대신 아래 게임 전용 변수만 쓴다. 아이 테마는 **배경 그라데이션 한 쌍**
+   (--g-sky1/--g-sky2)만 바뀌고 카드는 항상 흰색이다 — 그래서 바탕만 갈아도
+   화면 전체가 바뀌고, 테마를 10종으로 늘리든 나라별로 바꾸든 두 줄이면 된다.
+
+   ⚠ 아이콘은 전부 이모지다. 서브셋 폰트에 없는 ti-* 를 쓰면 빈 네모가 뜬다(08-07 사고).
    ⚠ 이 블록이 그대로 모듈 B(글로벌 단독 앱)의 스타일이 된다.
    ═══════════════════════════════════════════════════════════════════════ */
 
-.gm { min-height: 100vh; margin: calc(env(safe-area-inset-top) * -1 - 18px) -20px -24px;
-  padding: calc(env(safe-area-inset-top) + 10px) 18px calc(env(safe-area-inset-bottom) + 24px);
-  background: var(--surf); }
+.gm {
+  --g-sky1: #4A9BFF; --g-sky2: #7C5CFF;      /* ← 테마로 바뀌는 것은 이 둘뿐 */
+  --g-panel: #FFFFFF; --g-panel2: #F2F6FF;
+  --g-ink: #16203A; --g-sub: #5B6B8C;
+  --g-gold: #FFC531; --g-gold-d: #E8930B; --g-gold-ink: #7A4E00;
+  --g-lime: #38D46A; --g-lime-d: #23A94E;
+  --g-pink: #FF6BAA; --g-violet: #9B6BFF; --g-cyan: #2ED3E0;
+  --g-orange: #FF8A3D; --g-red: #FF4E7A;
+  --g-shadow: 0 6px 0 rgba(0, 0, 0, .13);
 
-/* ── 상태창 ── */
-.gm-top { display: flex; align-items: center; gap: 10px; }
-.gm-out { width: 44px; height: 44px; flex: none; display: grid; place-items: center;
-  border: none; border-radius: 50%; background: var(--card-a); color: var(--card-ink); font-size: 20px; }
-.gm-who { flex: 1; min-width: 0; }
-.gm-who b { display: block; font-size: 17px; font-weight: 900; color: var(--ink); }
-.gm-who em { font-style: normal; font-size: 12.5px; font-weight: 800; color: var(--accent-ink); }
-.gm-purse { flex: none; display: flex; align-items: center; gap: 5px;
-  padding: 8px 14px; border-radius: 999px; background: var(--card-a); }
-.gm-purse i { font-style: normal; font-size: 15px; color: var(--card-ink); }
-.gm-purse b { font-size: 19px; font-weight: 900; color: var(--card-ink);
-  font-variant-numeric: tabular-nums; }
+  /* ⚠ 위로 끌어올리지 않는다. 부모 홈은 위쪽에 그림이 꽉 차서 «상태바 밑까지» 밀어 올리지만,
+     게임 화면은 맨 위가 캐릭터 줄이다 — 끌어올리면 **이름·레벨·지갑이 상태바에 먹힌다**.
+     노치가 없는 기기에서는 env(safe-area-inset-top) 가 0 이라 그대로 -18px 만큼 잘렸다(08-08 실기). */
+  /* 게임 화면은 «화면 전체를 쓰는 다른 세계»다. #screen 의 안쪽 여백(위 18·아래 20)을
+     타면 그만큼 넘쳐서 상점 바가 잘린다 — 음수 마진으로 상쇄하면 그 숫자가 바뀔 때 또 깨진다.
+     그래서 부모 상자에서 아예 빠져나온다. 이러면 어느 기기에서도 딱 맞는다(08-08 실기).
+     ⚠ z-index 1 — 서랍·시트·클리어 연출(90)보다 아래여야 한다. */
+  position: fixed; inset: 0; z-index: 1; box-sizing: border-box;
+  overflow: hidden;
+  /* ⚠ 노치가 없는 안드로이드는 env(safe-area-inset-top) 가 0 이다. 그대로 두면
+     캐릭터 줄이 상태바(약 24px) 밑에 깔린다 — 실기에서 이름·레벨이 안 보였다(08-08).
+     그래서 «둘 중 큰 값»으로 최소 높이를 보장한다. */
+  padding: max(calc(env(safe-area-inset-top) + 12px), 40px) 14px
+           calc(env(safe-area-inset-bottom) + 16px);
+  background: linear-gradient(180deg, var(--g-sky1), var(--g-sky2));
+  color: var(--g-ink);
+  display: flex; flex-direction: column;
+}
+/* 배경 5종 — 실제로 갈리는 것은 이 두 줄이 전부다 */
+.gm.gt-lime   { --g-sky1: #4ED07A; --g-sky2: #12A5A0; }
+.gm.gt-lav    { --g-sky1: #A98BFF; --g-sky2: #F06BC0; }
+.gm.gt-sunset { --g-sky1: #FF9F4A; --g-sky2: #F0517A; }
+.gm.gt-mint   { --g-sky1: #3ED6D2; --g-sky2: #3A79E8; }
 
-/* ── 오늘 리밋 게이지 — 이게 게임의 시계다(기획서 §02) ── */
-.gm-lim { margin-top: 14px; }
-.gm-limbar { height: 10px; border-radius: 999px; overflow: hidden;
-  background: color-mix(in srgb, var(--ink) 12%, transparent); }
-.gm-limbar span { display: block; height: 100%; border-radius: 999px;
-  background: var(--accent); transition: width .35s ease; }
-.gm-limtx { display: flex; align-items: baseline; gap: 8px; margin-top: 6px;
-  font-size: 12.5px; font-weight: 700; color: var(--muted); font-variant-numeric: tabular-nums; }
-.gm-limtx b { font-size: 14px; color: var(--ink); }
-.gm-limtx em { font-style: normal; margin-left: auto; }
-.gm-limtx em.full { color: var(--accent-ink); font-weight: 800; }
-
-/* ── 탭 ── */
-.gm-tabs { display: flex; gap: 8px; margin-top: 16px; }
-.gm-tabs button { flex: 1; min-height: 44px; border: none; border-radius: 14px;
-  background: var(--card-a); color: var(--card-sub);
-  font-family: inherit; font-size: 14.5px; font-weight: 800; }
-.gm-tabs button.on { background: var(--accent); color: var(--on-accent); }
-
-.gm-body { margin-top: 14px; }
-.gm-empty { margin: 40px 0; text-align: center; font-size: 14px;
-  font-weight: 700; color: var(--muted); line-height: 1.7; }
-.gm-sec { display: flex; align-items: baseline; gap: 8px; margin: 18px 0 8px; }
-.gm-sec b { font-size: 14.5px; font-weight: 900; color: var(--ink); }
-.gm-sec em { font-style: normal; margin-left: auto; font-size: 12.5px;
-  font-weight: 700; color: var(--muted); }
-.gm-sec.later b { color: var(--muted); }
-
-/* ── 미션 줄 ── */
-.gm-ms { display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 9px;
-  padding: 14px 16px; border: none; border-radius: 16px; background: var(--card-a);
-  text-align: left; font-family: inherit; }
-.gm-msk { flex: none; width: 26px; height: 26px; border-radius: 50%; display: grid;
-  place-items: center; font-size: 14px; font-weight: 900;
-  background: color-mix(in srgb, var(--card-ink) 12%, transparent); color: var(--card-ink); }
-.gm-msb { flex: 1; min-width: 0; }
-.gm-msb b { display: block; font-size: 15px; font-weight: 800; color: var(--card-ink);
+/* ── 캐릭터 시트 ── */
+.gm-hero { display: flex; align-items: center; gap: 10px; flex: none; }
+.gm-ava { width: 46px; height: 46px; flex: none; display: grid; place-items: center;
+  border: none; border-radius: 15px; background: rgba(255, 255, 255, .32); font-size: 25px;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .5); }
+.gm-me { flex: 1; min-width: 0; color: #fff; }
+.gm-lv { display: inline-block; padding: 3px 9px; border-radius: 9px;
+  background: var(--g-gold); color: var(--g-gold-ink);
+  font-size: 11px; font-weight: 900; box-shadow: 0 2px 0 var(--g-gold-d); }
+.gm-nm { display: block; margin-top: 4px; font-size: 19px; font-weight: 900;
+  letter-spacing: -.02em; text-shadow: 0 2px 6px rgba(0, 0, 0, .22);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.gm-msb em { font-style: normal; font-size: 12px; font-weight: 700; color: var(--card-sub); }
-.gm-msc { flex: none; font-size: 14px; font-weight: 900; color: var(--card-ink); }
-.gm-ms.done { opacity: .55; }
-.gm-ms.done .gm-msb b { text-decoration: line-through; }
+.gm-purse { flex: none; display: flex; align-items: center; gap: 5px;
+  padding: 8px 13px; border-radius: 13px; background: var(--g-gold);
+  color: var(--g-gold-ink); box-shadow: 0 3px 0 var(--g-gold-d); }
+.gm-purse i { font-style: normal; font-size: 15px; }
+.gm-purse b { font-size: 18px; font-weight: 900; font-variant-numeric: tabular-nums; }
 
-/* ── 퀴즈: 유일하게 «게임처럼» 연출하는 곳 ── */
-.qz-intro { margin-top: 34px; text-align: center; }
-.qz-intro b { display: block; font-size: 21px; font-weight: 900; color: var(--ink); }
-.qz-intro p { margin: 6px 0 0; font-size: 14px; font-weight: 700; color: var(--muted); }
-.qz-intro .quiet { font-size: 12.5px; }
-.gm-go { width: 100%; min-height: 52px; margin-top: 22px; border: none; border-radius: 16px;
-  background: var(--accent); color: var(--on-accent);
-  font-family: inherit; font-size: 16px; font-weight: 900; }
-.gm-go.ghost { background: var(--card-a); color: var(--card-ink); }
+/* ── 오늘 얼마나 벌었나 ── */
+.gm-xp { margin-top: 10px; padding: 9px 12px; border-radius: 14px; flex: none;
+  background: rgba(255, 255, 255, .22); }
+.gm-xpb { height: 13px; padding: 3px; border-radius: 8px; overflow: hidden;
+  background: rgba(0, 0, 0, .18); }
+.gm-xpb span { display: block; height: 100%; border-radius: 6px;
+  background: linear-gradient(90deg, var(--g-gold-d), var(--g-gold));
+  box-shadow: 0 0 10px rgba(255, 197, 49, .7); transition: width .35s ease; }
+.gm-xpt { display: flex; margin-top: 6px; font-size: 12px; font-weight: 900;
+  color: #fff; font-variant-numeric: tabular-nums; }
+.gm-xpt em { margin-left: auto; font-style: normal; font-weight: 800;
+  color: rgba(255, 255, 255, .82); }
+.gm-xpt em.full { color: var(--g-gold); }
 
-.qz-hd { display: flex; align-items: baseline; gap: 10px; }
-.qz-no { font-size: 13px; font-weight: 900; color: var(--accent-ink);
+/* ══ 타일 — 홈도 카드 안도 «같은 문법» ══ */
+/* ⚠ 타일이 남는 높이를 «채운다». 고정 높이로 두면 폰 화면 아래쪽이 통째로 비어
+   «만들다 만 화면»으로 읽힌다(대표님이 여러 번 지적한 그 문제, 08-08 실기 확인).
+   grid-auto-rows: 1fr 이라 줄이 몇 개든 남는 높이를 고르게 나눠 갖는다. */
+.gm-grid { margin-top: 13px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  /* ⚠ 최소값을 크게 잡으면 **한 화면에 안 들어간다.** 세로가 짧은 기기에서 밀려 내려가
+     아래 상점 바가 잘린다(08-08 실기: 616px 화면에서 687px 이 됐다).
+     작게 줄 수 있게 열어 두고, 큰 화면에서는 상한까지만 커진다. 남는 높이는 위아래로 나눈다. */
+  /* ⚠ min-height: 0 이 없으면 **줄어들지 않는다.** flex 자식의 기본 min-height 는 auto 라
+     내용 높이 밑으로 못 내려가고, 그래서 616px 화면에서 717px 이 됐다(08-08 실기). */
+  /* ⚠ 상한을 «길이»(172px 같은 것)로 주면 줄이 그 값 그대로 고정돼 **컨테이너를 넘긴다.**
+     1fr 이어야 남는 높이에 맞춰 늘고 줄어든다. 최소값만 지키면 된다(08-08 실기로 두 번 잡음). */
+  flex: 1; min-height: 0; align-content: stretch;
+  grid-auto-rows: minmax(112px, 1fr); }
+/* 홈은 아래에 상점·티켓 줄이 있어 남는 높이를 타일이 먹어야 딱 맞는다.
+   안쪽 화면(카드·상점)은 아래에 아무것도 없어서 같은 규칙을 쓰면 타일이 늘어나 휑해진다.
+   → 안쪽에서는 높이에 상한을 두고 위로 붙인다. */
+.gm-grid.cap { flex: 0 1 auto; align-content: start; grid-auto-rows: minmax(158px, 226px); }
+.gm-grid > .gm-empty { grid-column: 1 / -1; }
+.gm-tile { --c: #B9C6DD;
+  position: relative; overflow: hidden; width: 100%; text-align: left;
+  border: none; font-family: inherit; color: var(--g-ink);
+  padding: 11px 11px 10px; border-radius: 18px;
+  background: var(--g-panel); box-shadow: var(--g-shadow); }
+.gm-tile::before { content: ""; position: absolute; left: 0; right: 0; top: 0;
+  height: 6px; background: var(--c); }
+.gm-tile:active { transform: translateY(2px); box-shadow: 0 4px 0 rgba(0, 0, 0, .13); }
+.gm-tile.c-orange { --c: var(--g-orange); } .gm-tile.c-cyan   { --c: var(--g-cyan); }
+.gm-tile.c-violet { --c: var(--g-violet); } .gm-tile.c-red    { --c: var(--g-red); }
+.gm-tile.c-gold   { --c: var(--g-gold); }   .gm-tile.c-lime   { --c: var(--g-lime); }
+
+.gm-tile { display: flex; flex-direction: column; }
+.gm-ti { position: relative; display: grid; place-items: center; width: 46px; height: 46px;
+  margin-top: 2px; border-radius: 15px; font-size: 25px; flex: none;
+  background: color-mix(in srgb, var(--c) 16%, #fff); }
+/* 내용을 한 덩어리로 모아 세로 가운데에 둔다. 바를 바닥에 붙이면(margin-top:auto)
+   카드 가운데가 휑해지고, 이름을 아래로 밀면 아이콘이 떠 보인다 — 둘 다 08-08 실기에서 확인. */
+.gm-tile { justify-content: center; }
+.gm-tt { display: block; margin-top: 8px; font-size: 15px; font-weight: 900;
+  letter-spacing: -.02em; }
+.gm-tn { display: block; margin-top: 3px; font-size: 11px; font-weight: 700;
+  font-style: normal; color: var(--g-sub);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.gm-bar { display: block; height: 9px; border-radius: 6px; overflow: hidden;
+  background: var(--g-panel2); }
+.gm-bar i { display: block; height: 100%; border-radius: 6px; background: var(--c);
+  transition: width .3s ease; }
+.gm-tb { display: flex; align-items: center; gap: 8px; margin-top: 6px; }
+.gm-tb em { font-style: normal; font-size: 11.5px; font-weight: 900; color: var(--g-sub);
+  font-variant-numeric: tabular-nums; min-width: 0; overflow: hidden;
+  text-overflow: ellipsis; white-space: nowrap; }
+.gm-co { margin-left: auto; padding: 4px 8px; border-radius: 9px;
+  background: var(--g-gold); color: var(--g-gold-ink);
+  font-size: 12px; font-weight: 900; box-shadow: 0 2px 0 var(--g-gold-d);
   font-variant-numeric: tabular-nums; }
-.qz-field { margin-left: auto; font-size: 12px; font-weight: 800; color: var(--muted); }
-/* 남은 시간 — 줄어드는 막대 하나면 충분하다. 숫자를 같이 두면 초조함만 커진다 */
-.qz-timer { height: 6px; margin-top: 8px; border-radius: 999px; overflow: hidden;
-  background: color-mix(in srgb, var(--ink) 12%, transparent); }
-.qz-timer span { display: block; height: 100%; background: var(--accent); }
-.qz-q { margin: 22px 0 18px; font-size: 20px; font-weight: 900; line-height: 1.45;
-  color: var(--ink); text-wrap: balance; }
+
+/* 국내 전용 표시 — 해외판은 이 타일 자체가 빠진다 */
+.gm-kr { position: absolute; top: 10px; right: 0; padding: 3px 8px;
+  border-radius: 9px 0 0 9px; font-size: 9.5px; font-weight: 900;
+  background: var(--c); color: #fff; }
+
+/* 아직 안 한 칸 — 누르라고 살짝 들려 있다 */
+.gm-tile.todo { box-shadow: var(--g-shadow), 0 0 0 3px color-mix(in srgb, var(--c) 45%, #fff); }
+
+/* 끝낸 칸 — 흐리게가 아니라 «도장 찍힘»으로 */
+.gm-tile.clear { background: var(--g-panel2); }
+.gm-tile.clear .gm-tt { color: var(--g-sub); }
+.gm-tile.clear .gm-co { background: var(--g-lime); color: #fff;
+  box-shadow: 0 2px 0 var(--g-lime-d); }
+.gm-tile.clear .gm-ti::after { content: "✓"; position: absolute;
+  width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%;
+  background: var(--g-lime); color: #fff; font-size: 15px; font-weight: 900;
+  transform: translate(16px, -16px); box-shadow: 0 2px 0 var(--g-lime-d); }
+/* 클리어 딱지 — 연출은 1.2초면 사라지지만 이건 하루 종일 남는다(대표님 지시 08-08) */
+.gm-stamp { position: absolute; top: 15px; right: -13px; transform: rotate(-11deg);
+  padding: 4px 22px; background: var(--g-lime); color: #fff;
+  font-size: 12px; font-weight: 900; letter-spacing: .14em;
+  box-shadow: 0 3px 0 var(--g-lime-d); pointer-events: none; }
+
+/* 보스 타일(오늘의 미션) — 4칸 중 하나지만 색으로 «다른 것»임을 알린다 */
+.gm-tile.boss { background: linear-gradient(135deg, #FF8A3D, #FF4E7A); color: #fff; }
+.gm-tile.boss::before { background: rgba(255, 255, 255, .5); }
+.gm-tile.boss .gm-ti { background: rgba(255, 255, 255, .26); }
+.gm-tile.boss .gm-tn,
+.gm-tile.boss .gm-tb em { color: rgba(255, 255, 255, .88); }
+.gm-tile.boss .gm-bar { background: rgba(0, 0, 0, .2); }
+
+/* ══ 상점 — 맨 아래 길게 하나 ══ */
+.gm-shopwrap { margin-top: auto; padding-top: 11px; display: grid; gap: 8px; flex: none; }
+/* 티켓 줄 — 상점 바 위에 얇게. 남는 높이를 «빈 판»으로 두지 않고 실제 정보로 채운다.
+   티켓이 갈 곳이 상점 안에만 있으면 아이가 «바꿔놓고 어디서 받나»를 못 찾는다. */
+.gm-tkbar { display: flex; align-items: center; gap: 11px; width: 100%; border: none;
+  font-family: inherit; text-align: left; padding: 12px 16px; border-radius: 17px;
+  background: rgba(255, 255, 255, .26); color: #fff; }
+.gm-tkbar .gm-si { font-size: 22px; }
+.gm-tkbar b { flex: 1; min-width: 0; font-size: 15px; font-weight: 900; }
+.gm-tkn { flex: none; padding: 4px 11px; border-radius: 999px; background: #FF6BAA;
+  color: #fff; font-size: 12.5px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.gm-tkn.zero { background: rgba(255, 255, 255, .3); }
+.gm-shopbar { display: flex; align-items: center; gap: 13px; width: 100%;
+  border: none; font-family: inherit; text-align: left;
+  padding: 15px 16px; border-radius: 20px; color: var(--g-gold-ink);
+  background: linear-gradient(135deg, #FFD86B, #FFB01F);
+  box-shadow: 0 6px 0 var(--g-gold-d); }
+.gm-shopbar:active { transform: translateY(2px); box-shadow: 0 4px 0 var(--g-gold-d); }
+.gm-si { flex: none; font-size: 30px; }
+.gm-sb { flex: 1; min-width: 0; }
+.gm-sb b { display: block; font-size: 17px; font-weight: 900; letter-spacing: -.02em; }
+.gm-sb em { font-style: normal; font-size: 12px; font-weight: 800; opacity: .78; }
+.gm-sc { flex: none; padding: 7px 12px; border-radius: 12px;
+  background: rgba(255, 255, 255, .75); font-size: 14px; font-weight: 900;
+  font-variant-numeric: tabular-nums; }
+
+/* ── 안쪽 화면 머리 ── */
+.gm-head { display: flex; align-items: center; gap: 11px; color: #fff; }
+.gm-back { width: 40px; height: 40px; flex: none; display: grid; place-items: center;
+  border: none; border-radius: 13px; background: rgba(255, 255, 255, .28);
+  color: #fff; font-family: inherit; font-size: 22px; font-weight: 900; line-height: 1; }
+.gm-hi { flex: none; width: 46px; height: 46px; display: grid; place-items: center;
+  border-radius: 15px; background: rgba(255, 255, 255, .26); font-size: 25px; }
+.gm-ht { display: block; font-size: 19px; font-weight: 900; letter-spacing: -.02em;
+  text-shadow: 0 2px 6px rgba(0, 0, 0, .2); }
+.gm-hs { display: block; margin-top: 2px; font-style: normal; font-size: 11.5px;
+  font-weight: 800; opacity: .85; }
+
+.gm-lab { margin: 17px 0 8px; color: #fff; font-size: 14px; font-weight: 900;
+  text-shadow: 0 2px 5px rgba(0, 0, 0, .2); }
+.gm-empty { margin: 34px 0; text-align: center; font-size: 14px; font-weight: 800;
+  line-height: 1.6; color: rgba(255, 255, 255, .9); }
+.gm-body { margin-top: 12px; }
+.gm-fine { margin: 8px 0 0; text-align: center; font-size: 11.5px; font-weight: 800;
+  color: rgba(255, 255, 255, .8); }
+
+.gm-go { width: 100%; min-height: 52px; margin-top: 16px; border: none; border-radius: 16px;
+  background: #fff; color: var(--g-ink); font-family: inherit;
+  font-size: 16px; font-weight: 900; box-shadow: 0 5px 0 rgba(0, 0, 0, .14); }
+.gm-go:active { transform: translateY(2px); box-shadow: 0 3px 0 rgba(0, 0, 0, .14); }
+.gm-go.ghost { background: rgba(255, 255, 255, .26); color: #fff; box-shadow: none; }
+.gm-go.retry { background: var(--g-gold); color: var(--g-gold-ink);
+  box-shadow: 0 5px 0 var(--g-gold-d); }
+.gm-go[disabled] { background: rgba(255, 255, 255, .3); color: rgba(255, 255, 255, .65);
+  box-shadow: none; }
+
+/* ── 상점 진열대 (2×2) ── */
+.gm-item { position: relative; padding: 12px; border-radius: 18px; text-align: center;
+  background: var(--g-panel); box-shadow: var(--g-shadow);
+  /* 타일과 같은 이유로 세로 가운데 — 위로 붙이면 카드 아래가 하얗게 뜬다 */
+  display: flex; flex-direction: column; justify-content: center; }
+.gm-ph { display: grid; place-items: center; height: 66px; border-radius: 13px;
+  background: var(--g-panel2); font-size: 34px; }
+.gm-inm { display: block; margin-top: 8px; font-size: 14px; font-weight: 900;
+  letter-spacing: -.01em; color: var(--g-ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gm-ilm { display: block; margin-top: 2px; font-style: normal; font-size: 10.5px;
+  font-weight: 800; color: var(--g-sub); }
+.gm-buy { width: 100%; min-height: 40px; margin-top: 8px; border: none; border-radius: 11px;
+  background: var(--g-gold); color: var(--g-gold-ink);
+  font-family: inherit; font-size: 14px; font-weight: 900;
+  box-shadow: 0 3px 0 var(--g-gold-d); font-variant-numeric: tabular-nums; }
+.gm-buy[disabled] { background: #DDE5F2; color: #95A3BC; box-shadow: none; }
+/* 못 사는 것은 숨기지 않는다 — «몇 개 더»가 곧 목표다 */
+.gm-need { display: block; margin-top: 5px; font-style: normal; font-size: 10.5px;
+  font-weight: 800; color: var(--g-pink); }
+.gm-item.off { opacity: .78; }
+
+/* ── 프로필 ── */
+.gm-pf { margin-top: 14px; padding: 18px 14px 16px; border-radius: 20px; text-align: center;
+  background: var(--g-panel); box-shadow: var(--g-shadow); }
+.gm-big { position: relative; width: 104px; height: 104px; margin: 0 auto;
+  display: grid; place-items: center; border-radius: 32px;
+  background: var(--g-panel2); font-size: 52px; }
+/* 캐릭터가 들어올 자리 — 업데이트 때 이 칸만 갈아끼운다 */
+.gm-soon { position: absolute; right: -6px; bottom: -6px; padding: 4px 9px;
+  border-radius: 10px; background: var(--g-violet); color: #fff;
+  font-size: 10px; font-weight: 900; box-shadow: 0 2px 0 #7A47E0; }
+.gm-pnm { display: block; margin-top: 12px; font-size: 20px; font-weight: 900;
+  letter-spacing: -.02em; color: var(--g-ink); }
+.gm-lv2 { display: inline-block; margin-top: 5px; padding: 4px 11px; border-radius: 10px;
+  background: var(--g-gold); color: var(--g-gold-ink);
+  font-size: 12px; font-weight: 900; box-shadow: 0 2px 0 var(--g-gold-d); }
+.gm-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; margin-top: 14px; }
+.gm-stats > div { padding: 11px 6px; border-radius: 14px; background: var(--g-panel2); }
+.gm-stats b { display: block; font-size: 18px; font-weight: 900; color: var(--g-ink);
+  font-variant-numeric: tabular-nums; }
+.gm-stats em { font-style: normal; font-size: 10.5px; font-weight: 800; color: var(--g-sub); }
+
+.gm-sw { display: grid; grid-template-columns: repeat(5, 1fr); gap: 9px; }
+.gm-swb { position: relative; aspect-ratio: 1; border: none; border-radius: 16px;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, .16); font-family: inherit; }
+.gm-swb.on::after { content: "✓"; position: absolute; inset: 0; display: grid;
+  place-items: center; color: #fff; font-size: 20px; font-weight: 900;
+  text-shadow: 0 2px 5px rgba(0, 0, 0, .35); }
+.gm-bgs { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; }
+.gm-bg2 { padding: 12px 4px; border-radius: 15px; text-align: center;
+  background: var(--g-panel); box-shadow: var(--g-shadow); }
+.gm-bgi { display: block; font-size: 26px; line-height: 1.1; }
+.gm-bg2 em { display: block; margin-top: 5px; font-style: normal; font-size: 10px;
+  font-weight: 900; color: var(--g-sub); }
+.gm-bg2.off { background: rgba(255, 255, 255, .26); box-shadow: none; }
+.gm-bg2.off em { color: rgba(255, 255, 255, .82); }
+
+.sw-sky    { background: linear-gradient(160deg, #4A9BFF, #7C5CFF); }
+.sw-lime   { background: linear-gradient(160deg, #4ED07A, #12A5A0); }
+.sw-lav    { background: linear-gradient(160deg, #A98BFF, #F06BC0); }
+.sw-sunset { background: linear-gradient(160deg, #FF9F4A, #F0517A); }
+.sw-mint   { background: linear-gradient(160deg, #3ED6D2, #3A79E8); }
+
+/* 푸는 동안은 붉은 «보스전» 배경 — 배경색 5종과 무관하게 이 순간만은 같다 */
+.gm.qzp { background: linear-gradient(180deg, #FF8A3D, #FF4E7A); }
+/* 그림·문제·보기를 **한 덩어리로 묶어 세로 가운데**에 둔다.
+   보기를 바닥에 붙였더니 문제와 보기 사이가 텅 비어 보였다 — 답을 위로 올린다(지시 08-08). */
+.qz-play { flex: 1; display: flex; flex-direction: column; }
+/* 위쪽 진행 표시(1/10 · 남은 시간)는 **제자리**에 두고,
+   그림·문제·보기만 남는 공간의 가운데로 모은다 — 위아래 auto 가 그 일을 한다.
+   ⚠ .qz-play 에 justify-content:center 를 주면 진행 표시까지 같이 내려온다(08-08 실기). */
+.qz-mid { margin: auto 0 22px; display: flex; flex-direction: column; min-height: 0; }
+.qz-play .qz-opts { margin: 0 0 auto; }
+
+/* ══ 오늘의 미션(퀴즈) ══ */
+.qz-intro { margin-top: 30px; text-align: center; }
+.qz-intro b { display: block; font-size: 21px; font-weight: 900; color: #fff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, .22); }
+.qz-intro p { margin: 6px 0 0; font-size: 14px; font-weight: 800;
+  color: rgba(255, 255, 255, .9); }
+.qz-intro .quiet { font-size: 12.5px; color: rgba(255, 255, 255, .75); }
+
+.qz-hd { display: flex; align-items: center; gap: 9px; color: #fff; }
+.qz-no { font-size: 13px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.qz-field { margin-left: auto; padding: 4px 11px; border-radius: 9px;
+  background: rgba(255, 255, 255, .28); font-size: 11.5px; font-weight: 900; }
+.qz-timer { height: 12px; margin-top: 10px; padding: 3px; border-radius: 7px;
+  background: rgba(0, 0, 0, .2); }
+.qz-timer span { display: block; height: 100%; border-radius: 5px; background: #fff;
+  box-shadow: 0 0 10px rgba(255, 255, 255, .8); }
+/* ⚠ 그림은 «다 받은 뒤» 타이머를 켠다 — 아니면 「안 늦었는데 틀렸다」가 된다 */
+.qz-img { border-radius: 18px; overflow: hidden; background: #fff; min-height: 0;
+  box-shadow: 0 6px 0 rgba(0, 0, 0, .14); }
+.qz-img img { display: block; width: 100%; max-height: 168px; object-fit: cover; }
+.qz-img + .qz-q { margin-top: 18px; }
+/* 시험지처럼 «1) 문제» 로 읽히게 — 번호가 문장 앞에 붙는다(대표님 지시 08-08) */
+.qz-qn { margin-right: 9px; font-variant-numeric: tabular-nums; opacity: .8; }
+.qz-q { margin: 0 0 20px; font-size: 23px; font-weight: 900; line-height: 1.4;
+  color: #fff; text-wrap: balance; text-shadow: 0 2px 8px rgba(0, 0, 0, .22); }
 .qz-opts { display: grid; gap: 10px; }
-.qz-op { min-height: 58px; padding: 0 18px; border: none; border-radius: 16px;
-  background: var(--card-a); color: var(--card-ink); text-align: left;
-  font-family: inherit; font-size: 16px; font-weight: 800; }
-.qz-op:active { transform: scale(.98); }
+.qz-opts.ox { grid-template-columns: 1fr 1fr; }
+.qz-op { display: flex; align-items: center; gap: 12px; min-height: 60px; padding: 0 16px;
+  border: none; border-radius: 16px; text-align: left; background: #fff;
+  color: var(--g-ink); font-family: inherit; font-size: 16.5px; font-weight: 900;
+  box-shadow: 0 5px 0 rgba(0, 0, 0, .14); }
+.qz-op:active { transform: translateY(2px); box-shadow: 0 3px 0 rgba(0, 0, 0, .14); }
+.qz-k { flex: none; width: 28px; height: 28px; display: grid; place-items: center;
+  border-radius: 9px; background: var(--g-panel2); color: var(--g-sub);
+  font-size: 12px; font-weight: 900; }
 
-.qz-done { margin-top: 26px; padding: 24px; border-radius: 20px;
-  background: var(--card-a); text-align: center; }
-.qz-score { display: flex; align-items: baseline; justify-content: center; gap: 4px;
-  font-variant-numeric: tabular-nums; }
-.qz-score b { font-size: 52px; font-weight: 900; color: var(--card-ink); line-height: 1; }
-.qz-score span { font-size: 20px; font-weight: 800; color: var(--card-sub); }
-.qz-perfect { margin-top: 8px; font-size: 15px; font-weight: 900; color: var(--accent-ink); }
-.qz-coin { margin-top: 6px; font-size: 17px; font-weight: 900; color: var(--card-ink); }
-.qz-cap { margin: 8px 0 0; font-size: 12.5px; font-weight: 700; color: var(--card-sub); }
-.qz-rv { margin-top: 9px; padding: 13px 16px; border-radius: 14px; background: var(--card-a); }
-.qz-rv b { display: block; font-size: 15px; font-weight: 800; color: var(--card-ink); }
-.qz-rv em { font-style: normal; font-size: 12.5px; font-weight: 700; color: var(--card-sub); }
+/* 답한 «직후» 보기에 붙는 표시 — 정답 초록, 내가 고른 오답 빨강, 나머지는 흐리게.
+   ⚠ 답하기 전에는 서버가 정답을 안 보내므로 여기서 칠할 방법 자체가 없다. */
+.qz-mk { margin-left: auto; font-size: 20px; font-weight: 900; }
+.qz-op.ok  { background: #E3F5EA; box-shadow: 0 5px 0 #23A94E; }
+.qz-op.ok .qz-k  { background: #C7ECD4; color: #1E7B43; }
+.qz-op.ok .qz-mk { color: #1E7B43; }
+.qz-op.no  { background: #FCE3E1; box-shadow: 0 5px 0 #C3352F; }
+.qz-op.no .qz-k  { background: #F6CFCC; color: #C3352F; }
+.qz-op.no .qz-mk { color: #C3352F; }
+.qz-op.dim { opacity: .5; }
+.qz-op[disabled] { pointer-events: none; }
 
-/* ── 상점 줄 ── */
-.gm-item { display: flex; align-items: center; gap: 12px; margin-top: 9px;
-  padding: 14px 16px; border-radius: 16px; background: var(--card-a); }
-.gm-itb { flex: 1; min-width: 0; }
-.gm-itb b { display: block; font-size: 15px; font-weight: 800; color: var(--card-ink); }
-.gm-itb em { font-style: normal; display: block; font-size: 12px; font-weight: 700;
-  color: var(--card-sub); }
-.gm-itb em.no { color: var(--card-sub); }
-.gm-buy { flex: none; min-height: 44px; padding: 0 18px; border: none; border-radius: 999px;
-  background: var(--accent); color: var(--on-accent);
-  font-family: inherit; font-size: 15px; font-weight: 900; }
-.gm-buy[disabled] { background: color-mix(in srgb, var(--card-ink) 14%, var(--card-a));
-  color: var(--card-ink); }
+/* 「맞았어요 / 아쉬워요 + 정답」 — 마지막에 답안지를 몰아 주지 않는다.
+   틀린 «그 순간»에 답을 봐야 남는다(대표님 지시 08-08). */
+.qz-feed { margin-top: 12px; padding: 13px 15px; border-radius: 16px; text-align: center;
+  background: rgba(0, 0, 0, .3); color: #fff; }
+.qz-feed b { display: block; font-size: 18px; font-weight: 900; }
+.qz-feed em { display: block; margin-top: 4px; font-style: normal; font-size: 14px;
+  font-weight: 900; color: #FFD86B; }
+.qz-feed i { display: block; margin-top: 3px; font-style: normal; font-size: 12px;
+  font-weight: 700; color: rgba(255, 255, 255, .8); }
+.qz-next { display: block; margin-top: 8px; font-size: 12px; font-weight: 900;
+  color: rgba(255, 255, 255, .75); }
+.qz-feed.o { background: rgba(30, 123, 67, .55); }
+.qz-feed.x { background: rgba(0, 0, 0, .38); }
+
+.qz-done { margin-top: 22px; padding: 22px; border-radius: 20px; text-align: center;
+  background: var(--g-panel); box-shadow: var(--g-shadow); }
+.qz-score { display: flex; align-items: baseline; justify-content: center; gap: 4px; }
+.qz-score b { font-size: 52px; font-weight: 900; line-height: 1; color: var(--g-ink); }
+.qz-score span { font-size: 20px; font-weight: 800; color: var(--g-sub); }
+.qz-perfect { margin-top: 8px; font-size: 15px; font-weight: 900; color: var(--g-gold-d); }
+.qz-coin { margin-top: 6px; font-size: 17px; font-weight: 900; color: var(--g-ink); }
+.qz-cap { margin: 8px 0 0; font-size: 12.5px; font-weight: 700; color: var(--g-sub); }
+.qz-sheet { display: grid; gap: 8px; }
+.qz-rv { display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px;
+  border-radius: 14px; background: var(--g-panel); box-shadow: var(--g-shadow); }
+.qz-rn { flex: none; width: 24px; height: 24px; display: grid; place-items: center;
+  border-radius: 8px; background: var(--g-panel2); color: var(--g-sub);
+  font-size: 12px; font-weight: 900; font-variant-numeric: tabular-nums; }
+.qz-rb { flex: 1; min-width: 0; }
+.qz-rv b { display: block; font-size: 14px; font-weight: 800; color: var(--g-ink); line-height: 1.4; }
+.qz-rv em { display: block; margin-top: 3px; font-style: normal; font-size: 12px;
+  font-weight: 800; color: var(--g-sub); }
+.qz-rv em.ans { color: #1E7B43; }
+.qz-rv em.mine { color: #C3352F; }
+.qz-rv em.hint { color: var(--g-sub); font-weight: 700; }
+.qz-rm { flex: none; font-size: 19px; font-weight: 900; line-height: 1.2; }
+.qz-rv.o .qz-rm { color: var(--g-lime); }
+.qz-rv.x .qz-rm { color: #FF5A5A; }
+.qz-rv.o .qz-rn { background: #E3F5EA; color: #1E7B43; }
+
+/* ══ 클리어 연출 — 세트를 완주한 «순간»에만 1.2초 ══
+   ⚠ 개별 미션 완료는 조용히 체크만. 매번 띄우면 3초 만에 성가신 것이 된다.
+   ⚠ .gm 밖에 그려지므로 색을 직접 적는다(변수 상속이 없다). */
+.gm-veil { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center;
+  padding: 20px; text-align: center; background: rgba(6, 9, 22, .9);
+  animation: gmveil .18s ease-out; }
+@keyframes gmveil { from { opacity: 0; } to { opacity: 1; } }
+.gm-ring { width: 132px; height: 132px; margin: 0 auto; display: grid; place-items: center;
+  border-radius: 50%; font-size: 62px;
+  background: radial-gradient(circle, rgba(255, 197, 49, .42), transparent 66%);
+  box-shadow: 0 0 60px rgba(255, 197, 49, .55); }
+.gm-big2 { margin-top: 6px; font-size: 44px; font-weight: 900; letter-spacing: .14em;
+  color: #fff; text-shadow: 0 0 26px rgba(255, 197, 49, .85), 0 4px 0 rgba(0, 0, 0, .28); }
+.gm-sub2 { margin-top: 2px; font-size: 15px; font-weight: 900; color: #FFC531; }
+.gm-gain { display: inline-flex; align-items: center; gap: 6px; margin-top: 16px;
+  padding: 10px 18px; border-radius: 15px; background: #FFC531; color: #7A4E00;
+  font-size: 19px; font-weight: 900; box-shadow: 0 4px 0 #E8930B; }
+.gm-tap { margin-top: 18px; font-size: 11.5px; font-weight: 800;
+  color: rgba(255, 255, 255, .6); }
+
+@media (prefers-reduced-motion: reduce) {
+  .gm-veil { animation: none; background: rgba(6, 9, 22, .9); }
+  .gm-xpb span, .gm-bar i { transition: none; }
+  .gm-tile:active, .gm-go:active, .qz-op:active, .gm-shopbar:active { transform: none; }
+}

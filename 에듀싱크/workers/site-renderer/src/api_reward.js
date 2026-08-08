@@ -108,7 +108,11 @@ async function addStoreItem(request, db, env, childId) {
   const title = String(b?.title || "").trim();
   const need = parseInt(b?.stars_required, 10);
   if (!title || title.length > 40) return apiErr("VALIDATION", null, "이름을 40자 안으로 적어 주세요.");
-  if (!(need >= 1 && need <= 999)) return apiErr("VALIDATION", null, "필요한 도장 수를 확인해 주세요.");
+  /* ⚠ 상한 999 는 «하루 3개, 미션 1개 = ★1» 시절의 값이었다.
+     지금은 하루 상한이 60 이라 ★2,000 짜리 자전거가 한 달, ★10,000 이 반년짜리 목표가 된다 —
+     **큰 목표가 이 앱 경제의 뼈대**인데 999 가 그걸 막고 있었다(기획서 v2 §02·§04).
+     ⚠ 그래도 무한은 아니다. 오타로 ★999999 를 걸면 아이가 «영영 못 사는 것»만 보게 된다. */
+  if (!(need >= 1 && need <= 99999)) return apiErr("VALIDATION", null, "필요한 도장 수를 확인해 주세요(1~99,999).");
   const lt = b?.limit_type === "weekly" || b?.limit_type === "monthly" ? b.limit_type : null;
   const lc = lt ? Math.max(1, parseInt(b?.limit_count, 10) || 1) : null;
 

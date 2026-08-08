@@ -5475,6 +5475,27 @@ function gmBadges(coin) {
   </div>`;
 }
 
+/* 진열대 그림 — **이름에서 고른다.**
+   store_items 에 그림 칸이 없고, 부모에게 이모지를 고르라고 시키면 진열대 세팅이 길어진다
+   (첫 설정에서 손을 놓으면 아이 화면이 텅 빈다 — 기획서 v2 §04).
+   ⚠ 못 찾으면 🎁 다. 억지로 맞히지 않는다.
+   ⚠ 나중에 부모가 직접 고르게 하면 그 값이 이것보다 우선이다. */
+const SHOP_ICONS = [
+  [/아이스크림|하드|빙수|아이스/, "🍦"], [/치킨|닭/, "🍗"], [/피자/, "🍕"],
+  [/햄버거|버거/, "🍔"], [/과자|간식|젤리|사탕|초콜|초코/, "🍬"], [/음료|콜라|주스|음료수/, "🥤"],
+  [/떡볶이|분식/, "🌶"], [/라면/, "🍜"], [/케이크|생일/, "🎂"],
+  [/게임|플스|닌텐도|로블록스|마크/, "🎮"], [/유튜브|영상|티비|TV|만화|웹툰/, "📺"], [/영화/, "🎬"],
+  [/자전거|킥보드/, "🚲"], [/장난감|레고|인형/, "🧸"], [/책|도서|만화책/, "📚"],
+  [/용돈|돈|현금/, "💰"], [/문구|스티커|펜/, "✏️"], [/놀이공원|워터파크|키즈카페/, "🎡"],
+  [/외식|식당|고기/, "🍖"], [/여행|캠핑/, "⛺"], [/축구|야구|운동/, "⚽"],
+  [/폰|핸드폰|스마트폰/, "📱"], [/늦게|자정|밤샘|취침/, "🌙"], [/친구|초대/, "👫"],
+];
+function shopIcon(title) {
+  const t = String(title || "");
+  for (const [re, ic] of SHOP_ICONS) if (re.test(t)) return ic;
+  return "🎁";
+}
+
 /* 상점 바 — 홈과 카드 안이 **같은 것**을 쓴다. 둘로 나누면 반드시 어긋난다.
    withTicket 이면 티켓 줄까지 얹는다(홈에서만). */
 function gmShopBar(withTicket) {
@@ -5704,7 +5725,7 @@ function gameShop() {
         const short = Math.max(0, (it.stars_required || 0) - stars);
         return `
         <div class="gm-item ${it.can_buy ? "" : "off"}">
-          <div class="gm-ph">${esc(it.emoji || "🎁")}</div>
+          <div class="gm-ph">${esc(it.emoji || shopIcon(it.title))}</div>
           <b class="gm-inm">${esc(it.title)}</b>
           ${it.limit_type ? `<em class="gm-ilm">${it.limit_type === "weekly" ? "주" : "달"} ${it.limit_count}번 중 ${it.used}번</em>` : ""}
           <button class="gm-buy" ${it.can_buy && !busy ? "" : "disabled"}
@@ -9566,6 +9587,7 @@ const App = {
     if (S.schoolMs === null) this.loadSchoolMissions();
     if (S.msets === null) this.loadMissionSets();
     if (S.store === null) this.loadStore();
+    if (S.rewards === null) this.loadRewards();   // 티켓 개수가 «…» 로 남지 않게
   },
 
   async loadQuiz(force) {
