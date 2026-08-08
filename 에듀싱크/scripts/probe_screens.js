@@ -2,6 +2,7 @@
 // 🔬 화면 전수검사 — 기기에서 **모든 화면을 돌며 잰다** (2026-08-08)
 //
 //   node scripts/emul_eval.mjs --file scripts/probe_screens.js            (부모 폰)
+// 대비는 여기서 안 잰다 → scripts/probe_contrast.js
 //   CDP_PORT=9334 node scripts/emul_eval.mjs --file scripts/probe_screens.js  (자녀 폰)
 //
 // 화면마다 재는 것 —
@@ -132,34 +133,21 @@
       if (!hasBox) continue;
       // 장식용 그림·구분선·진행바는 «자리»가 아니다
       const cn = (e.className || "").toString();
-      if (/art|scrim|dim|bar|line|divider|grip|badge|dot|ring|spark|track|veil|shadow/i.test(cn)) continue;
+      /* ⚠ ghost = 자료를 기다리는 동안 그리는 «뼈대»다. 글자가 없는 게 정상이고
+       실제로는 반짝이며 «불러오는 중»을 말한다 — 빈 자리가 아니다(08-09 확인). */
+      if (/art|scrim|dim|bar|line|divider|grip|badge|dot|ring|spark|track|veil|shadow|ghost|skel/i.test(cn)) continue;
       if (r.height < 24 && r.width > 80) continue;         // 가로 선
       doodle.push((cn || e.tagName).split(/\s+/).slice(0, 2).join(".") + ` ${Math.round(r.width)}×${Math.round(r.height)}`);
     }
     hit.빈상자 = [...new Set(doodle)].slice(0, 8);
 
-    /* ⑧ 글자 대비 — 읽을 수 없는 글자는 **취향이 아니라 결함**이다(4.5:1 · 큰 글자 3:1).
-       ⚠ 배경은 부모를 타고 올라가며 찾는다 — 투명한 요소가 겹쳐 있으면 잘못 잡을 수 있어
-         «측정상 미달»과 «진짜 안 보임»은 다를 수 있다. 의심되면 화면으로 한 번 더 본다. */
-    const lum = (c) => { const [r0,g0,b0] = (c.match(/\d+/g)||[0,0,0]).slice(0,3).map(Number)
-        .map(v => { v/=255; return v<=0.03928 ? v/12.92 : Math.pow((v+0.055)/1.055, 2.4); });
-      return 0.2126*r0 + 0.7152*g0 + 0.0722*b0; };
-    const ratio = (a,b) => { const [x,y]=[lum(a),lum(b)].sort((m,n)=>n-m); return (x+0.05)/(y+0.05); };
-    const bgOf = (el) => { let e2 = el; while (e2) { const c = getComputedStyle(e2).backgroundColor;
-        if (c && c !== "rgba(0, 0, 0, 0)" && c !== "transparent") return c; e2 = e2.parentElement; }
-      return "rgb(255,255,255)"; };
-    const dim = [];
-    for (const e of document.querySelectorAll("b,em,span,p,h1,h2,h3,button,a,i,div,label")) {
-      if (e.children.length) continue;
-      const t = (e.textContent || "").trim(); if (!t) continue;
-      if (!vis(e)) continue;
-      const cs3 = getComputedStyle(e);
-      const size = parseFloat(cs3.fontSize), fw = parseInt(cs3.fontWeight) || 400;
-      const need = (size >= 24 || (size >= 18.66 && fw >= 700)) ? 3 : 4.5;
-      const cr = ratio(cs3.color, bgOf(e));
-      if (cr < need) dim.push(`${(e.className||e.tagName).toString().split(/\s+/)[0]} ${cr.toFixed(2)}<${need} "${t.slice(0,10)}"`);
-    }
-    hit.흐린글자 = [...new Set(dim)].slice(0, 6);
+    /* ⑧ 글자 대비는 **여기서 재지 않는다** — probe_contrast.js 로 옮겼다(2026-08-09).
+       여기 있던 판정은 두 가지를 못 다뤄 오탐이 쏟아졌다:
+         · color-mix() 결과 `color(srgb 0.1 …)` 는 **0~1 범위**인데 0~255 로 읽었다
+         · 그라데이션으로 칠한 면 위의 글자는 배경을 뒤 카드로 잡았다
+       실측: 설정 화면 «34건» → 파서 고치니 «1건». 「58건」 보고도 대부분 이것이었다.
+       ⚠ 대비는 `node scripts/emul_eval.mjs --file scripts/probe_contrast.js` 로 잰다. */
+    hit.흐린글자 = [];
 
     const bad = hit.가로넘침 || hit.작은버튼.length || hit.글자잘림.length || hit.겹침.length
               || hit.기호쏠림.length || hit.빈상자.length || hit.흐린글자.length;

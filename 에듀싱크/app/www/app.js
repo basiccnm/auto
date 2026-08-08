@@ -3710,7 +3710,7 @@ const Screens = {
       return `
       <div class="dw-semhd"><span>${sem}학기</span>
         <em>${rows.length ? `${rows.length}건` : "없어요"}</em>
-        <button onclick="App.addRecordAt(${g}, ${sem})">＋ 넣기</button></div>
+        <button onclick="App.addRecordAt(${g}, ${sem})"><span class="pl">＋</span> 넣기</button></div>
       ${rows.length ? `<div class="dw-grid">${rows.map((r) => `
         <button class="dw-item" onclick="if(!App.holdGuard())App.openRecord(${r.id})" onpointerdown="App.holdRecord(${r.id})">
           <span class="dw-shot">

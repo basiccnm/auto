@@ -6438,3 +6438,18 @@ html:root[data-theme="charcoal"], html:root[data-theme="lavender"] {
 /* 서랍의 ＋ — 클래스가 없는 맨 span 이라 부모(버튼)에서 --accent 를 물려받았다.
    다크에서 연보라 강조색이 유리 카드 위 3.99 로 내려온다. 글씨용 값으로. */
 :root .dw-year button span, :root .dw-sem button span, :root .dw-list button span { color: var(--accent-ink); }
+
+/* 서랍 「＋ 넣기」 — 클래스 없는 맨 span 이라 부모에서 --accent 를 물려받아
+   다크에서 3.99 로 내려왔다(선택자로는 못 잡아 app.js 에서 .pl 을 붙였다).
+   --accent 는 «면» 색이다. 글씨 자리에는 글씨용 값을 쓴다. */
+:root .dw-sem .pl, :root .pl { color: var(--accent-ink); }
+
+/* ── 아이 세계 대비 2곳 (2026-08-09 자녀폰 실측) ────────────────────
+   ⚠ 둘 다 «밝은 면에 흰 글씨»다. 아이 화면은 색이 밝고 쨍해서 이 실수가 나기 쉽다. */
+
+/* 「학교정보」 꼬리표 1.82:1 — 면 색(--c)이 타일마다 달라 어떤 타일에선 흰 글씨가 사라진다.
+   타일 색을 그대로 쓰되 **꼬리표에서만 한 단계 눌러** 어떤 --c 가 와도 성립하게 한다. */
+:root .gm-kr { background: color-mix(in srgb, var(--c) 52%, #000); }
+
+/* 「1장 기다리는 중」 2.65:1 — 밝은 분홍 위 흰 글씨. 분홍은 유지하고 톤만 내린다 */
+:root .gm-tkn { background: #D01B63; }
