@@ -3690,17 +3690,22 @@ const Screens = {
       </button>`;
 
     // 학년 줄 오른쪽 — 겹쳐 놓은 종이. 없으면 빈 종이 세 장이 흐리게.
+    /* ⚠ 기록이 **없으면 빈 종이를 그리지 않는다**(2026-08-08 지적: 「공책에 낙서해놓은 거야?」).
+       회색 상자 세 개만 덩그러니 놓이면 «뭔가 있어야 하는데 비었다»로 읽히고,
+       학년이 넉 줄이면 화면이 통째로 낙서가 된다. 없으면 **개수로 말한다.** */
     const stack = (rows) => {
-      const n = Math.min(3, rows.length);
-      const arr = n ? rows.slice(0, n) : [null, null, null];
-      return `<span class="dw-stack">${arr.map((r) => `
-        <i class="${r ? "" : "blank"}">${r?.image ? `<img src="${r.image}" ${r._thumb ? `data-rec="${r._thumb}"` : ""} alt="">` : ""}</i>`).join("")}</span>`;
+      if (!rows.length) return `<span class="dw-none">아직 없어요</span>`;
+      return `<span class="dw-stack">${rows.slice(0, 3).map((r) => `
+        <i>${r?.image ? `<img src="${r.image}" ${r._thumb ? `data-rec="${r._thumb}"` : ""} alt="">` : ""}</i>`).join("")}
+        ${rows.length > 3 ? `<em>+${rows.length - 3}</em>` : ""}</span>`;
     };
 
     const semBlock = (g, sem) => {
       const rows = semOf(g, sem);
       return `
-      <div class="dw-semhd"><span>${sem}학기</span><i></i><button onclick="App.addRecordAt(${g}, ${sem})">넣기</button></div>
+      <div class="dw-semhd"><span>${sem}학기</span>
+        <em>${rows.length ? `${rows.length}건` : "없어요"}</em>
+        <button onclick="App.addRecordAt(${g}, ${sem})">＋ 넣기</button></div>
       ${rows.length ? `<div class="dw-grid">${rows.map((r) => `
         <button class="dw-item" onclick="if(!App.holdGuard())App.openRecord(${r.id})" onpointerdown="App.holdRecord(${r.id})">
           <span class="dw-shot">
@@ -3726,8 +3731,9 @@ const Screens = {
     return `
     ${subHeader("서랍", esc(c.nickname))}
     <div class="dw-top">
+      <!-- ⚠ 이니셜 얼굴 옆에 이름을 또 쓰면 「테 테스트아이」로 읽힌다(08-08). 이름만 둔다 -->
       <button class="dw-child" onclick="location.hash='#switch'">
-        ${childFace(c, "dw-face")}<span>${esc(c.nickname)}</span><i class='ti ti-chevron-down'></i>
+        <span>${esc(c.nickname)}</span><i class='ti ti-chevron-down'></i>
       </button>
       <span class="dw-acts"><button onclick="App.recordSearch()">${S.recSearch ? "닫기" : "검색"}</button></span>
     </div>

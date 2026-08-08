@@ -109,7 +109,32 @@
     }
     hit.기호쏠림 = [...new Set(off)].slice(0, 6);
 
-    const bad = hit.가로넘침 || hit.작은버튼.length || hit.글자잘림.length || hit.겹침.length || hit.기호쏠림.length;
+    /* ⑦ 「낙서형 빈 상태」 — 글자 하나 없이 **테두리·배경만 있는 상자**.
+       서랍 화면이 그랬다: 기록이 없는데 회색 종이 세 장만 그려 놔서
+       「공책에 낙서해놓은 거야?」가 됐다(대표님 지적 08-08).
+       빈 자리는 **그리지 말거나, 무슨 자리인지 말해야** 한다. */
+    const doodle = [];
+    for (const e of document.querySelectorAll("div, span, li, i, section")) {
+      if (!vis(e)) continue;
+      const r = rect(e);
+      if (r.width < 24 || r.height < 16) continue;
+      if ((e.textContent || "").trim()) continue;
+      if (e.querySelector("img, svg, canvas, input, button")) continue;
+      const cs = getComputedStyle(e);
+      const hasBox = (cs.borderTopWidth !== "0px" && cs.borderTopStyle !== "none")
+                  || (cs.backgroundColor !== "rgba(0, 0, 0, 0)" && cs.backgroundColor !== "transparent")
+                  || cs.backgroundImage !== "none";
+      if (!hasBox) continue;
+      // 장식용 그림·구분선·진행바는 «자리»가 아니다
+      const cn = (e.className || "").toString();
+      if (/art|scrim|dim|bar|line|divider|grip|badge|dot|ring|spark|track|veil|shadow/i.test(cn)) continue;
+      if (r.height < 24 && r.width > 80) continue;         // 가로 선
+      doodle.push((cn || e.tagName).split(/\s+/).slice(0, 2).join(".") + ` ${Math.round(r.width)}×${Math.round(r.height)}`);
+    }
+    hit.빈상자 = [...new Set(doodle)].slice(0, 8);
+
+    const bad = hit.가로넘침 || hit.작은버튼.length || hit.글자잘림.length || hit.겹침.length
+              || hit.기호쏠림.length || hit.빈상자.length;
     if (bad) out.push(hit);
     seen.add(hit.실제);
   }
