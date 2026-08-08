@@ -825,6 +825,7 @@ const S = {
   schoolMs: null,         // 학교 «미션» 오늘 상태 — 서버 school_missions.js 가 정본
   msets: null,            // 아침·방과후 «세트 완주» 상태 {morning:{done,all,taken},after:{…}}
   gamePreview: false,     // 부모가 «아이 화면»을 일부러 들여다보는 중
+  pmTab: null,            // 부모 관리 안쪽 화면 (todo|bonus|today) — null 이면 카드 허브
   giveBusy: false,        // 추가 증정 중복 누름 방지
   bonusGiven: null,       // 오늘 «추가 증정»을 이미 준 미션 id 들 — 서버가 정본
                           // ⚠ 전역 SCHOOL(급식·시간표)과 다른 것이다. 이름을 섞지 말 것
@@ -5275,87 +5276,100 @@ function parentMissionAdmin(c, coin) {
   if (!c.id) return `${subHeader("미션 관리")}
     <p class="empty-mid">아이를 등록하면 시작해요</p>`;
 
-  // 「확인해 주세요」 — 부모가 손대야 하는 것만 센다
+  const head = (title, sub) => `
+    <div class="gmp-top">
+      <button class="gmp-back" onclick="${S.pmTab ? "App.pmTab(null)" : "App.goBack()"}" aria-label="뒤로">‹</button>
+      <div><b>${esc(title)}</b>${sub ? `<em>${esc(sub)}</em>` : ""}</div>
+    </div>`;
+
   const waitMission = (S.missions || []).filter((x) => x.status === "waiting").length;
   const waitVerify = (S.verifyPending || []).length;
   const waitTicket = (S.rewards || []).filter((o) => o.status === "requested").length;
   const todo = waitMission + waitVerify + waitTicket;
+  const done = (S.missions || []).filter((x) => x.status === "done");
+  const given = S.bonusGiven || [];
+  const leftBonus = done.filter((x) => given.indexOf(x.id) < 0).length;
 
-  const sets = S.msets || {};
-  const sc = S.schoolMs;
-  const q = S.quiz;
-  const row = (icon, name, done, all, extra) => `
-    <div class="pm-row">
-      <span class="pm-i">${icon}</span>
-      <b>${esc(name)}</b>
-      <span class="pm-n">${all ? `${done} / ${all}` : "오늘 없음"}</span>
-      ${done >= all && all > 0 ? `<span class="pm-ok">완료</span>` : ""}
-      ${extra || ""}
+  /* ── 안쪽 화면 ─────────────────────────────────────────────
+     ⚠ 한 장에 다 펼치면 스크롤이 길어져 «무엇부터 봐야 하는지»가 안 보인다
+       (대표님 지시 08-08: 「카드로 각 화면으로 들어가서 보게. 한 번에 다 펼치지 말고」). */
+  if (S.pmTab === "todo") {
+    return `<div class="gmp">${head("확인해 주세요", todo ? `${todo}건` : "지금은 없어요")}
+      ${!todo ? `<p class="pm-none">지금 확인할 게 없어요</p>` : `
+        ${!waitVerify ? "" : `<button class="pm-go" onclick="location.hash='#mission'">
+          <span class="pm-i">📸</span><b>아이가 낸 것</b><span class="pm-cnt">${waitVerify}</span></button>`}
+        ${!waitMission ? "" : `<button class="pm-go" onclick="location.hash='#mission'">
+          <span class="pm-i">✅</span><b>미션 확인 기다림</b><span class="pm-cnt">${waitMission}</span></button>`}
+        ${!waitTicket ? "" : `<button class="pm-go" onclick="location.hash='#tickets'">
+          <span class="pm-i">🎟</span><b>바꿔 달라고 한 것</b><span class="pm-cnt">${waitTicket}</span></button>`}`}
     </div>`;
+  }
 
-  /* ⚠ subHeader 를 안 쓴다 — 그건 부모 테마(살구·라벤더…)를 입어서
-     아래 게임 바탕과 따로 논다(대표님 지적 08-08). 머리도 같은 세계 안에 둔다. */
+  if (S.pmTab === "bonus") {
+    return `<div class="gmp">${head("추가 증정", "해낸 미션에 ＋1")}
+      ${!done.length ? `<p class="pm-none">아이가 미션을 끝내면 여기서 ＋1을 얹어 줄 수 있어요</p>`
+        : done.map((x) => {
+          const had = given.indexOf(x.id) >= 0;
+          return `
+          <div class="pm-row">
+            <span class="pm-i">⭐</span>
+            <b>${esc(x.title)}</b>
+            ${had ? `<span class="pm-ok">＋1 줬어요</span>`
+                  : `<button class="pm-plus" ${S.giveBusy ? "disabled" : ""}
+                       onclick="App.missionBonus(${x.id})">＋1</button>`}
+          </div>`;
+        }).join("")}
+      <p class="pm-fine">한 미션에 한 번만 · 오늘 받은 것이 ${coin.limit}개를 넘으면 안 들어가요</p>
+    </div>`;
+  }
+
+  if (S.pmTab === "today") {
+    const sets = S.msets || {}, sc = S.schoolMs, q = S.quiz;
+    const row = (icon, name, d, all, extra) => `
+      <div class="pm-row">
+        <span class="pm-i">${icon}</span><b>${esc(name)}</b>
+        <span class="pm-n">${all ? `${d} / ${all}` : "오늘 없음"}</span>
+        ${d >= all && all > 0 ? `<span class="pm-ok">완료</span>` : ""}${extra || ""}
+      </div>`;
+    return `<div class="gmp">${head("오늘 아이가 한 것", "모은 스탬프 ★" + coin.stars)}
+      ${row("🌅", "아침 미션", sets.morning?.done || 0, sets.morning?.all || 0)}
+      ${sc && sc.available === false ? "" : row("🏫", "학교 미션", sc?.done || 0, sc?.all || 0)}
+      ${row("📚", "방과후 미션", sets.after?.done || 0, sets.after?.all || 0)}
+      ${row("⚔️", "오늘의 미션", q?.done ? 1 : 0, 1,
+            q?.done ? `<span class="pm-sub">${q.correct} / ${q.total} 맞힘</span>` : "")}
+    </div>`;
+  }
+
+  /* ── 허브 — 2×2 카드. 아이 홈과 **같은 문법**이라 배울 게 없다 ── */
+  const tile = (key, icon, name, note, cnt, cls) => `
+    <button class="pm-tile${cls ? " " + cls : ""}" onclick="${key.startsWith("#") ? `location.hash='${key}'` : `App.pmTab('${key}')`}">
+      ${cnt ? `<span class="pm-badge">${cnt}</span>` : ""}
+      <span class="pm-ti">${icon}</span>
+      <b>${esc(name)}</b>
+      <em>${esc(note)}</em>
+    </button>`;
+
   return `
   <div class="gmp">
     <div class="gmp-top">
       <button class="gmp-back" onclick="App.goBack()" aria-label="뒤로">‹</button>
-      <b>${nm} 미션 관리</b>
+      <div><b>${nm} 미션 관리</b></div>
     </div>
 
-  <!-- 오늘 한눈에 -->
-  <div class="pm-top">
-    <div class="pm-big"><b>★ ${coin.stars}</b><em>모은 스탬프</em></div>
-    <div class="pm-big"><b>${coin.earned_today} / ${coin.limit}</b><em>오늘 받은 것</em></div>
-    <div class="pm-big"><b>Lv.${coin.level || 1}</b><em>${gmRank(coin.level || 1)}</em></div>
-  </div>
+    <div class="pm-top">
+      <div class="pm-big"><b>★ ${coin.stars}</b><em>모은 스탬프</em></div>
+      <div class="pm-big"><b>${coin.earned_today} / ${coin.limit}</b><em>오늘 받은 것</em></div>
+      <div class="pm-big"><b>Lv.${coin.level || 1}</b><em>${gmRank(coin.level || 1)}</em></div>
+    </div>
 
-  <!-- ① 확인해 주세요 — 부모가 손대야 하는 것 -->
-  <h3 class="pm-h">확인해 주세요${todo ? ` <em>${todo}</em>` : ""}</h3>
-  ${!todo ? `<p class="pm-none">지금 확인할 게 없어요</p>` : `
-    ${!waitVerify ? "" : `<button class="pm-go" onclick="location.hash='#mission'">
-      <span class="pm-i">📸</span><b>아이가 낸 것</b><span class="pm-cnt">${waitVerify}</span></button>`}
-    ${!waitMission ? "" : `<button class="pm-go" onclick="location.hash='#mission'">
-      <span class="pm-i">✅</span><b>미션 확인 기다림</b><span class="pm-cnt">${waitMission}</span></button>`}
-    ${!waitTicket ? "" : `<button class="pm-go" onclick="location.hash='#tickets'">
-      <span class="pm-i">🎟</span><b>바꿔 달라고 한 것</b><span class="pm-cnt">${waitTicket}</span></button>`}`}
-
-  <!-- ② 추가 증정 — **해낸 미션 하나에 ＋1**. 자유 지급은 없다(대표님 지시 08-08).
-       그렇게 두면 코인 값어치가 그날 부모 기분이 되고 «무엇을 잘해서 받았는지»가 안 남는다. -->
-  <h3 class="pm-h">추가 증정</h3>
-  ${(() => {
-    const done = (S.missions || []).filter((x) => x.status === "done");
-    if (!done.length) return `<p class="pm-none">아이가 미션을 끝내면 여기서 ＋1을 얹어 줄 수 있어요</p>`;
-    const given = S.bonusGiven || [];
-    return done.map((x) => {
-      const had = given.indexOf(x.id) >= 0;
-      return `
-      <div class="pm-row">
-        <span class="pm-i">⭐</span>
-        <b>${esc(x.title)}</b>
-        ${had ? `<span class="pm-ok">＋1 줬어요</span>`
-              : `<button class="pm-plus" ${S.giveBusy ? "disabled" : ""}
-                   onclick="App.missionBonus(${x.id})">＋1</button>`}
-      </div>`;
-    }).join("");
-  })()}
-  <p class="pm-fine">한 미션에 한 번만 · 오늘 받은 것이 ${coin.limit}개를 넘으면 안 들어가요</p>
-
-  <!-- ③ 오늘 아이가 한 것 (읽기) -->
-  <h3 class="pm-h">오늘 아이가 한 것</h3>
-  ${row("🌅", "아침 미션", sets.morning?.done || 0, sets.morning?.all || 0)}
-  ${sc && sc.available === false ? "" : row("🏫", "학교 미션", sc?.done || 0, sc?.all || 0)}
-  ${row("📚", "방과후 미션", sets.after?.done || 0, sets.after?.all || 0)}
-  ${row("⚔️", "오늘의 미션", q?.done ? 1 : 0, 1,
-        q?.done ? `<span class="pm-sub">${q.correct} / ${q.total} 맞힘</span>` : "")}
-
-  <!-- ④ 손대는 곳 -->
-  <h3 class="pm-h">바꿔 주기</h3>
-  <button class="pm-go" onclick="location.hash='#store'">
-    <span class="pm-i">🏪</span><b>진열대 꾸미기</b><span class="pm-arw">›</span></button>
-  <button class="pm-go" onclick="location.hash='#mission'">
-    <span class="pm-i">🎯</span><b>미션 고르기</b><span class="pm-arw">›</span></button>
-  <button class="pm-go" onclick="App.gamePreviewOn()">
-    <span class="pm-i">👀</span><b>아이 화면 미리보기</b><span class="pm-arw">›</span></button>
+    <div class="pm-grid">
+      ${tile("todo", "🔔", "확인해 주세요", todo ? `${todo}건 기다려요` : "지금은 없어요", todo, todo ? "hot" : "")}
+      ${tile("bonus", "⭐", "추가 증정", leftBonus ? `${leftBonus}개에 줄 수 있어요` : "해낸 미션에 ＋1", leftBonus)}
+      ${tile("today", "📋", "오늘 한 것", "아침·학교·방과후", 0)}
+      ${tile("#store", "🏪", "진열대 꾸미기", "바꿀 것을 정해요", 0)}
+      ${tile("#mission", "🎯", "미션 고르기", "무엇을 시킬지", 0)}
+      ${tile("preview", "👀", "아이 화면", "아이가 보는 그대로", 0)}
+    </div>
   </div>`;
 }
 
@@ -9665,7 +9679,8 @@ const App = {
 
   /* 부모가 «아이 화면»을 일부러 들여다본다. 기본은 관리 화면이다 — 부모에게 아이 세계를
      기본으로 띄우면 «내 화면이 왜 애들 것이지»가 된다(대표님 지적 08-08). */
-  gamePreviewOn() { S.gamePreview = true; S.gameTab = null; this.gameEnter(); this.render(); },
+  pmTab(k) { if (k === "preview") return this.gamePreviewOn(); S.pmTab = k || null; this.render(); },
+  gamePreviewOn() { S.gamePreview = true; S.gameTab = null; S.pmTab = null; this.gameEnter(); this.render(); },
   gamePreviewOff() { S.gamePreview = false; S.gameTab = null; this.render(); },
 
   /* 해낸 미션 하나에 ＋1 을 얹어 준다. ⚠ 몇 개가 실제로 들어갔는지는 **서버가** 말한다 —

@@ -5433,6 +5433,10 @@ body:has(#tabbar.hidden) #screen:has(.ib),
 .gmw .st-purse em, .gmw .st-purse span { color: var(--g-sub); font-style: normal; }
 .gmw .st-bd b { color: var(--g-ink); }
 .gmw .st-bd em, .gmw .st-lim { color: var(--g-sub); font-style: normal; }
+/* ⚠ ★가격 칩과 「바꾸기」가 서로 겹쳐 보였다(08-08 실기) — 사이를 띄우고 줄을 정리한다 */
+.gmw .st-item { display: flex; align-items: center; gap: 10px; padding: 14px; }
+.gmw .st-bd { flex: 1; min-width: 0; }
+.gmw .st-act { flex: none; display: flex; align-items: center; gap: 8px; }
 .gmw .st-act, .gmw .st-act button, .gmw .st-item button:not(.btn-ghost) {
   background: var(--g-gold); color: var(--g-gold-ink); border: none;
   border-radius: 12px; box-shadow: 0 3px 0 var(--g-gold-d); font-weight: 900; }
@@ -5458,6 +5462,31 @@ body:has(#tabbar.hidden) #screen:has(.ib),
   min-height: 100vh; margin: calc(env(safe-area-inset-top) * -1 - 18px) -20px -24px;
   padding: max(calc(env(safe-area-inset-top) + 8px), 30px) 14px calc(env(safe-area-inset-bottom) + 20px);
   background: linear-gradient(180deg, #4A9BFF, #7C5CFF); }
+/* ── 관리 허브 카드 (2026-08-08) ────────────────────────────────────
+   ⚠ 한 장에 다 펼치면 스크롤이 길어져 «무엇부터 봐야 하는지»가 안 보인다.
+     아이 홈과 **같은 타일 문법**이라 부모도 배울 게 없다. */
+.pm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+.pm-tile { position: relative; padding: 14px 12px 12px; border-radius: 18px; text-align: left;
+  border: none; font-family: inherit; background: var(--g-panel); color: var(--g-ink);
+  box-shadow: var(--g-shadow); }
+.pm-tile:active { transform: translateY(2px); box-shadow: 0 3px 0 rgba(0, 0, 0, .12); }
+.pm-ti { display: grid; place-items: center; width: 44px; height: 44px; border-radius: 14px;
+  background: var(--g-panel2); font-size: 24px; }
+.pm-tile b { display: block; margin-top: 9px; font-size: 15px; font-weight: 900;
+  letter-spacing: -.02em; }
+.pm-tile em { display: block; margin-top: 3px; font-style: normal; font-size: 11.5px;
+  font-weight: 700; color: var(--g-sub);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* 기다리는 게 있으면 그 카드만 눈에 띈다 — 여기가 흔해지면 아무 뜻도 없어진다 */
+.pm-tile.hot { box-shadow: var(--g-shadow), 0 0 0 3px #FF6BAA; }
+.pm-badge { position: absolute; top: 10px; right: 10px; min-width: 22px; padding: 3px 8px;
+  border-radius: 999px; background: #FF6BAA; color: #fff;
+  font-size: 12px; font-weight: 900; font-variant-numeric: tabular-nums; }
+
+.gmp-top div { flex: 1; min-width: 0; }
+.gmp-top em { display: block; margin-top: 2px; font-style: normal; font-size: 11.5px;
+  font-weight: 800; color: rgba(255, 255, 255, .85); }
+
 /* 머리도 같은 세계 안에 — 부모 테마 헤더(살구·라벤더)를 얹으면 아래와 따로 논다 */
 .gmp-top { display: flex; align-items: center; gap: 11px; margin-bottom: 14px; }
 .gmp-back { width: 40px; height: 40px; flex: none; display: grid; place-items: center;
