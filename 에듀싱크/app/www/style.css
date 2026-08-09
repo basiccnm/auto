@@ -7015,3 +7015,23 @@ body {
 :root .kd2-stars button.on { color: #C77800; }
 :root[data-theme="dark"] .kd2-stars button.on, :root[data-theme="navy"] .kd2-stars button.on,
 :root[data-theme="charcoal"] .kd2-stars button.on, :root[data-theme="lavender"] .kd2-stars button.on { color: #FFC531; }
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   🍚 급식 종류 표시 (2026-08-09) — 「어디가 뭔지 모르겠는데」
+
+   밥·국·반찬·김치·후식이 전부 같은 모양이라 눈이 걸릴 곳이 없었다.
+   → 줄 앞에 **색 점**, 줄 끝에 **작은 이름**.
+   ⚠ 점은 «그림»이라 테마를 안 타지만, 글자(밥·국…)는 --muted 로 둔다.
+     여기에 색을 주면 다섯 색이 글자로 튀어 시장통이 된다. 색은 점 하나로 족하다.
+   ══════════════════════════════════════════════════════════════════════ */
+:root .ml-dishes > span { position: relative; padding-left: 16px; padding-right: 34px; }
+:root .ml-kd { position: absolute; left: 2px; top: 50%; margin-top: -3px;
+  width: 7px; height: 7px; border-radius: 4px; }
+:root .ml-kd.k-rice   { background: #D98A1F; }
+:root .ml-kd.k-soup   { background: #3B72C8; }
+:root .ml-kd.k-side   { background: #2F9E6E; }
+:root .ml-kd.k-kimchi { background: #C0453F; }
+:root .ml-kd.k-des    { background: #7B5CD6; }
+:root .ml-kdn { position: absolute; right: 2px; top: 50%; transform: translateY(-50%);
+  text-decoration: none; font-size: 11px; font-weight: 800; color: var(--muted); }

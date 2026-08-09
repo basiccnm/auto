@@ -4896,6 +4896,17 @@ const nameHue = (s0) => { let h = 0; for (const ch of String(s0 || "")) h = (h *
    0 은 «안 골랐다»는 뜻이다. 사용자가 직접 고른 값은 1 이상이다.
    → 0·null·undefined 면 이름으로 정한다. 같은 학원은 언제나 같은 색이다. */
 const planColor = (i, name) => PLAN_COLORS[(i > 0 ? i : nameHue(name)) % PLAN_COLORS.length];
+/* 급식 종류 — 「어디가 뭔지 모르겠다」(2026-08-09 지적).
+   밥·국·반찬·김치·후식이 전부 같은 모양이라 눈이 걸릴 곳이 없었다.
+   ⚠ 이름만 보고 정한다(NEIS 가 종류를 안 준다). 못 맞히면 «반찬»으로 둔다 —
+     틀린 이름표보다 «반찬»이 낫다. 억지로 분류하지 않는다. */
+const MEAL_KIND = [
+  { k: "rice",  ko: "밥",   re: /밥|면|국수|죽|떡국|파스타|리조또|비빔|덮밥|카레/ },
+  { k: "soup",  ko: "국",   re: /국|탕|찌개|스프|수프/ },
+  { k: "kimchi",ko: "김치", re: /김치|깍두기|장아찌|단무지|피클/ },
+  { k: "des",   ko: "후식", re: /우유|요구르트|주스|음료|사과|바나나|수박|파인애플|토마토|배|귤|포도|멜론|푸딩|케이크|아이스|빵|떡$/ },
+];
+const mealKind = (name) => (MEAL_KIND.find((x) => x.re.test(String(name || ""))) || { k: "side", ko: "반찬" });
 const toMin = (t) => +t.slice(0, 2) * 60 + +t.slice(3);
 const toHHMM = (m) => String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0");
 const gridTop = (t) => ((toMin(t) - GRID.h0 * 60) / 30) * GRID.px;
@@ -6435,7 +6446,11 @@ function mealTab() {
               const mm = String(d.name).match(/^(.*?)\s*\(([\d.\s]+)\)\s*$/);
               const nm = mm ? mm[1] : d.name;
               const no = mm ? mm[2].trim() : "";
-              const body = `${hit ? `<mark>${esc(nm)}</mark>` : esc(nm)}${no ? `<em class="ml-no">${esc(no)}</em>` : ""}`;
+              const kd = mealKind(nm);
+              const body = `<i class="ml-kd k-${kd.k}" aria-hidden="true"></i>`
+                + `${hit ? `<mark>${esc(nm)}</mark>` : esc(nm)}`
+                + `${no ? `<em class="ml-no">${esc(no)}</em>` : ""}`
+                + `<u class="ml-kdn">${kd.ko}</u>`;
               return bad.length
                 ? `<span class="bad">${body}<i>${bad.map((a) => ALLERGEN_KO[a]).join("·")}</i></span>`
                 : `<span>${body}</span>`;
