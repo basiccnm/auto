@@ -3552,7 +3552,8 @@ const Screens = {
                 /* ⚠ 저장된 반이 실제 목록에 없으면 **시간표가 안 나온다.**
                    조용히 두면 부모는 이유를 모른 채 빈 시간표만 본다 — 반드시 말해 준다. */
                 : `⚠ 지금 「${esc(String(S.childDraft.class_name))}」로 돼 있는데 이 학년엔 없는 반이에요. 다시 골라주세요`)
-            : (S.classBusy ? "반 이름을 알아보는 중…" : `${g}학년은 ${classes}개 반이에요`)}</p></div>
+            : (S.classBusy ? "반 이름을 알아보는 중…"
+                : `${g}학년은 ${classes}개 반이에요 · 학교가 시간표를 올리면 실제 반 이름으로 바뀌어요`)}</p></div>
       </div>
       <label class="f">별명 * <span style="font-weight:400">(화면에는 이 이름만 보여요)</span></label>
       <input id="ce-nick" placeholder="예: 셋째" value="${esc(S.childDraft.nickname)}" oninput="S.childDraft.nickname=this.value">
@@ -9119,9 +9120,22 @@ const App = {
     S.classNames = null; S.classBusy = true; this.render();
     const path = "/schools/" + encodeURIComponent(slug);
     try {
-      await api(`${path}/warm?kind=timetable&grade=${encodeURIComponent(grade)}`, { method: "POST" });
-      const r = await api(`${path}/timetable?grade=${encodeURIComponent(grade)}`);
-      const names = [...new Set((r?.ok ? r.data.items : []).map((x) => x.class_name).filter(Boolean))];
+      /* ⚠ 방학에는 **다음 학기 시간표가 아직 NEIS 에 없다.**
+         실측(2026-08-09, 경기초): 1학기는 전 학년 「난초·매화·모란·장미」가 다 나오는데
+         2학기는 전 학년 0건이다. 그래서 8월에 가입하는 부모는 반 이름을 못 골랐다.
+         → 지금 학기로 물어보고 비면 **이전 학기로 한 번 더** 물어본다.
+           반 이름은 학기가 바뀌어도 대개 그대로다(꽃 이름·색 이름은 학년 단위로 정해진다). */
+      /* ⚠ `classes=1` 은 **반 이름만** 준다. 시간표를 통째로 받아 추리면
+         페이징 50건에 잘려서 반이 몇 개 빠진다(경기초 4학년 「장미」가 그렇게 사라졌다). */
+      const pull = async (sem) => {
+        const q = sem ? `&semester=${sem}` : "";
+        await api(`${path}/warm?kind=timetable&grade=${encodeURIComponent(grade)}${q}`, { method: "POST" });
+        const r = await api(`${path}/timetable?classes=1&grade=${encodeURIComponent(grade)}${q}`);
+        return (r?.ok ? r.data.items : []).filter(Boolean);
+      };
+      let names = await pull("");
+      if (!names.length) names = await pull("1");
+      if (!names.length) names = await pull("2");
       S.classNames = names.length ? names.sort() : null;
     } catch (e) { S.classNames = null; }
     S.classBusy = false; this.render();

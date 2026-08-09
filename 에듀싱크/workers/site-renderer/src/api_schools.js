@@ -225,7 +225,18 @@ async function schoolTimetable(db, url, schoolId) {
   // 시간표는 요일 단위로 축약 저장돼 날짜 개념이 없다 → 현재 학년도·학기분만 뽑으면 월~금 1벌이 나온다.
   const today = ymdToday();
   const ay = schoolYearOf(today);
-  const sem = currentSemester(today);
+  const sem = semesterOf(url, today);
+
+  /* ⚠ 「그 학년에 어떤 반이 있나」만 알고 싶을 때가 있다(자녀 등록의 반 고르기).
+     예전엔 시간표를 통째로 받아 반 이름을 추려 썼는데, **페이징 기본 50건**에 잘려서
+     경기초 4학년이 「난초·매화·장미」인데 「난초·매화」만 나왔다.
+     반이 많은 학교는 상한 200건으로도 모자란다 → 반 이름만 주는 길을 따로 낸다. */
+  if (url.searchParams.get("classes") === "1") {
+    const { results } = await db.prepare(
+      "SELECT DISTINCT class_name FROM timetables WHERE school_id=? AND school_year=? AND semester=? AND grade=? AND COALESCE(class_name,'')<>'' ORDER BY class_name"
+    ).bind(schoolId, ay, sem, grade).all();
+    return apiOk({ items: results.map((r) => r.class_name), semester: sem, neis_year: ay });
+  }
 
   let sql = "SELECT weekday, period, subject, grade, class_name, school_year, semester FROM timetables WHERE school_id = ? AND school_year = ? AND semester = ?";
   const binds = [schoolId, ay, sem];
@@ -308,7 +319,7 @@ async function warmSchool(request, db, env, url, slug) {
     else {
       const grade = pick("grade");
       if (!grade) return apiErr("VALIDATION", { fields: { grade: "시간표는 학년이 필요해요." } });
-      await warmTimetable(db, school, grade, pick("class") || null, today, key);
+      await warmTimetable(db, school, grade, pick("class") || null, today, key, pick("semester"));
     }
   } catch (e) {
     console.error("[api_schools/warm]", e && e.stack ? e.stack : String(e));
@@ -346,6 +357,20 @@ function weekdayOf(y) {
 function currentSemester(today) {
   const mo = +today.slice(4, 6);
   return mo >= 3 && mo <= 7 ? "1" : "2";
+}
+// 요청에 학기가 실려 오면 그걸 쓴다. 안 실려 오면 오늘 기준.
+// ⚠ 방학에는 **다음 학기 시간표가 NEIS 에 아직 없다** — 실측(2026-08-09, 경기초):
+//   1학기는 전 학년 「난초·매화·모란·장미」가 다 나오는데 2학기는 전 학년 0건이었다.
+//   그래서 앱이 반 이름을 고르려고 이전 학기를 되짚어 물어본다.
+function semesterOf(url, today) {
+  const q = (url.searchParams.get("semester") || "").trim();
+  return q === "1" || q === "2" ? q : currentSemester(today);
+}
+// 그 학기 «한복판» 날짜 — NEIS 시간표는 날짜창으로 조회하는데,
+// 방학 중에 「오늘±」로 물으면 수업일이 하나도 안 걸려서 빈손으로 돌아온다.
+function midOfSemester(ay, sem) {
+  const y = +ay;
+  return sem === "1" ? String(y) + "0520" : String(y + (1 - 1)) + "1110";
 }
 // 학년도(AY)는 3월 시작 — 1~2월은 전년도 학년도 2학기다.
 function schoolYearOf(today) {
@@ -430,10 +455,11 @@ async function warmSchedules(db, school, today, key) {
   if (stmts.length) await batchChunked(db, stmts);
 }
 
-async function warmTimetable(db, school, grade, className, today, key) {
+async function warmTimetable(db, school, grade, className, today, key, semReq) {
   const ep = TT_ENDPOINT[school.school_kind];
   if (!ep) return;
-  const ay = schoolYearOf(today), sem = currentSemester(today);
+  const ay = schoolYearOf(today);
+  const sem = semReq === "1" || semReq === "2" ? semReq : currentSemester(today);
   const cnt = await db.prepare("SELECT COUNT(*) AS n FROM timetables WHERE school_id=? AND school_year=? AND semester=? AND grade=? AND COALESCE(class_name,'')=COALESCE(?,'')")
     .bind(school.id, ay, sem, grade, className || null).first();
   if (cnt && cnt.n > 0) return;
@@ -441,7 +467,11 @@ async function warmTimetable(db, school, grade, className, today, key) {
   const rows = await neisGet(ep, {
     ATPT_OFCDC_SC_CODE: school.office_code, SD_SCHUL_CODE: school.school_code,
     AY: ay, SEM: sem, GRADE: grade, CLASS_NM: className || "",
-    TI_FROM_YMD: ymdAddDays(today, -35), TI_TO_YMD: ymdAddDays(today, 14),
+    /* 지금 학기면 「오늘 언저리」가 맞다. 지난 학기를 되짚는 요청이면
+       오늘 기준 날짜창엔 그 학기 수업일이 하나도 안 들어온다 → 그 학기 한복판으로 옮긴다. */
+    ...(sem === currentSemester(today)
+      ? { TI_FROM_YMD: ymdAddDays(today, -35), TI_TO_YMD: ymdAddDays(today, 14) }
+      : { TI_FROM_YMD: ymdAddDays(midOfSemester(ay, sem), -14), TI_TO_YMD: ymdAddDays(midOfSemester(ay, sem), 14) }),
   }, key);
   if (!rows.length) return;
   // (요일|반|교실|교시) → 가장 자주 나온 과목을 정규 시간표로 축약 저장.

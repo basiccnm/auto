@@ -21,7 +21,13 @@ const ALLERGEN_KO = {
    학부모가 볼 것이 아니다. **배포 전 false 로 바꾼다**(docs/작업로그.md 배포 체크리스트). */
 const DEV_TOOLS = false;   // 배포 상태(2026-07-27). 화면 검수할 때만 true 로 되돌린다.
 
-const TODAY = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10).replace(/-/g, "");
+/* ⚠ 검수용 날짜 고정 (2026-08-09) — 🔴 출시 전 이 세 줄을 지운다(STATUS 에 적어 뒀다).
+   방학에는 급식·시간표가 비어서 화면 절반을 볼 수 없다. 학기 중 날짜로 돌려 봐야
+   «진짜 화면»을 검수할 수 있다. 에뮬이 루팅이 아니라 기기 날짜를 못 바꿔서 앱에 둔다.
+     localStorage.setItem("devDate", "20260520") 하고 새로고침 → 그 날로 본다. 지우면 원래대로.
+   ⚠ 서버는 자기 날짜로 판단한다 — 이건 «앱이 보는 날»만 바꾼다(권한이 늘지 않는다). */
+const DEV_DATE = (() => { try { return (localStorage.getItem("devDate") || "").match(/^\d{8}$/)?.[0] || ""; } catch (e) { return ""; } })();
+const TODAY = DEV_DATE || new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10).replace(/-/g, "");
 
 // 한 달치 급식 — 실제로는 GET …/meals?from&to 한 번으로 받는다(기간 조회).
 // 목업이라 평일에 반찬 풀을 돌려 채운다. 모양은 계약 응답과 동일.
@@ -707,6 +713,7 @@ const S = {
   friendBusy: false,
   linkWarn: false,        // 자녀폰 미연결 안내 팝업 (물음표를 눌렀을 때만)
   deckIdx: 0,             // 자녀 홈 카드 덱에서 보고 있는 장
+  classNames: null, classBusy: false,   // 그 학교·학년의 «실제» 반 이름 (없으면 숫자로 폴백)
   report: null, reportMonth: null, reportBusy: false,   // 부모 월간 리포트
   kidTab: "daily",        // 자녀 미션 탭 — daily(일일 퀘스트) | quest(의뢰)
   subjectBest: null,      // 오늘 제일 재밌었던 과목
@@ -1940,8 +1947,11 @@ const Screens = {
           </button>`).join("")}
       </div>
       <div class="ob-bot">
+        <!-- 「건너뛰기」를 뺐다(대표님 지시 2026-08-09).
+             이 화면은 **앱을 누구에게 맞출지 정하는 자리**다 — 부모 유형·자녀 수·나이대를
+             모르면 첫 화면부터 엉뚱한 걸 보여주게 된다. 물음이 셋뿐이고 전부 한 번 누르면 끝이다.
+             ⚠ 대신 «뒤로»(←)는 남긴다. 앞 답을 고칠 길까지 막으면 갇힌 느낌이 든다. -->
         <button class="ob-go" ${got ? "" : "disabled"} onclick="App.obNext()">계속</button>
-        <button class="cm-skip" style="width:100%;margin-top:4px" onclick="App.introToNotify()">건너뛰기</button>
       </div>
     </div>`;
   },
@@ -2039,6 +2049,13 @@ const Screens = {
     ${subHeader("미션")}
     <p class="sub">오늘 <b>${esc(c.nickname)}</b>에게 준 것 · 모은 도장 <b class="ms-star">★ ${S.missionStars}</b></p>
     ${childLinkWarn()}
+
+    <!-- 🎲 리롤 — 하루 한 번. «하루 한 번»은 서버의 PRIMARY KEY(child_id, ymd) 가 강제한다.
+         화면은 세지 않는다 — 앱이 세면 폰 두 대에서 각자 세다가 두 번 바뀐다.
+         ⚠ 아직 시작 안 한 것만 바뀐다. 해낸 것(확인 기다림·완료)은 그대로 둔다 —
+           해낸 것을 리롤로 날리면 그건 보상이 아니라 벌이다. -->
+    ${list.some((x) => x.status === "open") ? `<button class="ms-reroll" onclick="App.msReroll()">
+      🎲 <span><b>오늘 미션 바꾸기</b><em>하루 한 번 · 아직 시작 안 한 것만</em></span></button>` : ""}
 
     ${list.map((x, i) => {
       const st = ST[x.status] || ST.open;
@@ -2578,7 +2595,7 @@ const Screens = {
       ${S.kidMode
         ? `<button class="hv3-ham" onclick="App.kidModeOff()" aria-label="부모 모드로 나가기">
              <i aria-hidden="true" class="ti ti-lock"></i></button>`
-        : `<button class="hv3-ham" onclick="App.drawerOpen()" aria-label="메뉴"><i aria-hidden="true" class="ti ti-menu-2"></i></button>`}
+        : `<button class="hv3-ham" onclick="App.drawerOpen()" aria-label="메뉴${unread ? ` · 안 읽음 ${unread}개` : ""}"><i aria-hidden="true" class="ti ti-menu-2"></i>${unread ? `<span class="hd-badge">${unread}</span>` : ""}</button>`}
       <!-- 아이가 없으면(구경 중) 자녀칩 자리에 **앱 이름**만 둔다(2026-08-04 지시).
            ⚠ 여기에 「가입하기」 버튼을 뒀다가 걷어냈다. 들어오자마자 가입을 들이밀면
              «구경하러 왔는데 문 앞에서 붙잡는» 꼴이다. 가입 길은 서랍(☰)에 있으면 족하다.
@@ -2587,19 +2604,32 @@ const Screens = {
            아이를 바꾸는 길은 **서랍 안**에 그대로 있다(hv3-drwho) — 입구가 둘일 이유가 없고,
            맨 위 줄이 비면 그림이 더 크게 보인다. -->
       <span class="hd-gap"></span>
-      <!-- 서랍은 저빈도지만 «이 앱이 뭐 하는 앱인가»를 말하는 자리다 — 항상 보이게 둔다(§1) -->
-      <button class="hd-box" onclick="location.hash='#timeline'" aria-label="서랍">
-        <i aria-hidden="true" class="ti ti-archive"></i>
-      </button>
-      <button class="hd-bell" onclick="location.hash='#notify'" aria-label="알림${unread ? ` ${unread}개` : ""}">
-        <i aria-hidden="true" class="ti ti-bell"></i>${unread ? `<span class="hd-badge">${unread}</span>` : ""}
-      </button>
+      <!-- 서랍·알림 아이콘을 걷어냈다(대표님 지시 2026-08-09).
+           **메뉴 안에 「서랍」과 「대화」가 이미 있다** — 입구가 둘일 이유가 없고,
+           맨 위 줄이 비면 그림이 더 크게 보인다(자녀 칩을 걷어낸 것과 같은 이유).
+           안 읽은 개수는 **메뉴 버튼 위 숫자**로 옮겼다 — 새 알림이 온 걸 홈에서 모르면
+           그건 기능이 준 것이다. -->
     </div>
 
-    <!-- 일러스트 헤더 — 그림만. 정보 텍스트는 절대 여기 얹지 않는다(§6) -->
-    <div class="hv3-art" aria-hidden="true"></div>
+    <!-- 일러스트 헤더 + 전광판.
+         ⚠ 예전 규칙(§6)은 「그림만 · 정보 텍스트를 얹지 않는다」였다. **08-09 대표님 지시로 바꿨다** —
+           「시계를 일러까지 올려서 투명 유지하면서」. 유리판은 뒤가 비쳐야 유리라서,
+           맨색 위에 얹으면 흐림이 티가 안 난다. 그림 위에 얹어야 참조(타운보드)처럼 읽힌다.
+         ⚠ 그래서 aria-hidden 을 뗐다 — 안에 **읽어야 할 글자**(날짜·시각)가 들어왔다.
+         ⚠ 그림은 테마마다 밝기가 다르다. 글자 대비는 그림이 아니라 **아래 어둠막(::after)**
+           이 책임진다 — 막을 지우면 밝은 그림에서 시계가 사라진다. -->
+    <div class="hv3-art">${boardView()}</div>
 
     ${promoteCard(c)}
+    <!-- 아이가 없으면(구경 중) **다음에 뭘 할지**를 홈에서 말해 준다(2026-08-09 실기).
+         ⚠ 예전에 여기 「가입하기」를 뒀다가 걷어낸 적이 있다 — 들어오자마자 가입을
+           들이미는 게 싫어서였다. 그건 지금도 맞다. 그래서 **가입이 아니라 «이유»**를 말한다.
+         ⚠ 빈 카드 넉 장만 있는 홈은 «고장난 앱»처럼 보인다.
+           ☰ 안에 「아이 등록하기」가 있지만, 메뉴를 열어야 보이는 것은 «없는 것»에 가깝다. -->
+    ${cur() ? "" : `<button class="hm-start" onclick="location.hash='#child-add'">
+      <b>아이를 등록하면 시작돼요</b>
+      <em>급식 · 시간표 · 학사일정이 매일 저절로 들어와요<i aria-hidden="true" class="ti ti-chevron-right"></i></em>
+    </button>`}
     <!-- ⚠ 여기에 «지금은 구경만 하고 계세요» 가입 유도 카드를 얹었다가 걷어냈다(2026-08-04 지시).
          비회원에게 보여주려는 건 **회원이 보는 그 화면 그대로**다. 그 위에 안내 카드를 덧대면
          «진짜 화면»이 아니라 광고가 낀 화면이 된다. 가입 길은 위 자녀칩 자리 하나로 족하다. -->
@@ -2616,7 +2646,6 @@ const Screens = {
     <!-- ① 전광판 — **표시 전용.** 탭도 링크도 없다(§1).
          시각은 분마다 갱신되고, 아이 상태는 시간표·학원을 보고 저절로 바뀐다.
          ⚠ 시간표가 없거나 방학이면 **아무 말도 안 한다** — 시각만 남긴다(지어내기 금지). -->
-    ${boardView()}
 
     <!-- ② 일정 카드 — 오늘 일정을 **내용 그대로**. 탭하면 일간 화면 -->
     ${(() => {
@@ -2632,7 +2661,7 @@ const Screens = {
       /* 세 카드를 **같은 한 줄 문법**으로 맞춘다(2026-08-04 지시) —
          [아이콘] 제목 …… 값 [>]. 내용이 있으면 그 아래로 펼친다.
          ⚠ 하나만 아이콘이 있으면 그 줄만 특별해 보인다 → 셋 다 준다. */
-      return `<button class="hv3-card" onclick="App.dayOpen('${TODAY}')">
+      return `<button class="hv3-card k-day" onclick="App.dayOpen('${TODAY}')">
         <div class="hv3-hdrow">
           <span class="ic"><i aria-hidden="true" class="ti ti-calendar"></i></span>
           <b>오늘 일정</b>
@@ -2648,7 +2677,7 @@ const Screens = {
     <!-- ③ 준비물 — **버튼 하나.** 내용은 나열하지 않는다. 숫자는 «내일» 미체크 개수(§1) -->
     ${(() => {
       const n = packs.length;
-      return `<button class="hv3-card ${n ? "on" : ""}" onclick="location.hash='#supplies'">
+      return `<button class="hv3-card k-supply ${n ? "on" : ""}" onclick="location.hash='#supplies'">
         <div class="hv3-hdrow">
           <span class="ic"><i aria-hidden="true" class="ti ti-backpack"></i></span>
           <b>내일 준비물</b>
@@ -2661,7 +2690,7 @@ const Screens = {
     ${(() => {
       const acts = STUB.activities.filter((a) => String(a.days_of_week || "").split(",").includes(String(dow)))
         .sort((x, y) => String(x.start_time).localeCompare(String(y.start_time)));
-      return `<button class="hv3-card" onclick="location.hash='#afterschool'">
+      return `<button class="hv3-card k-after" onclick="location.hash='#afterschool'">
         <div class="hv3-hdrow">
           <span class="ic"><i aria-hidden="true" class="ti ti-run"></i></span>
           <b>방과후 · 학원</b>
@@ -2683,7 +2712,7 @@ const Screens = {
       const kid = isChildToken() || S.childView || S.kidMode;
       const n = kid ? 0 : (S.verifyPending || []).length;
       if (!n) return "";
-      return `<button class="hv3-card need" onclick="location.hash='#game'">
+      return `<button class="hv3-card k-mission need" onclick="location.hash='#game'">
         <div class="hv3-hdrow">
           <span class="ic"><i aria-hidden="true" class="ti ti-eye"></i></span>
           <b>확인해 주세요</b><span class="cnt">${n}</span>
@@ -2703,7 +2732,7 @@ const Screens = {
          «회원이 보는 진짜 홈 그대로»가 원칙이므로 빈 상태 카드를 그대로 보여 준다. */
       const done = (list || []).filter((x) => x.status === "done").length;
       if (!list || !list.length) {
-        return `<button class="hv3-card" onclick="location.hash='#game'">
+        return `<button class="hv3-card k-mission" onclick="location.hash='#game'">
           <div class="hv3-hdrow">
             <span class="ic"><i aria-hidden="true" class="ti ti-target"></i></span>
             <b>오늘 미션</b><em class="val">아직 없어요</em>
@@ -2712,7 +2741,7 @@ const Screens = {
           /* ⚠ 설명 한 줄을 덧붙이지 않는다(2026-08-07 지시). 다른 카드는 «제목 + 값 + ›» 한 줄인데
              여기만 «골라 주면 아이가…» 를 달아 두면 그 카드만 튀고, 매번 읽을 말도 아니다. */
       }
-      return `<button class="hv3-card" onclick="location.hash='#game'">
+      return `<button class="hv3-card k-mission" onclick="location.hash='#game'">
         <div class="hv3-hdrow">
           <span class="ic"><i aria-hidden="true" class="ti ti-target"></i></span>
           <b>오늘 미션</b><em class="val">${done}/${list.length}</em>
@@ -2877,6 +2906,13 @@ const Screens = {
 
   school: () => {
     const sc = schoolInfo();
+    /* ⚠ 「schedule」은 **이제 학교 화면의 탭이 아니다** — 달력은 #calendar 로 떨어져 나갔다.
+       그런데 calendar() 가 S.schoolTab = "schedule" 을 전역에 써 놓고 나가서,
+       달력을 본 뒤 #school 에 닿으면 학교정보 자리에 달력이 그려졌다(08-09 실측:
+       두 화면 스샷이 픽셀까지 같았다). 메뉴로 들어오면 go() 가 info 를 넣어 괜찮고
+       뒤로가기·옛 주소·딥링크로 올 때만 터진다.
+       → 없는 탭으로 들어온 것이니 «학교정보»로 되돌린다. 위의 커뮤니티 처리와 같은 방식이다. */
+    if (S.schoolTab === "schedule") S.schoolTab = "info";
     // 중·고에서 커뮤니티 탭으로 들어오면(홈 메뉴·옛 주소) 학교정보로 되돌린다 — 없는 탭에 갇히지 않게
     if (S.schoolTab === "community" && !String(sc.kind || "").startsWith("초")) S.schoolTab = "info";
     const t = S.schoolTab;
@@ -3498,11 +3534,26 @@ const Screens = {
               `<option value="${n}" ${+g === n ? "selected" : ""}>${n}학년</option>`).join("")}
           </select></div>
         <div><label class="f">반</label>
+          <!-- ⚠ 예전엔 «1반~N반» 숫자만 골랐다. 그런데 **반 이름이 말인 학교가 있다** —
+               경기초 4학년은 「난초·매화·장미」다(2026-08-09 실측). 숫자로 저장하면
+               NEIS 에 CLASS_NM=2 로 묻게 되고 **시간표가 영영 0건**이 된다.
+               화면엔 「아직 올라오지 않음」만 떠서 부모는 이유를 알 수 없었다.
+               → 그 학교·학년의 **실제 반 이름**을 받아오면 그걸 고르게 한다. -->
           <select onchange="S.childDraft.class_name=this.value">
-            ${Array.from({ length: classes }, (_, i) => i + 1).map((n) =>
-              `<option value="${n}" ${+S.childDraft.class_name === n ? "selected" : ""}>${n}반</option>`).join("")}
+            ${(S.classNames || []).length
+              ? S.classNames.map((n) =>
+                  `<option value="${esc(n)}" ${String(S.childDraft.class_name) === String(n) ? "selected" : ""}>${esc(n)}${/^\d+$/.test(n) ? "반" : ""}</option>`).join("")
+              : Array.from({ length: classes }, (_, i) => i + 1).map((n) =>
+                  `<option value="${n}" ${+S.childDraft.class_name === n ? "selected" : ""}>${n}반</option>`).join("")}
           </select>
-          <p class="sub">${g}학년은 ${classes}개 반이에요</p></div>
+          <p class="sub">${(S.classNames || []).length
+            ? (S.classNames.some((n) => String(n) === String(S.childDraft.class_name))
+                ? `${g}학년 실제 반 이름이에요`
+                /* ⚠ 저장된 반이 실제 목록에 없으면 **시간표가 안 나온다.**
+                   조용히 두면 부모는 이유를 모른 채 빈 시간표만 본다 — 반드시 말해 준다. */
+                : `⚠ 지금 「${esc(String(S.childDraft.class_name))}」로 돼 있는데 이 학년엔 없는 반이에요. 다시 골라주세요`)
+            : (S.classBusy ? "반 이름을 알아보는 중…"
+                : `${g}학년은 ${classes}개 반이에요 · 학교가 시간표를 올리면 실제 반 이름으로 바뀌어요`)}</p></div>
       </div>
       <label class="f">별명 * <span style="font-weight:400">(화면에는 이 이름만 보여요)</span></label>
       <input id="ce-nick" placeholder="예: 셋째" value="${esc(S.childDraft.nickname)}" oninput="S.childDraft.nickname=this.value">
@@ -3705,7 +3756,7 @@ const Screens = {
       return `
       <div class="dw-semhd"><span>${sem}학기</span>
         <em>${rows.length ? `${rows.length}건` : "없어요"}</em>
-        <button onclick="App.addRecordAt(${g}, ${sem})">＋ 넣기</button></div>
+        <button onclick="App.addRecordAt(${g}, ${sem})"><span class="pl">＋</span> 넣기</button></div>
       ${rows.length ? `<div class="dw-grid">${rows.map((r) => `
         <button class="dw-item" onclick="if(!App.holdGuard())App.openRecord(${r.id})" onpointerdown="App.holdRecord(${r.id})">
           <span class="dw-shot">
@@ -3833,11 +3884,11 @@ const Screens = {
       <div class="wk-body">
         <div class="wk-axis">${hours.map((h) => `<div style="height:${GRID.px * 2}px"><span>${h}시</span></div>`).join("")}</div>
         ${DAY_KO.map((d, i) => `
-          <div class="wk-col ${i % 2 ? "alt" : ""} ${i === todayCol ? "today" : ""}"
+          <div class="wk-col d${i} ${i % 2 ? "alt" : ""} ${i === todayCol ? "today" : ""}"
                role="button" aria-label="${d}요일 — 눌러서 일정 넣기" onclick="App.planTap(event, ${i + 1})">
             ${hours.map(() => `<div class="wk-slot" style="height:${GRID.px * 2}px"></div>`).join("")}
             ${byDay[i].map((a) => `
-              <div class="blk" onclick="if(!App.holdGuard())App.planEdit(${a.id})" onpointerdown="App.holdPlan(${a.id})" style="top:${gridTop(a.start_time)}px;height:${Math.max(GRID.px, gridTop(a.end_time) - gridTop(a.start_time))}px;--tag:${planColor(a.color).v}"
+              <div class="blk" onclick="if(!App.holdGuard())App.planEdit(${a.id})" onpointerdown="App.holdPlan(${a.id})" style="top:${gridTop(a.start_time)}px;height:${Math.max(GRID.px, gridTop(a.end_time) - gridTop(a.start_time))}px;--tag:${planColor(a.color, a.name).v}"
                    onclick="event.stopPropagation();App.askDelete('일정 「${esc(a.name)}」 수정·삭제')">
                 <b>${esc(a.name)}</b>
                 <i class="grip" onpointerdown="App.gripDown(event, ${a.id}, ${i + 1})"></i>
@@ -3956,7 +4007,10 @@ const Screens = {
       ${STUB.children.map((c) => {
         const on = !!c.child_device;
         const when = c.child_device_at ? String(c.child_device_at).slice(0, 10).replace(/-/g, ".") : "";
-        return `<div class="mp-row two">
+        /* ⚠ 연결된 아이는 «불이 들어온» 것처럼 보여야 한다(08-09 지시).
+           지금까지는 정작 «자녀 추가» 쪽이 강조색이라 켜진 것처럼 보이고,
+           진짜 붙어 있는 아이 줄이 밋밋했다 — 순서가 반대였다. */
+        return `<div class="mp-row two${on ? " lit" : ""}">
           <span class="mp-l">${esc(c.nickname)}<em>${on ? `연결됨${when ? ` · ${when}부터` : ""}` : "연결 안 됨"}</em></span>
           <span class="cl-acts">
             ${on ? `<button class="cl-off" onclick="App.unlinkChild(${c.id})">끊기</button>` : ""}
@@ -4103,14 +4157,29 @@ const Screens = {
           <em>${x[cntKey]}${unit}</em></li>`).join("");
     };
 
+    /* ⚠ 한 달을 봤는데 «알려주는 게 없다»는 지적(08-09). 세부 목록만 있고 요약이 없었다.
+       맨 위에 «며칠 남겼나»를 먼저 놓는다 — 부모가 제일 먼저 궁금한 것이다.
+       ⚠ 없는 숫자를 만들지 않는다. 여기 쓰는 값은 전부 서버가 준 것뿐이다. */
+    const sum = [
+      ["🍚", "급식", r.meal?.days || 0],
+      ["🧒", "친구", r.play?.days || 0],
+      ["📘", "과목", r.subject?.days || 0],
+    ];
     return `
     <a class="back" href="#mission" aria-label="뒤로"><i aria-hidden="true" class="ti ti-chevron-left"></i></a>
     <h1 class="pg-h">${esc(c?.nickname || "아이")} 리포트</h1>
     ${nav}
 
+    <div class="rp-sum">
+      <b class="rp-sum-h">${+mm.slice(4)}월에 <em>${total}일</em> 남겼어요</b>
+      <div class="rp-sum-g">
+        ${sum.map(([ic, ko, n]) => `<div><span>${ic}</span><b>${n}<i>일</i></b><em>${ko}</em></div>`).join("")}
+      </div>
+    </div>
+
     ${r.meal?.days ? `
     <div class="rp-sec">
-      <div class="rp-hd"><b>급식</b><span>${r.meal.days}일 평가 ${r.meal.avg_stars ? `· 평균 ★${r.meal.avg_stars}` : ""}</span></div>
+      <div class="rp-hd"><b>급식</b><span>${r.meal.days}일 기록${r.meal.avg_stars ? ` · 평균 ★${r.meal.avg_stars}` : ""}</span></div>
       ${r.meal.cats?.length ? `<p class="rp-lead">어떤 <b>종류</b>를 좋아하나</p>
         <ul class="rp-list">${rows(r.meal.cats, "cat", "best", "번 1등")}</ul>` : ""}
       ${r.meal.dishes?.length ? `<p class="rp-lead">두 번 이상 나온 <b>메뉴</b></p>
@@ -4525,7 +4594,7 @@ const Screens = {
         <span class="tx"><b>${tomorrow ? "내일" : "오늘"} 점심</b>
         <span>${meal.dishes.slice(0, 3).map((x) => esc(x.name)).join(" · ")}</span></span></div>` : "";
     return `
-    <a class="back" href="#childview" aria-label="뒤로"><i aria-hidden="true" class="ti ti-chevron-left"></i></a>
+    <a class="back" href="#game" aria-label="뒤로"><i aria-hidden="true" class="ti ti-chevron-left"></i></a>
     <h1 class="kd2-h1">시간표</h1>
     <div class="kd2-seg">${seg("today", "오늘")}${seg("tomorrow", "내일")}</div>
     ${subs.length ? `
@@ -4546,10 +4615,10 @@ const Screens = {
      → 메뉴 목록은 **고르는 카드 하나로 합치고**, 순위는 1등만 받는다. */
   childmealrate: () => {
     const meal = mealsOf().find((m) => m.date === TODAY && m.type === "중식");
-    if (!meal) { location.hash = "#childview"; return ""; }
+    if (!meal) { location.hash = "#game"; return ""; }
     const d = S.mealDraft;
     return `
-    <a class="back" href="#childview" aria-label="뒤로"><i aria-hidden="true" class="ti ti-chevron-left"></i></a>
+    <a class="back" href="#game" aria-label="뒤로"><i aria-hidden="true" class="ti ti-chevron-left"></i></a>
     <h1 class="kd2-h1">오늘 급식 어땠어?</h1>
 
     <p class="kd2-starhint">${d.stars ? "" : "별을 눌러서 골라줘"}</p>
@@ -4578,9 +4647,9 @@ const Screens = {
      성적표가 알려주지 않는 것이다. 과목은 주 단위로 반복돼서 한 달이면 표본이 충분하다. */
   childsubject: () => {
     const subs = todaySubjects();
-    if (!subs.length) { location.hash = "#childview"; return ""; }
+    if (!subs.length) { location.hash = "#game"; return ""; }
     return `
-    <a class="back" href="#childview" aria-label="뒤로"><i aria-hidden="true" class="ti ti-chevron-left"></i></a>
+    <a class="back" href="#game" aria-label="뒤로"><i aria-hidden="true" class="ti ti-chevron-left"></i></a>
     <h1 class="kd2-h1">오늘 제일 재밌었던 건?</h1>
 
     <div class="kd2-pick1" style="margin-top:22px">
@@ -4605,7 +4674,7 @@ const Screens = {
   childfriend: () => {
     const d = S.friendDraft;
     return `
-    <a class="back" href="#childview" aria-label="뒤로"><i aria-hidden="true" class="ti ti-chevron-left"></i></a>
+    <a class="back" href="#game" aria-label="뒤로"><i aria-hidden="true" class="ti ti-chevron-left"></i></a>
     <h1 class="kd2-h1">오늘 누구랑 놀았어?</h1>
     <p class="kd2-sub">여러 명 골라도 돼요</p>
 
@@ -4663,47 +4732,13 @@ const Screens = {
         childtheme 은 `,` 로 끝나서 그 뒤 childboard 의 `},` 가 잡혔다.
         범위를 줄 번호가 아니라 «다음 스크린 이름»으로 잡으면 이런 일이 안 난다.
      색 12벌이 되면서 격자판 갈래는 없앴다 — 판이 둘이면 색만 바꿔도 화면이 달라 보인다. */
-  childboard: () => {
-    const total = S.missionStars || 0;
-    const goal = Math.ceil(Math.max(total + 1, 10) / 10) * 10;   // 다음 10 단위가 목표
-    /* 이정표 5개 = goal 의 1/5 씩. 켜짐은 **실제 모은 별**로 판정한다 —
-       전 판은 2개가 그냥 켜져 있었다(0개인 아이 화면에도). 거짓 진행도는 최악이다. */
-    const steps = [1, 2, 3, 4, 5].map((i) => Math.round((goal * i) / 5));
-    const doneCount = steps.filter((s) => total >= s).length;
-    const todayIdx = Math.min(doneCount, 4);                     // 다음에 켤 별 자리에 «오늘 여기»
-    return `
-    <a class="back" href="#childview" aria-label="뒤로"><i aria-hidden="true" class="ti ti-chevron-left"></i></a>
-    <h1 class="kd2-h1">${kw("board")}</h1>
-    <p class="kd2-sub">${+TODAY.slice(4, 6)}월 · ${kw("unit")} ${total}개 모았어요</p>
-
-    <div class="kb-path">
-      <svg class="kb-trail" viewBox="0 0 100 130" preserveAspectRatio="none" aria-hidden="true">
-        <path d="M 50 118 C 20 108, 14 100, 22 92 C 30 84, 78 78, 82 66 C 86 54, 30 50, 24 40 C 18 30, 72 24, 50 10"
-              fill="none" stroke="currentColor" stroke-width="2.6" stroke-dasharray="0.2 5.4" stroke-linecap="round"/>
-      </svg>
-      ${steps.map((need, i) => {
-        const on = total >= need;
-        const today = !on && i === todayIdx;
-        /* 지그재그 — 가운데를 축으로 좌우 번갈아. %라 어느 폰에서도 균형이 맞는다 */
-        const xs = [50, 22, 80, 24, 50];
-        const ys = [90, 71, 51, 31, 8];   /* 아래→위로 오른다 — 게임판은 올라가야 맛이다 */
-        return `
-        <div class="kb-node ${on ? "on" : ""} ${today ? "today" : ""}" style="left:${xs[i]}%;top:${ys[i]}%">
-          <span class="kb-ball ${i === 4 ? "goal" : ""}">${on ? "★" : (i === 4 ? "🏁" : need)}</span>
-          ${today ? `<b class="kb-here">오늘 여기</b>` : `<b class="kb-need">${on ? "" : `${kw("unit")} ${need}`}</b>`}
-        </div>`;
-      }).join("")}
-    </div>
-
-    <div class="kb-left">${goal}개까지 <b>${goal - total}개</b> 남았어요!</div>`;
-  },
 
   /* ── 자녀: 사진 인증 ── */
   childshoot: () => {
     const m = (S.missions || []).find((x) => x.id === S.kidShootId);
-    if (!m) { location.hash = "#childview"; return ""; }
+    if (!m) { location.hash = "#game"; return ""; }
     return `
-    <a class="back" href="#childview" aria-label="뒤로"><i aria-hidden="true" class="ti ti-chevron-left"></i></a>
+    <a class="back" href="#game" aria-label="뒤로"><i aria-hidden="true" class="ti ti-chevron-left"></i></a>
     <h1 class="kd2-h1">${esc(m.title)}</h1>
     <p class="kd2-sub">${"하는 모습을 찍어서 보여주세요"}</p>
     <button class="kd2-shot" onclick="App.missionShoot(${m.id})" ${S.missionBusy === m.id ? "disabled" : ""}>
@@ -4740,149 +4775,6 @@ const Screens = {
        탭은 눌러봐야 알지만 배지는 그 카드를 볼 때 같이 읽힌다
      ⚠ 덱만 갈아끼웠다. 아래 준비물·엄마 말·오늘 하루는 그대로 둔다 —
         그건 질문이 아니라 참고할 것이라 목록이 맞다. */
-  childview: () => {
-    const cards = deckCards();
-    const waiting = (S.missions || []).filter((x) => x.status === "waiting").length;
-    const i = Math.min(S.deckIdx, Math.max(0, cards.length - 1));
-    const card = cards[i];
-
-    return `
-    <div class="kd3-top">
-      <button class="kd3-star" onclick="location.hash='#childboard'">
-        <i class="s">★</i><b>${S.missionStars || 0}</b><span>${kw("collect")}</span>
-      </button>
-      ${waiting ? `<span class="kd3-wait">확인중 ${waiting}</span>` : ""}
-    </div>
-
-    <div class="kd3-deck">
-      ${!cards.length ? `
-      <!-- 다 했을 때 — 빈 화면 대신 «끝났다»고 말해준다. 이 한 장이 하루의 마침표다 -->
-      <article class="kd3-card kd3-clear">
-        <span class="kd3-seal"><i aria-hidden="true" class="ti ti-circle-check"></i></span>
-        <h2>${kw("done")}</h2>
-        <p>${waiting ? `${waiting}개는 확인중이에요` : `${kw("collect")} ★${S.missionStars || 0}`}</p>
-      </article>` : `
-      <div class="kd3-stack">
-        ${cards.length > 2 ? `<i class="kd3-ghost g2"></i>` : ""}
-        ${cards.length > 1 ? `<i class="kd3-ghost g1"></i>` : ""}
-        <article class="kd3-card">
-          <div class="kd3-hd">
-            <span class="kd3-badge ${card.now ? "now" : "wait"}">${card.now ? `바로 ${kw("unit")}` : `확인 후 ${kw("unit")}`}</span>
-            <span class="kd3-stars">★${card.stars}</span>
-          </div>
-          <h2>${esc(card.title)}</h2>
-          ${card.sub ? `<p class="kd3-sub">${esc(card.sub)}</p>` : ""}
-          <button class="kd3-go" onclick="${card.go}" ${S.missionBusy === card.id ? "disabled" : ""}>
-            ${S.missionBusy === card.id ? "보내는 중…" : esc(card.goLabel)}</button>
-          <div class="kd3-foot">
-            ${card.skip ? `<button class="kd3-x" onclick="${card.skip}"><i aria-hidden="true" class="ti ti-x"></i>못 했어요</button>` : `<span></span>`}
-            ${cards.length > 1 ? `<button class="kd3-next" onclick="App.deckNext()">다음 <i aria-hidden="true" class="ti ti-chevron-right"></i></button>` : ""}
-          </div>
-        </article>
-      </div>
-      ${cards.length > 1 ? `<div class="kd3-dots">${cards.map((_, n) =>
-        `<i class="${n === i ? "on" : ""}"></i>`).join("")}</div>` : ""}`}
-    </div>
-
-    <div class="kd3-chips">
-      ${(() => {
-        const t = ymdPlus(TODAY, 1);
-        const n = STUB.supplies.filter((x) => x.date === t && !x.done).length;
-        return `<button onclick="document.getElementById('kd-sup')?.scrollIntoView({behavior:'smooth',block:'start'})">
-          <i aria-hidden="true" class="ti ti-backpack"></i>내일 준비물${n ? `<em>${n}</em>` : ""}</button>`;
-      })()}
-      ${(() => {
-        if (!STUB.notices.some((x) => x.from === "parent")) return "";
-        const n = STUB.notices.filter((x) => x.from === "parent" && !x.seen).length;
-        return `<button onclick="document.getElementById('kd-nt')?.scrollIntoView({behavior:'smooth',block:'start'})">
-          <i aria-hidden="true" class="ti ti-message-circle"></i>엄마 말${n ? `<em>${n}</em>` : ""}</button>`;
-      })()}
-      <button onclick="location.hash='#childtt'"><i aria-hidden="true" class="ti ti-table"></i>오늘 하루</button>
-    </div>
-    ${(() => {
-      const rows = STUB.notices.slice().reverse().filter((n) => n.from === "parent");
-      if (!rows.length) return "";
-      return `
-      <div class="mp-sec" id="kd-nt">엄마가 보낸 말</div>
-      ${rows.map((n) => `
-        <div class="kd2-nt ${n.seen ? "seen" : ""}">
-          <span class="tx">${esc(n.text)}</span>
-          ${n.seen ? `<span class="ok"><i aria-hidden="true" class="ti ti-check"></i></span>`
-            : `<button class="ack" onclick="App.ackNotice(${n.id})">봤어요</button>`}
-        </div>`).join("")}`;
-    })()}
-
-    <!-- 준비물 (2026-07-28 지시) — «아이가 알림장 보고 직접 적는다»가 이 기능의 원래 쓰임이다.
-         넣으면 엄마 앱에 알림이 간다. 지우는 건 안 된다(아이가 지우면 엄마가 모른다). -->
-    <div class="mp-sec" id="kd-sup">내일 준비물</div>
-    ${(() => {
-      const t = ymdPlus(TODAY, 1);
-      const list = STUB.supplies.filter((x) => x.date === t);
-      return `
-      ${list.map((x) => `
-        <label class="kd2-sup ${x.done ? "done" : ""}">
-          <input type="checkbox" ${x.done ? "checked" : ""} onchange="App.supplyToggle(${x.id})">
-          <i class="box">${x.done ? `<i aria-hidden="true" class="ti ti-check"></i>` : ""}</i>
-          <b>${esc(x.item)}</b>${x.by === "child" ? `<span>내가 넣음</span>` : ""}
-        </label>`).join("")}
-      <div class="kd2-supadd">
-        <input id="csup" placeholder="내일 뭐 챙겨?" value="${esc(S.supDraft.item)}"
-               oninput="S.supDraft.item=this.value" onkeydown="if(event.key==='Enter')App.childSupplyAdd()">
-        <button onclick="App.childSupplyAdd()"><i aria-hidden="true" class="ti ti-plus"></i>넣기</button>
-      </div>`;
-    })()}
-
-    <!-- 아이의 «오늘 하루»(0802-3 ②) — 부모 dayTimeline 을 버리고 아이에게 필요한 것만:
-         수업 몇 교시 · 점심 · 방과후. 상세(엄마 일정·시간축)는 부모 화면 것이다. -->
-    ${(() => {
-      const wd = new Date(`${TODAY.slice(0,4)}-${TODAY.slice(4,6)}-${TODAY.slice(6)}`).getDay();
-      const col = wd - 1;
-      const subs = (col >= 0 && col <= 4)
-        ? (ttOf()?.grid || []).map((r) => String(r?.[col] || "").trim()).filter(Boolean) : [];
-      const meal = mealsOf().find((m) => m.date === TODAY && m.type === "중식");
-      const acts = STUB.activities.filter((a) => String(a.days_of_week || "").split(",").includes(String(wd)));
-      const rows = [
-        subs.length ? `<button class="kd2-day" onclick="location.hash='#childtt'">
-          <i aria-hidden="true" class="ti ti-table"></i><b>수업 ${subs.length}교시</b>
-          <span>${esc(STUB.periods[subs.length - 1]?.end || "")} 하교</span></button>` : "",
-        meal ? `<button class="kd2-day" onclick="location.hash='#childtt'">
-          <i aria-hidden="true" class="ti ti-tools-kitchen-2"></i><b>점심</b>
-          <span>${esc(meal.dishes[0]?.name || "")}</span></button>` : "",
-        ...acts.map((a) => `<div class="kd2-day">
-          <i aria-hidden="true" class="ti ti-run"></i><b>${esc(a.name)}</b>
-          <span>${esc(a.start_time || "")}</span></div>`),
-      ].filter(Boolean);
-      return rows.length ? `<div class="mp-sec">오늘 하루</div>${rows.join("")}` : "";
-    })()}
-
-    <div class="kd2-me">
-      <span>내 색</span>
-      <span class="kd2-chip now" aria-hidden="true"></span>
-      <b class="kd2-nowname">${esc(KID_THEMES[S.kidTheme]?.name || "")}</b>
-      <button class="kd2-theme" onclick="location.hash='#childtheme'">화면 바꾸기</button>
-    </div>
-
-    ${S.kidHooray ? `
-    <div class="kd2-hooray-wrap" onclick="App.kidHoorayClose()">
-      <div class="kd2-hooray">
-        <span class="spark"><i>★</i><i>★</i><i>★</i><i>★</i></span>
-        <b>참 잘했어요!</b><!-- kw("done")와 겹치지만 문구가 달라 의도적으로 남긴다: 참 잘했어요!(오버레이) vs 잘했어요! -->
-        <span class="t">${esc(S.kidHooray.title)} · ★${S.kidHooray.stars}${S.kidHooray.sub ? ` — ${esc(S.kidHooray.sub)}` : ""}</span>
-        <span class="stamp"><i aria-hidden="true" class="ti ti-check"></i></span>
-        <button class="kd2-cta" onclick="App.kidHoorayClose()">좋아!</button>
-      </div>
-    </div>` : ""}
-
-    ${DEV_TOOLS ? `<div class="card devtool">
-      <label class="check"><input type="checkbox" checked onchange="App.toggleChildView()">
-        <span>부모 화면으로 돌아가기 <b class="stub">개발용</b></span></label>
-    </div>` : ""}`;
-    /* ⛔ 자녀 화면의 엄마 대화바를 뺐다(2026-08-02, 사장님: «눈에 거슬린다, 추후에 넣자»).
-       화면 맨 아래에 늘 떠 있어서 준비물·오늘하루를 가렸다.
-       기능은 살아 있다 — chatDock()·chatSend()·messages API 그대로다. 이 한 줄만 되살리면 돌아온다:
-         ${chatDock()}
-       부모 홈의 대화바는 그대로 둔다(그쪽은 가리는 것이 없다). */
-  },
 };
 
 /* ═══ 길게 누르기 = 메뉴 (2026-07-26 지시) ═══════════════
@@ -5001,13 +4893,35 @@ function childChip() {
 }
 // ── 방과후 주간 타임그리드 ──────────────────────────────────
 // h0~h1 = 방과후 시간대. px = 30분당 높이(이 값만 키우면 그리드가 길어진다).
-const GRID = { h0: 13, h1: 21, px: 30 };
+/* ⚠ px 는 «30분»의 높이다. 30px 이면 한 시간이 60px — 블록에 이름 한 줄도 겨우 들어가
+   「방과후 코딩」이 세 줄로 쪼개졌다(08-09 지적). 44 로 올려 한 시간 88px 로 본다. */
+/* ⚠ 30 은 너무 촘촘(이름이 세 줄로 쪼개짐), 44 는 **너무 길다**(화면을 한참 내려야 한다).
+   36 = 한 시간 72px. 이름 두 줄이 들어가면서 13~21시가 한 화면에 담긴다. */
+const GRID = { h0: 13, h1: 21, px: 36 };
 /* 일정 색 — 학원별로 구분하려고 사용자가 직접 고른다(2026-07-24 지시).
    ⚠ 값을 여기 적지 않는다(2026-07-28, 시안 10g). 파스텔 6종을 하드코딩해 뒀더니
       테마를 갈아도 이 색만 안 따라와서 어두운 테마에서 혼자 밝게 떴다.
       이제 **--tag1~5** 라는 변수 5개를 style.css 가 테마마다 정의하고, 여기선 이름만 부른다. */
 const PLAN_COLORS = [1, 2, 3, 4, 5].map((n) => ({ v: `var(--tag${n})` }));
-const planColor = (i) => PLAN_COLORS[(i ?? 0) % PLAN_COLORS.length];
+/* ⚠ color 가 없으면 전부 0번 색이 됐다 — 서버로 넣은 활동은 color 를 안 준다.
+   그래서 수요일에 「방과후 코딩」과 「피아노 학원」이 같은 색으로 보였다(08-09 지적).
+   → 색이 없으면 **이름으로 정한다.** 같은 학원은 언제나 같은 색이고, 다른 학원은 갈린다. */
+const nameHue = (s0) => { let h = 0; for (const ch of String(s0 || "")) h = (h * 31 + ch.charCodeAt(0)) % 997; return h; };
+/* ⚠ color 가 **0** 으로 들어온다(null 이 아니다) — 그래서 ?? 로는 못 걸러 전부 1번 색이었다.
+   0 은 «안 골랐다»는 뜻이다. 사용자가 직접 고른 값은 1 이상이다.
+   → 0·null·undefined 면 이름으로 정한다. 같은 학원은 언제나 같은 색이다. */
+const planColor = (i, name) => PLAN_COLORS[(i > 0 ? i : nameHue(name)) % PLAN_COLORS.length];
+/* 급식 종류 — 「어디가 뭔지 모르겠다」(2026-08-09 지적).
+   밥·국·반찬·김치·후식이 전부 같은 모양이라 눈이 걸릴 곳이 없었다.
+   ⚠ 이름만 보고 정한다(NEIS 가 종류를 안 준다). 못 맞히면 «반찬»으로 둔다 —
+     틀린 이름표보다 «반찬»이 낫다. 억지로 분류하지 않는다. */
+const MEAL_KIND = [
+  { k: "rice",  ko: "밥",   re: /밥|면|국수|죽|떡국|파스타|리조또|비빔|덮밥|카레/ },
+  { k: "soup",  ko: "국",   re: /국|탕|찌개|스프|수프/ },
+  { k: "kimchi",ko: "김치", re: /김치|깍두기|장아찌|단무지|피클/ },
+  { k: "des",   ko: "후식", re: /우유|요구르트|주스|음료|사과|바나나|수박|파인애플|토마토|배|귤|포도|멜론|푸딩|케이크|아이스|빵|떡$/ },
+];
+const mealKind = (name) => (MEAL_KIND.find((x) => x.re.test(String(name || ""))) || { k: "side", ko: "반찬" });
 const toMin = (t) => +t.slice(0, 2) * 60 + +t.slice(3);
 const toHHMM = (m) => String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0");
 const gridTop = (t) => ((toMin(t) - GRID.h0 * 60) / 30) * GRID.px;
@@ -5151,6 +5065,7 @@ function boardView() {
   const d = new Date();
   const hh = String(d.getHours()).padStart(2, "0");
   const mm = String(d.getMinutes()).padStart(2, "0");
+  const ss = String(d.getSeconds()).padStart(2, "0");
   const n = nowDoing();                       // 없으면 null — 그 줄을 안 그린다
   // 임박한 부모 일정 = 오늘 것 중 «지금 이후» 가장 가까운 하나. 지난 것은 임박이 아니다
   const nowMin = d.getHours() * 60 + d.getMinutes();
@@ -5162,13 +5077,17 @@ function boardView() {
     <!-- 시계 — «날짜 · 요일» 위, «시각» 아래. 한 줄에 몰면 날짜가 시각에 묻힌다(2026-08-04) -->
     <div class="bd-time">
       <span class="dt">${fmtD(+TODAY.slice(4, 6), +TODAY.slice(6))} ${["일", "월", "화", "수", "목", "금", "토"][d.getDay()]}요일</span>
-      <span class="tm">${hh}<i>:</i>${mm}</span>
+      <!-- ⚠ 초까지 보여 준다(2026-08-09 지시). 콜론은 1초마다 깜빡여 «살아 있다»를 말한다.
+           초를 안 보여 주면 화면이 멈춘 것처럼 보인다. -->
+      <span class="tm">${hh}<i class="${d.getSeconds() % 2 ? "off" : ""}">:</i>${mm}<u>${ss}</u></span>
     </div>
     ${n ? `<div class="bd-now ${n.k}"><i></i><b>${n.t}</b>${n.s ? `<em>${n.s}</em>` : ""}</div>` : ""}
     ${next ? `<div class="bd-next"><i aria-hidden="true" class="ti ti-pin"></i>${esc(next.start)} ${esc(next.title)}</div>` : ""}
   </div>`;
 }
-/* 분이 바뀔 때만 전광판을 갈아끼운다.
+/* ⚠ 예전엔 **분이 바뀔 때만** 갈아끼웠다 — 초를 보여 주기로 했으니 1초마다 돈다.
+   화면 전체를 다시 그리지 않고 전광판 마크업만 바꿔 끼우므로 입력·스크롤은 안 튄다.
+   분이 바뀔 때만 전광판을 갈아끼운다.
    ⚠ 화면 전체를 다시 그리면 안 된다 — 입력 중이던 칸이 날아가고(한글 조합 깨짐),
      스크롤도 튄다. 전광판 마크업만 바꿔 끼운다. */
 let QUIZ_TIMER = null;   // 퀴즈 문제당 카운트다운(전체 렌더와 분리)
@@ -5184,7 +5103,7 @@ function startBoard() {
     box.innerHTML = boardView();
     const fresh = box.firstElementChild;
     if (fresh && fresh.innerHTML !== el.innerHTML) el.innerHTML = fresh.innerHTML;
-  }, 15000);   // 15초마다 확인 — 분이 바뀌는 순간을 1분 늦게 따라가지 않으려고
+  }, 1000);   // 1초마다 — 초를 보여 주기로 했으니(2026-08-09). 전광판 마크업만 바꿔 끼워 가볍다
 }
 
 /* ═══ 아이 흔적 (2026-08-03 지시서 0803-1 §3) ═══════════════════
@@ -5601,6 +5520,7 @@ function gameProfile(c, coin) {
         <div><b>${coin.earned_today} / ${coin.limit}</b><em>오늘 획득</em></div>
       </div>
     </div>
+
 
     <div class="gm-lab">🎨 배경 바꾸기</div>
     <div class="gm-sw">
@@ -6444,6 +6364,13 @@ const hitAllergens = (meal) => [...new Set(meal.dishes.flatMap((d) => d.allergen
 function mealTab() {
   const q = S.mealQuery.trim();
   // 일반 학교는 중식만. 기숙사형이면 조식·석식까지 들어온다(웹과 같은 규칙 — 있는 끼니만 탭에 띄운다).
+  /* ⚠ 예전엔 「기숙사형 학교」 스위치(S.dorm)를 **부모가 직접 켜야** 조식·석식이 보였다.
+     그런데 그 스위치가 있는 줄 모르면 서울과학고처럼 세 끼를 다 주는 학교에서도
+     점심만 보게 된다(2026-08-09 실측: 데이터는 47건인데 화면엔 점심뿐이었다).
+     → **급식에 조식·석식이 있으면 알아서 켠다.** 스위치는 끄고 싶을 때만 쓴다.
+     ⚠ 사용자가 직접 끈 경우(S.dormTouched)는 그 뜻을 존중한다. */
+  const hasOther = mealsOf().some((m) => m.type === "조식" || m.type === "석식");
+  if (hasOther && !S.dorm && !S.dormTouched) S.dorm = true;
   const types = [...new Set(mealsOf().map((m) => m.type))]
     .filter((t) => S.dorm || t === "중식")
     .sort((a, b) => MEAL_ORDER[a] - MEAL_ORDER[b]);
@@ -6539,10 +6466,24 @@ function mealTab() {
             ${m.dishes.map((d) => {
               const bad = d.allergens.filter((a) => S.myAllergens.includes(a));
               const hit = q && d.name.includes(q);
-              // 걸린 메뉴만 점선 밑줄 + 원인. 안 걸리면 평범한 글자 그대로 — 줄이 밀리지 않는다.
+              /* ⚠ NEIS 는 이름 뒤에 알레르기 번호를 «(5.6.12)» 로 붙여서 준다.
+                 그걸 이름과 같은 크기로 두면 「호박잎된장국 (5.6.12)」이 한 덩어리로 읽혀
+                 반찬 이름이 눈에 안 들어온다(대표님 지적 08-09).
+                 → 번호를 떼어 작고 흐리게. 이름만 굵게 남긴다. */
+              /* ⚠ NEIS 는 이름 앞뒤에 «*» 를 붙여 준다(자체 표기라 부모에겐 뜻이 없다).
+                 서울과학고 급식에서 「*배추김치」처럼 그대로 노출됐다 — 걷어낸다. */
+              const clean = String(d.name).replace(/^[*\s]+|[*\s]+$/g, "");
+              const mm = clean.match(/^(.*?)\s*\(([\d.\s]+)\)\s*$/);
+              const nm = mm ? mm[1] : clean;
+              const no = mm ? mm[2].trim() : "";
+              const kd = mealKind(nm);
+              const body = `<i class="ml-kd k-${kd.k}" aria-hidden="true"></i>`
+                + `${hit ? `<mark>${esc(nm)}</mark>` : esc(nm)}`
+                + `${no ? `<em class="ml-no">${esc(no)}</em>` : ""}`
+                + `<u class="ml-kdn">${kd.ko}</u>`;
               return bad.length
-                ? `<span class="bad">${hit ? `<mark>${esc(d.name)}</mark>` : esc(d.name)}<i>${bad.map((a) => ALLERGEN_KO[a]).join("·")}</i></span>`
-                : `<span>${hit ? `<mark>${esc(d.name)}</mark>` : esc(d.name)}</span>`;
+                ? `<span class="bad">${body}<i>${bad.map((a) => ALLERGEN_KO[a]).join("·")}</i></span>`
+                : `<span>${body}</span>`;
             }).join("")}
           </div>
         </div>`).join("")}
@@ -7065,7 +7006,7 @@ function timetableTab() {
         const days = String(a.days_of_week || "").split(",").filter(Boolean)
           .sort().map((n) => DAY_KO[+n - 1]).filter(Boolean).join(" ");
         return `
-        <button class="ttp-item" onclick="App.planEdit(${a.id})" style="--tag:${planColor(a.color).v}">
+        <button class="ttp-item" onclick="App.planEdit(${a.id})" style="--tag:${planColor(a.color, a.name).v}">
           <i></i>
           <span class="ttp-name"><b>${esc(a.name)}</b><em>${days}${days && a.start_time ? " · " : ""}${esc(a.start_time || "")}${a.end_time ? ` – ${esc(a.end_time)}` : ""}</em></span>
           <span class="ttp-go"><i aria-hidden="true" class="ti ti-chevron-right"></i></span>
@@ -7438,8 +7379,8 @@ const isGuest = () => !S.loggedIn && !isChildToken() && !!localStorage.getItem("
 /* 자녀 토큰으로 볼 수 있는 화면 — **이 목록 밖은 전부 자녀 화면으로 되돌린다**(2026-08-02).
    자녀 화면이 «결제·삭제·형제 정보는 안 보입니다»라고 적어놓고 뒤로는 다 보여주면 거짓말이다.
    약관·개인정보는 남긴다(법적으로 늘 닿을 수 있어야 한다). login 은 연결을 끊을 길이다. */
-const CHILD_SCREENS = ["childview", "childlink", "login", "terms", "policy",
-  "childtheme", "childboard", "childshoot", "childexpired", "childtt", "childmealrate", "childfriend", "childsubject", "childlocked",
+const CHILD_SCREENS = ["childlink", "login", "terms", "policy",
+  "childtheme", "childshoot", "childexpired", "childtt", "childmealrate", "childfriend", "childsubject", "childlocked",
   // 상점·티켓은 아이가 직접 쓴다(§5③). ⚠ childmode 는 넣지 않는다 — 자녀폰에서 열리면 아이가 제 잠금을 푼다
   "store", "tickets", "game"];
 /* §4.5 열람 잠금 — **비웠다**(2026-07-31 «기록 누르면 바로 기록잠금 나오게 하지마»).
@@ -7452,10 +7393,10 @@ const BIO_LOCKED = [];
    «그 기능을 공짜로 준다»는 뜻이므로 함부로 늘리지 않는다.
      · 이용권/내정보 — 결제하러 가는 길과 로그아웃이 막히면 안 된다
      · 자녀 관련 — 자녀가 없으면 체험 자체가 시작되지 않는다
-     · childview — 자녀폰은 부모 이용권을 따라간다(아이에게 결제를 물리지 않는다) */
+     · 아이 화면 — 자녀폰은 부모 이용권을 따라간다(아이에게 결제를 물리지 않는다) */
 // 약관·방침 읽기는 잠그면 안 된다(법적 고지). 고객센터도 마찬가지 —
 // 이용권이 끝나서 막힌 사람이 **결제 문의를 할 길**까지 막으면 돈을 낼 사람을 쫓아내는 셈이다.
-const PASS_FREE = ["pay", "mypage", "switch", "child-add", "childlink", "childview", "terms", "policy", "help", "ask", "asks"];
+const PASS_FREE = ["pay", "mypage", "switch", "child-add", "childlink", "terms", "policy", "help", "ask", "asks"];
 // 체험 남은 날 (음수면 끝남). 이용권을 사면 expires_at 이 뒤로 밀린다.
 function passDaysLeft(c) {
   const t = c?.pass?.expires_at ? new Date(c.pass.expires_at).getTime() : 0;
@@ -7498,7 +7439,12 @@ const App = {
        바깥(위젯·알림·저장된 링크)에서 아직 올 수 있으니, 보던 탭에 맞는 **단독 화면**으로 넘긴다.
        replaceState 라 뒤로가기 기록에 «학교 탭»이 남지 않는다. */
     if (name === "school") {
-      name = { meal: "meal", schedule: "calendar", timetable: "timetable", community: "community" }[S.schoolTab] || "schoolinfo";
+      /* ⚠ schedule → calendar 매핑을 **뺐다**(08-09). 달력은 #calendar 로 떨어져 나갔는데
+         calendar() 가 S.schoolTab="schedule" 을 전역에 써 놓고 나가서, 달력을 본 뒤
+         #school 에 닿으면 **주소는 #school 인데 달력이 그려졌다**(스샷 두 장이 픽셀까지 같았다).
+         메뉴로 들어오면 go() 가 info 를 넣어 괜찮고 뒤로가기·옛 주소로 올 때만 터졌다.
+         ⚠ 라우터가 화면을 고른 뒤에 school() 이 돈다 — school() 안에서 고치려 했다가 안 먹었다. */
+      name = { meal: "meal", timetable: "timetable", community: "community" }[S.schoolTab] || "schoolinfo";
       history.replaceState(null, "", "#" + name);
     }
     /* 주소가 비었을 때의 «집» — 회원은 홈, 비회원(설문까지 마친 사람)은 둘러보기,
@@ -7531,7 +7477,7 @@ const App = {
        게임이 아니라 예전 화면을 봤다. 급식·친구·수업 입력 화면은 그대로 살아 있고,
        이제 «학교 미션» 카드를 눌러 들어간다.
        ⚠ 부모의 «아이 화면 미리보기»(S.kidMode)도 같은 길로 게임을 본다. */
-    if ((isChildToken() || S.kidMode) && (name === "childview" || name === "home")) {
+    if ((isChildToken() || S.kidMode) && (name === "home")) {
       name = "game";
       if (location.hash !== "#game") history.replaceState(null, "", "#game");
     }
@@ -7546,7 +7492,7 @@ const App = {
       if (location.hash !== "#childexpired") history.replaceState(null, "", "#childexpired");
     }
     // 자녀 앱 첫 실행(연결 직후) — 테마를 먼저 고른다. 고르기 전엔 홈이 없다.
-    if (isChildToken() && (name === "game" || name === "childview") && !S.kidTheme) {
+    if (isChildToken() && (name === "game") && !S.kidTheme) {
       name = "childtheme";
       if (location.hash !== "#childtheme") history.replaceState(null, "", "#childtheme");
     }
@@ -7554,7 +7500,7 @@ const App = {
     applyKidTheme((isChildToken() || S.childView) && CHILD_SCREENS.includes(name) && name !== "login");
     /* 자녀 토큰인데 «내가 누군지»를 모르면 자녀 화면이 통째로 죽는다(빈 화면 — 2026-08-02 실측).
        앱을 지웠다 깔거나 저장이 날아간 경우다. 흰 화면 대신 **코드 다시 넣는 화면**으로 보낸다. */
-    if (isChildToken() && (name === "game" || name === "childview") && !cur()) {
+    if (isChildToken() && (name === "game") && !cur()) {
       name = "childlink";
       if (location.hash !== "#childlink") history.replaceState(null, "", "#childlink");
     }
@@ -7566,22 +7512,22 @@ const App = {
       // 자녀폰에 결제·내정보·로그아웃을 열어주면 안 된다(2026-08-03 에뮬 실기에서 잡음)
       name = isChildToken() ? "childlocked" : "locked";
     }
-    if (name !== "home" && name !== "childview" && name !== "game") S.chatOpen = false;
+    if (name !== "home" && name !== "game") S.chatOpen = false;
     /* 고객센터에 들어올 때 내 문의를 한 번 받아온다. 앱 시작마다 받아오면 쓰지도 않을 요청이
        하나 늘어 첫 화면이 늦어진다 — 필요한 자리에서만 부른다(체감속도 작업과 같은 규칙). */
     if ((name === "help" || name === "asks") && S.loggedIn && S.inquiries === null) this.loadInquiries();
     /* 미션은 **홈에서도** 받아온다 — 홈 카드에 「오늘 2/3」이 떠야 부모가 누를 이유가 생긴다.
        미션·자녀 화면에서도 같은 값을 쓴다. 한 번 받아오면 다시 안 부른다(force 로만 갱신). */
-    if (["home", "mission", "childview"].includes(name) && S.loggedIn && S.missions === null) this.loadMissions();
+    if (["home", "mission"].includes(name) && S.loggedIn && S.missions === null) this.loadMissions();
     // 보상 화면 로더 (2026-08-07) — 필요한 화면에서만(첫 화면을 늦추지 않게)
     if (["game"].includes(name) && S.loggedIn) { this.loadCoin(); if (S.missions === null) this.loadMissions(); }
-    if (["store", "home", "game", "childview"].includes(name) && S.loggedIn && S.store === null) this.loadStore();
+    if (["store", "home", "game"].includes(name) && S.loggedIn && S.store === null) this.loadStore();
     if (["tickets", "store"].includes(name) && S.loggedIn && S.rewards === null) this.loadRewards();
     // 게임 화면 — 카드가 하나씩 뒤늦게 뜨면 «고장»으로 읽힌다. 들어올 때 한 번에 부른다
     if (name === "game" && S.loggedIn) this.gameEnter();
     if (["mission", "home"].includes(name) && S.loggedIn && S.verifyPending === null) this.loadVerify();
     if (name === "childmode" && S.loggedIn && S.pinHas === null) this.loadPinState();
-    if ((isChildToken() || S.childView || S.kidMode) && ["childview", "home", "store"].includes(name)
+    if ((isChildToken() || S.childView || S.kidMode) && ["home", "store"].includes(name)
         && S.loggedIn) this.loadReactions();
     if (name === "report" && S.loggedIn) this.loadReport();
     // 요금은 자녀마다 다르다(둘째부터 싸다) → 이용권 화면에 들어올 때 그 자녀 기준으로 받아온다
@@ -7643,7 +7589,7 @@ const App = {
     /* «보상 구획»은 부모가 봐도 같은 세계다 — 미션 관리에서 상점·티켓으로 넘어가는데
        거기만 옛 부모 테마면 또 다른 앱이 된다(대표님 지적 08-08: 「부모페이지 작업 안 된 곳 많어」). */
     const WORLD = ["tickets", "store", "mission"];
-    const KID_ONLY = ["childmealrate", "childfriend", "childsubject", "childboard", "childtt"];
+    const KID_ONLY = ["childmealrate", "childfriend", "childsubject", "childtt"];
     const kidNow = isChildToken() || S.kidMode;
     const asKid = WORLD.includes(name) || (kidNow && KID_ONLY.includes(name));
     const body = Screens[name]();
@@ -7973,7 +7919,7 @@ const App = {
       }).catch(() => {});
       S.loggedIn = true; S.serverAuth = true; S.childView = true;
       S.linkCode = "";
-      location.hash = "#childview";
+      location.hash = "#game";
       loadSchool(true);                      // 급식·시간표 — /me 는 자녀에게 막혀 있다
       this.render();
       toast(`${r.data.child.nickname} 폰으로 연결됐어요`);
@@ -8308,7 +8254,14 @@ const App = {
   },
   toggleGrades() { S.gradesOpen = !S.gradesOpen; this.render(); },
   // 학년이 바뀌면 반 목록이 그 학년 학급수로 다시 만들어진다 → 1반으로 되돌린다
-  childGrade(g) { S.childDraft.grade = g; S.childDraft.class_name = "1"; this.render(); },
+  childGrade(g) {
+    S.childDraft.grade = g; S.childDraft.class_name = "1"; S.classNames = null;
+    this.render();
+    /* 학년이 정해져야 그 학년의 «실제» 반 이름을 물어볼 수 있다.
+       기다리지 않는다 — 받아오면 스스로 다시 그린다(등록을 막지 않는다). */
+    const slug = S.childDraft.school && S.childDraft.school.slug;
+    if (slug) this.loadClassNames(slug, g);
+  },
   // 학교 검색 — GET /api/v1/schools/search?q= (전국 12,563개교, 서버가 찾는다).
   // 타자가 빠르면 요청이 겹친다 → 250ms 쉬고 한 번만 보내고, 늦게 온 옛 응답은 버린다.
   // 다시 그리면 포커스가 날아가니 되돌린다.
@@ -8349,8 +8302,14 @@ const App = {
     S.childDraft.school = { ...s, detail: s.detail || null };
     S.childDraft.grade = "3"; S.childDraft.class_name = "1";
     S.schoolQuery = ""; S.schoolHits = null;
+    S.classNames = null;
     this.render();
     toast(`${esc(s.name)} (${s.sido}) 선택`);
+    /* ⚠ 학교를 고른 직후에 **그 학교의 실제 반 이름**을 받아온다.
+       예전엔 «학년을 바꿀 때»만 받아와서, 학교만 고르고 학년을 안 건드리면
+       계속 「1반·2반」 숫자로 남았다 — 경기초 4학년은 「난초·매화·장미」다.
+       기다리지 않는다. 받아오면 스스로 다시 그린다. */
+    this.loadClassNames(s.slug, S.childDraft.grade);
   },
   // 예전엔 등록하기가 화면 이동만 했다 → 고른 학년·반이 사라졌다(2026-07-24 지적). 실제로 만든다.
   // 신규 자녀 추가 — 폼을 비우고 수정 모드 해제
@@ -8372,7 +8331,15 @@ const App = {
       server_id: c.server_id || null, photo: c.photo || null,
     };
     S.schoolQuery = ""; S.schoolHits = null;
+    S.classNames = null;
     location.hash = "#child-add"; this.render();
+    /* ⚠ 반 이름 고치기를 «새 등록»에만 넣었더니 **이미 가입한 아이는 그대로 숫자**였다.
+       실서버 자녀 11명 전원이 숫자 반이라, 반을 말로 쓰는 학교(「난초·매화·장미」)
+       아이는 고친 뒤에도 시간표가 0건이었다(2026-08-09 실측).
+       → 고치기 화면에서도 실제 반 이름을 받아온다. 기존 값은 그대로 두고 «고를 길»만 준다. */
+    if (S.childDraft.school?.slug && S.childDraft.grade) {
+      this.loadClassNames(S.childDraft.school.slug, S.childDraft.grade);
+    }
   },
   childSave() {
     const d = S.childDraft;
@@ -8630,13 +8597,13 @@ const App = {
   toggleChildView() {
     S.childView = !S.childView;
     S.chatOpen = false;                       // 역할이 바뀌면 대화창은 접고 시작
-    location.hash = S.childView ? "#childview" : "#notify";
+    location.hash = S.childView ? "#game" : "#notify";
     this.render();
   },
 
   // ── 맨 밑 대화창 ──────────────────────────────────────────
   // 여는 순간 상대가 보낸 말은 읽음 처리한다(대화창을 열었다 = 봤다).
-  // 부모 알림의 «확인» 버튼(#childview)은 그대로 둔다 — 같은 seen 값을 쓴다.
+  // 부모 알림의 «확인» 버튼(#game)은 그대로 둔다 — 같은 seen 값을 쓴다.
   chatOpen() {
     const role = myRole();
     STUB.notices.forEach((n) => { if (n.from !== role) n.seen = true; });
@@ -8779,7 +8746,7 @@ const App = {
     this.render();
   },
   mealType(t) { S.mealType = t; this.render(); },
-  toggleDorm() { S.dorm = !S.dorm; if (!S.dorm) S.mealType = "중식"; this.render(); },
+  toggleDorm() { S.dorm = !S.dorm; S.dormTouched = true;   /* 직접 만졌으면 자동으로 안 바꾼다 */ if (!S.dorm) S.mealType = "중식"; this.render(); },
   // key = "YYYYMMDD|끼니" — 기숙사형은 같은 날 아침·점심·저녁 알람을 따로 걸 수 있어야 한다.
   toggleMealAlarm(key) {
     const [date, type] = key.split("|");
@@ -9131,6 +9098,49 @@ const App = {
   /* ⚠ 앱이 켜지는 순간엔 아직 자녀를 못 받아왔다. 그때 «미션 없음»으로 못 박으면
      다음에 다시 안 부른다 — 홈 카드가 영영 「오늘 미션 없음」으로 남는다(2026-08-01 실측).
      **못 묻는 상태와 물어봤는데 없는 상태는 다르다.** 못 묻겠으면 null 로 두고 그냥 돌아간다. */
+  /* 🎲 오늘 미션 바꾸기 — 하루 한 번.
+     ⚠ 성공/실패 판정을 앱이 하지 않는다. 「오늘은 이미 바꿨어요」도 서버가 말한다. */
+  async msReroll() {
+    const c = cur();
+    if (!c) return;
+    const r = await api(`/children/${c.id}/missions/reroll`, { method: "POST" });
+    /* ⚠ 막히는 경우는 거의 «오늘 이미 바꿨다» 하나다. 서버 안내문이 안 실려 오면
+       「지금은 바꿀 수 없어요」 같은 맹탕이 뜬다 — 그건 아이에게 아무것도 안 알려준다. */
+    if (!r.ok) { toast(r.message || "오늘은 이미 한 번 바꿨어요. 내일 다시 할 수 있어요."); return; }
+    toast("오늘 미션을 바꿨어요");
+    await this.loadMissions(true);
+    this.render();
+  },
+  /* 그 학교·학년의 «실제» 반 이름을 받아온다 (2026-08-09).
+     ⚠ 시간표는 조회만으로 NEIS 를 안 부른다 — 먼저 warm 으로 캐시를 채워야 한다(실측).
+     ⚠ 못 받아오면 조용히 숫자 폴백으로 둔다. 등록을 막으면 안 된다 —
+       반 이름을 못 읽는 것보다 아이를 못 넣는 게 훨씬 나쁘다. */
+  async loadClassNames(slug, grade) {
+    if (!slug || !grade) return;
+    S.classNames = null; S.classBusy = true; this.render();
+    const path = "/schools/" + encodeURIComponent(slug);
+    try {
+      /* ⚠ 방학에는 **다음 학기 시간표가 아직 NEIS 에 없다.**
+         실측(2026-08-09, 경기초): 1학기는 전 학년 「난초·매화·모란·장미」가 다 나오는데
+         2학기는 전 학년 0건이다. 그래서 8월에 가입하는 부모는 반 이름을 못 골랐다.
+         → 지금 학기로 물어보고 비면 **이전 학기로 한 번 더** 물어본다.
+           반 이름은 학기가 바뀌어도 대개 그대로다(꽃 이름·색 이름은 학년 단위로 정해진다). */
+      /* ⚠ `classes=1` 은 **반 이름만** 준다. 시간표를 통째로 받아 추리면
+         페이징 50건에 잘려서 반이 몇 개 빠진다(경기초 4학년 「장미」가 그렇게 사라졌다). */
+      const pull = async (sem) => {
+        const q = sem ? `&semester=${sem}` : "";
+        await api(`${path}/warm?kind=timetable&grade=${encodeURIComponent(grade)}${q}`, { method: "POST" });
+        const r = await api(`${path}/timetable?classes=1&grade=${encodeURIComponent(grade)}${q}`);
+        return (r?.ok ? r.data.items : []).filter(Boolean);
+      };
+      let names = await pull("");
+      if (!names.length) names = await pull("1");
+      if (!names.length) names = await pull("2");
+      S.classNames = names.length ? names.sort() : null;
+    } catch (e) { S.classNames = null; }
+    S.classBusy = false; this.render();
+  },
+
   async loadMissions(force) {
     const c = cur();
     if (!TOKENS.access || !c?.server_id) return;        // 아직 못 묻는다 → 다음 그리기에서 다시
@@ -9228,7 +9238,7 @@ const App = {
     App.loadSchoolMissions(true);   // 학교 미션 카드를 새로 받는다(1/3 → 2/3)
     S.mealDraft = { stars: 0, best: null };
     S.kidHooray = { title: "급식 평가", stars: got };
-    location.hash = "#childview";
+    location.hash = "#game";
     this.render();
   },
 
@@ -9250,7 +9260,7 @@ const App = {
     App.loadSchoolMissions(true);   // 학교 미션 카드를 새로 받는다(1/3 → 2/3)
     S.subjectBest = null;
     S.kidHooray = { title: "오늘 재밌었던 것", stars: got };
-    location.hash = "#childview";
+    location.hash = "#game";
     this.render();
   },
 
@@ -9301,7 +9311,7 @@ const App = {
     App.loadSchoolMissions(true);   // 학교 미션 카드를 새로 받는다(1/3 → 2/3)
     S.friendDraft = { picked: [], alone: false, adding: null };
     S.kidHooray = { title: "오늘 논 친구", stars: got };
-    location.hash = "#childview";
+    location.hash = "#game";
     this.render();
   },
 
@@ -11546,7 +11556,7 @@ if (TOKENS.access) {
     wipeParentData();
     loadChildMe();
     S.childView = true; S.booting = false;
-    history.replaceState(null, "", "#childview");
+    history.replaceState(null, "", "#game");   /* 옛 자녀 홈은 08-09 에 지웠다 */
     if (cur()) { loadSchoolCache(cur()); loadSchool(); }
   } else {
     /* 지난번 자녀 목록이 있으면 **그걸로 먼저 그린다.** 서버를 기다리지 않는다.
@@ -11598,7 +11608,7 @@ document.addEventListener("visibilitychange", () => {
   if (S.appLock && away > APP_LOCK_AWAY_MS) S.appLocked = true;
   /* 자리를 비웠다 돌아오면 첫 화면으로 되돌린다 — 다만 **자녀폰의 첫 화면은 자녀 화면**이다.
      여기서 #home 으로 보내는 바람에 카메라(5초 초과)를 다녀온 자녀폰에 부모 홈이 떴다(2026-08-02). */
-  const homeHash = isChildToken() ? "#childview" : "#home";
+  const homeHash = isChildToken() ? "#game" : "#home";   /* 아이의 홈은 게임 세계다(08-09) */
   if (!busy && away > AWAY_RESET_MS && location.hash && location.hash !== homeHash) {
     location.hash = homeHash;
   }
