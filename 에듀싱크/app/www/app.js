@@ -919,7 +919,10 @@ const S = {
   ibText: "",             // 메신저식 입력바에 치고 있는 글자 (§3)
   _missionBusyLoad: false,// 받아오는 중 — 그리기가 잦아 같은 요청이 겹치는 것을 막는다
   missionNew: null,       // 우리 집 미션 만들기 폼 (null = 닫힘)
-  reg: { userid: "", pw: "", pw2: "", name: "", birth: "", email: "", phone: "", t1: true, t2: true },  // 회원가입 입력
+  /* ⚠ **필수 동의를 미리 켜두지 않는다**(2026-08-10 폰 실측에서 잡음).
+     동의는 «본인이 누른 것»이어야 법적으로 의미가 있다 — 미리 체크해 두면 다크패턴이고,
+     실제로 읽지 않은 사람이 동의한 것이 된다. */
+  reg: { userid: "", pw: "", pw2: "", name: "", birth: "", email: "", phone: "", t1: false, t2: false },  // 회원가입 입력
   regServerErr: {},       // 서버가 돌려준 칸별 사유(중복 아이디·이메일 등). _ 는 칸 없는 사유
   regBusy: false,         // 서버에 확인하는 중
   loginBusy: false,
@@ -4089,6 +4092,8 @@ const Screens = {
          새 코드로 다른 폰이 붙으면 앞 폰은 그 자리에서 끊긴다(서버가 기기 표식으로 판정). -->
     <div class="mp-sec">자녀폰</div>
     <div class="mp-list">
+      <!-- ⚠ 아이가 없으면 목록이 비어 **제목만 덩그러니** 남았다(폰 실측). 왜 비었는지 말한다. -->
+      ${STUB.children.length ? "" : `<div class="mp-row"><span class="mp-l" style="color:var(--muted)">아이를 등록하면 여기서 연결해요</span></div>`}
       ${STUB.children.map((c) => {
         const on = !!c.child_device;
         const when = c.child_device_at ? String(c.child_device_at).slice(0, 10).replace(/-/g, ".") : "";
@@ -6159,13 +6164,16 @@ function drawerView(c) {
       <!-- ⚠ 아이가 없으면(구경 중) 여기서 자녀 이름을 읽다가 **서랍이 통째로 안 열렸다**
            (2026-08-04 실측). 그 자리에 «아이 등록하기»를 둔다 — 가입 길이 여기 하나면 족하다.
            ⚠ 이 주석에 역따옴표를 쓰지 말 것 — 템플릿 문자열 안이라 그 자리에서 문법이 깨진다. -->
+      <!-- ⚠ 별명이 **한 글자**면 이니셜 아바타(첫 글자)와 이름이 똑같아 두 번 쓴 것처럼 보인다
+           (「콩」 옆에 「콩」 — 2026-08-10 폰 실측). 사진이 있으면 겹치지 않으니 그대로 둔다. -->
       ${c ? `<button class="hv3-drwho" onclick="App.drawerClose();location.hash='#switch'">
-        ${childFace(c, "hd-face")}
+        ${(c.photo || c.photoLocal || String(c.nickname || "").trim().length > 1) ? childFace(c, "hd-face") : ""}
         <span class="nm"><b>${esc(c.nickname)}</b><em>${[esc(schoolName(c)), c.grade ? `${c.grade}학년` : ""].filter(Boolean).join(" · ")}</em></span>
         <i aria-hidden="true" class="ti ti-chevron-right"></i>
       </button>
 
-      <div class="hv3-drpass">${esc(pass?.t || "무료 사용 중")}</div>`
+      <!-- ⚠ 「무료 사용 중」이라고 하면 안 된다 — 2026-07-28 부터 **무료 티어가 없다**. 값을 모르면 모른다고 한다. -->
+      <div class="hv3-drpass">${esc(pass?.t || "확인 중")}</div>`
       : `<button class="hv3-drwho" onclick="App.drawerClose();App.childAddStart()">
         <span class="nm"><b>아이 등록하기</b></span>
         <i aria-hidden="true" class="ti ti-chevron-right"></i>
