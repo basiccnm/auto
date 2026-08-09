@@ -713,6 +713,7 @@ const S = {
   friendBusy: false,
   linkWarn: false,        // 자녀폰 미연결 안내 팝업 (물음표를 눌렀을 때만)
   deckIdx: 0,             // 자녀 홈 카드 덱에서 보고 있는 장
+  classNames: null, classBusy: false,   // 그 학교·학년의 «실제» 반 이름 (없으면 숫자로 폴백)
   report: null, reportMonth: null, reportBusy: false,   // 부모 월간 리포트
   kidTab: "daily",        // 자녀 미션 탭 — daily(일일 퀘스트) | quest(의뢰)
   subjectBest: null,      // 오늘 제일 재밌었던 과목
@@ -3523,11 +3524,21 @@ const Screens = {
               `<option value="${n}" ${+g === n ? "selected" : ""}>${n}학년</option>`).join("")}
           </select></div>
         <div><label class="f">반</label>
+          <!-- ⚠ 예전엔 «1반~N반» 숫자만 골랐다. 그런데 **반 이름이 말인 학교가 있다** —
+               경기초 4학년은 「난초·매화·장미」다(2026-08-09 실측). 숫자로 저장하면
+               NEIS 에 CLASS_NM=2 로 묻게 되고 **시간표가 영영 0건**이 된다.
+               화면엔 「아직 올라오지 않음」만 떠서 부모는 이유를 알 수 없었다.
+               → 그 학교·학년의 **실제 반 이름**을 받아오면 그걸 고르게 한다. -->
           <select onchange="S.childDraft.class_name=this.value">
-            ${Array.from({ length: classes }, (_, i) => i + 1).map((n) =>
-              `<option value="${n}" ${+S.childDraft.class_name === n ? "selected" : ""}>${n}반</option>`).join("")}
+            ${(S.classNames || []).length
+              ? S.classNames.map((n) =>
+                  `<option value="${esc(n)}" ${String(S.childDraft.class_name) === String(n) ? "selected" : ""}>${esc(n)}${/^\d+$/.test(n) ? "반" : ""}</option>`).join("")
+              : Array.from({ length: classes }, (_, i) => i + 1).map((n) =>
+                  `<option value="${n}" ${+S.childDraft.class_name === n ? "selected" : ""}>${n}반</option>`).join("")}
           </select>
-          <p class="sub">${g}학년은 ${classes}개 반이에요</p></div>
+          <p class="sub">${(S.classNames || []).length
+            ? `${g}학년 실제 반 이름이에요`
+            : (S.classBusy ? "반 이름을 알아보는 중…" : `${g}학년은 ${classes}개 반이에요`)}</p></div>
       </div>
       <label class="f">별명 * <span style="font-weight:400">(화면에는 이 이름만 보여요)</span></label>
       <input id="ce-nick" placeholder="예: 셋째" value="${esc(S.childDraft.nickname)}" oninput="S.childDraft.nickname=this.value">
@@ -8187,7 +8198,14 @@ const App = {
   },
   toggleGrades() { S.gradesOpen = !S.gradesOpen; this.render(); },
   // 학년이 바뀌면 반 목록이 그 학년 학급수로 다시 만들어진다 → 1반으로 되돌린다
-  childGrade(g) { S.childDraft.grade = g; S.childDraft.class_name = "1"; this.render(); },
+  childGrade(g) {
+    S.childDraft.grade = g; S.childDraft.class_name = "1"; S.classNames = null;
+    this.render();
+    /* 학년이 정해져야 그 학년의 «실제» 반 이름을 물어볼 수 있다.
+       기다리지 않는다 — 받아오면 스스로 다시 그린다(등록을 막지 않는다). */
+    const slug = S.childDraft.school && S.childDraft.school.slug;
+    if (slug) this.loadClassNames(slug, g);
+  },
   // 학교 검색 — GET /api/v1/schools/search?q= (전국 12,563개교, 서버가 찾는다).
   // 타자가 빠르면 요청이 겹친다 → 250ms 쉬고 한 번만 보내고, 늦게 온 옛 응답은 버린다.
   // 다시 그리면 포커스가 날아가니 되돌린다.
@@ -9023,6 +9041,23 @@ const App = {
     await this.loadMissions(true);
     this.render();
   },
+  /* 그 학교·학년의 «실제» 반 이름을 받아온다 (2026-08-09).
+     ⚠ 시간표는 조회만으로 NEIS 를 안 부른다 — 먼저 warm 으로 캐시를 채워야 한다(실측).
+     ⚠ 못 받아오면 조용히 숫자 폴백으로 둔다. 등록을 막으면 안 된다 —
+       반 이름을 못 읽는 것보다 아이를 못 넣는 게 훨씬 나쁘다. */
+  async loadClassNames(slug, grade) {
+    if (!slug || !grade) return;
+    S.classNames = null; S.classBusy = true; this.render();
+    const path = "/schools/" + encodeURIComponent(slug);
+    try {
+      await api(`${path}/warm?kind=timetable&grade=${encodeURIComponent(grade)}`, { method: "POST" });
+      const r = await api(`${path}/timetable?grade=${encodeURIComponent(grade)}`);
+      const names = [...new Set((r?.ok ? r.data.items : []).map((x) => x.class_name).filter(Boolean))];
+      S.classNames = names.length ? names.sort() : null;
+    } catch (e) { S.classNames = null; }
+    S.classBusy = false; this.render();
+  },
+
   async loadMissions(force) {
     const c = cur();
     if (!TOKENS.access || !c?.server_id) return;        // 아직 못 묻는다 → 다음 그리기에서 다시
