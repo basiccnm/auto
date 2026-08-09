@@ -3565,13 +3565,18 @@ const Screens = {
         const q = S.schoolQuery.trim();
         if (!q) return S.childDraft.school
           ? `<div class="picked-school"><i class='ti ti-circle-check'></i> <b>${esc(sc.name)}</b><span class="ntime">${esc(sc.address)}</span></div>`
-          : `<p class="sub">전국 12,563개 학교에서 찾아요.</p>`;
+          /* ⚠ 중·고를 막아 놓고 아무 말도 안 하면 중학생 부모는 «우리 학교가 없네?»로,
+               즉 **고장으로** 읽는다. 초등학교만 되는 앱이라고 먼저 말한다. */
+          : `<p class="sub">초등학교 6,336곳에서 찾아요. <b>지금은 초등학생용이에요.</b></p>`;
         if (q.length < 2) return `<p class="sub">두 글자 이상 적어주세요.</p>`;
         if (S.schoolBusy || S.schoolHits === null) return `<p class="sub">찾는 중…</p>`;
         const hits = S.schoolHits;
         if (!hits.length) return S.schoolFrom === "offline"
           ? `<p class="sub">지금은 학교를 찾을 수 없어요. 인터넷 연결을 확인하고 다시 해주세요.</p>`
-          : `<p class="sub">"${q}" 로 찾은 학교가 없어요. 이름을 다시 확인해 주세요.</p>`;
+          /* ⚠ 중·고를 걸러 놓았으므로 「이름을 다시 확인하라」는 **틀린 안내**다 —
+               중학교를 제대로 친 부모가 자기 오타를 찾게 만든다. 왜 없는지를 말한다. */
+          : `<p class="sub">"${esc(q)}" 로 찾은 초등학교가 없어요.<br>
+              이름을 다시 확인해 주세요. <b>중·고등학교는 아직 준비 중이에요.</b></p>`;
         return `
           <p class="sub">${hits.length}곳 찾았어요 — <b>주소를 보고</b> 우리 학교를 고르세요.
 </p>
@@ -8433,7 +8438,13 @@ const App = {
     const seq = ++this._schoolSeq;
     this._schoolTimer = setTimeout(async () => {
       try {
-        const r = await api(`/schools/search?q=${encodeURIComponent(q)}`);
+        /* 🎒 **지금은 초등학교만 낸다**(대표님 확정 2026-08-10).
+           DB 에는 중·고도 다 있지만(중 3,322 · 고 2,404), 이 앱의 상품은 초등용
+           미션·별도장이라 중·고 부모가 들어오면 «훅만 있고 물건이 없는» 앱이 된다.
+           중·고는 다른 상품을 붙여 따로 낸다(docs/관리자페이지-요구사항.md).
+           ⚠ 되돌리는 법: 아래 `&level=elem` 한 줄만 빼면 전국 12,563곳이 다시 나온다.
+             서버는 안 건드렸다 — 필터는 원래부터 있던 기능이다. */
+        const r = await api(`/schools/search?q=${encodeURIComponent(q)}&level=elem`);
         if (seq !== this._schoolSeq) return;                 // 더 최근 입력이 있으면 이 응답은 버린다
         S.schoolHits = r?.ok ? r.data.items : [];
         S.schoolFrom = "server";
