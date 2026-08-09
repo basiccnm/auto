@@ -6463,3 +6463,50 @@ html:root[data-theme="charcoal"], html:root[data-theme="lavender"] {
 .ms-reroll b { display: block; font-size: 15px; font-weight: 900; }
 .ms-reroll em { display: block; margin-top: 2px; font-size: 12px; font-style: normal;
   font-weight: 700; color: var(--muted); }
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   대비 전수(49화면 × 5조합 = 245번) 에서 나온 8종 (2026-08-09)
+
+   ⚠ 그동안 «20화면 2테마»만 재고 「전수」라고 불렀다. 실제로는 49화면 18테마다.
+     제대로 도니 36건이 나왔고, 서로 다른 것은 아래 8종 — 나머지는 테마마다 반복된 같은 자리다.
+   ⚠ 되풀이되는 원인 둘뿐이다:
+       ① «면» 색(빨강 --danger · 분홍 · 금색)을 **글씨로** 썼다
+       ② 유리 카드가 밝아진 만큼 회색 계열이 경계선을 넘었다
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* 달력 일요일·공휴일 숫자 — --danger(#A8322F) 를 글씨로 썼다. 4.09 */
+/* ⚠ 처음에 #93261F 만 박았다가 **다크에서 1.59 로 더 나빠졌다** — 어두운 면에 어두운 글씨.
+   이 실수를 이 세션에서만 두 번 했다. 「밝은 쪽을 고쳤다」는 절반이다. 양쪽을 같이 준다. */
+:root .sun, :root .gc-num.sun, :root .gc-cell.hol .gc-num { color: #93261F; }
+:root[data-theme="dark"] .sun, :root[data-theme="navy"] .sun,
+:root[data-theme="charcoal"] .sun, :root[data-theme="lavender"] .sun,
+:root[data-theme="dark"] .gc-num.sun, :root[data-theme="navy"] .gc-num.sun,
+:root[data-theme="charcoal"] .gc-num.sun, :root[data-theme="lavender"] .gc-num.sun,
+:root[data-theme="dark"] .gc-cell.hol .gc-num, :root[data-theme="navy"] .gc-cell.hol .gc-num,
+:root[data-theme="charcoal"] .gc-cell.hol .gc-num, :root[data-theme="lavender"] .gc-cell.hol .gc-num { color: #FFA294; }
+
+/* 「사진 없음」류 설명문 — #57514A 는 유리 카드 위에서 3.60 */
+:root .bd em { color: var(--muted); }
+
+/* 「취소」·「지금 쓰는 테마예요」 — 중간톤 면 위 4.12. --ink 는 테마 밝기를 따라간다 */
+:root .ed-cancel, :root .th-use { color: var(--ink); }
+
+/* 테마 미리보기의 ★ — 분홍을 글씨로 썼다. 미리보기 색이 저마다라 3.23~4.16 으로 흔들렸다 */
+/* ⚠ 글씨색을 바꿔 봤자 소용없다 — 뒤가 **테마 미리보기 색**이라 18종마다 다르다.
+   어두운 색을 주면 어두운 미리보기에서 죽고, 밝은 색을 주면 밝은 미리보기에서 죽는다.
+   («라이트/다크»로 갈라도 안 된다. 갈리는 건 테마가 아니라 미리보기 타일 색이다.)
+   → kb-here 와 같은 답: **어두운 알약**을 깔고 흰 글씨를 얹는다. 배경이 뭐든 성립한다. */
+:root .pv-star { color: #FFFFFF; background: rgba(24, 20, 40, .78);
+  padding: 2px 8px; border-radius: 999px; }
+
+/* 아이 보드 「오늘 여기」 1.62 — 밝은 마디 위 흰 글씨.
+   마디 색이 아이마다 달라 흰 글씨로는 어떤 색에서도 안전할 수 없다 → 어둡게 파고 흰 테를 준다 */
+/* 마디 색이 아이마다 달라 «어떤 색에서도 안전한 글씨색»은 없다.
+   → 글씨에 기대지 말고 **어두운 알약**을 깔고 그 위에 흰 글씨를 얹는다. 배경이 뭐든 성립한다. */
+:root .kb-here { color: #FFFFFF; background: rgba(24, 20, 40, .82); padding: 2px 8px;
+  border-radius: 999px; text-shadow: none; }
+
+/* 부모 미션판 뱃지 2.65 — 밝은 분홍 위 흰 글씨. 분홍은 유지하고 톤만 내린다
+   (아이 세계 .gm-tkn 과 **같은 원인·같은 값**이다) */
+:root .pm-badge { background: #D01B63; }
