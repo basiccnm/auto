@@ -4694,7 +4694,9 @@ const Screens = {
     const doneCount = steps.filter((s) => total >= s).length;
     const todayIdx = Math.min(doneCount, 4);                     // 다음에 켤 별 자리에 «오늘 여기»
     return `
-    <a class="back" href="#childview" aria-label="뒤로"><i aria-hidden="true" class="ti ti-chevron-left"></i></a>
+    <!-- ⚠ 뒤로가기가 #childview(게임 세계 이전의 옛 자녀 홈)를 가리키고 있었다.
+         라우터가 그걸 #game 으로 돌려보내 «되기는» 했지만, 없어질 화면을 가리키는 링크다. -->
+    <a class="back" href="#game" aria-label="뒤로"><i aria-hidden="true" class="ti ti-chevron-left"></i></a>
     <h1 class="kd2-h1">${kw("board")}</h1>
     <p class="kd2-sub">${+TODAY.slice(4, 6)}월 · ${kw("unit")} ${total}개 모았어요</p>
 
@@ -5623,6 +5625,13 @@ function gameProfile(c, coin) {
         <div><b>${coin.earned_today} / ${coin.limit}</b><em>오늘 획득</em></div>
       </div>
     </div>
+
+    <!-- ⚠ 「별의 길」은 게임 세계를 만들 때 옆에 새로 만드느라 **딸려 오지 못한 화면**이다.
+         옛 자녀 홈에서만 갈 수 있어 아이가 도달할 길이 없었다 — 여기로 옮긴다.
+         모은 별이 길 위에 쌓이는 건 아이가 제일 보고 싶어 하는 것이다. -->
+    <button class="gm-go" onclick="location.hash='#childboard'">
+      <span>🛤️</span><b>별의 길</b><em>모은 별 ${coin.stars}개가 어디까지 왔나</em>
+    </button>
 
     <div class="gm-lab">🎨 배경 바꾸기</div>
     <div class="gm-sw">

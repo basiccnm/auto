@@ -6661,3 +6661,14 @@ input:focus, select:focus, textarea:focus {
 :root[data-theme="dark"] .rp-list b, :root[data-theme="navy"] .rp-list b, :root[data-theme="charcoal"] .rp-list b, :root[data-theme="lavender"] .rp-list b, :root[data-theme="dark"] .rp-list li b, :root[data-theme="navy"] .rp-list li b, :root[data-theme="charcoal"] .rp-list li b, :root[data-theme="lavender"] .rp-list li b, :root[data-theme="dark"] .dw-fab button span, :root[data-theme="navy"] .dw-fab button span, :root[data-theme="charcoal"] .dw-fab button span, :root[data-theme="lavender"] .dw-fab button span, :root[data-theme="dark"] .mk-add, :root[data-theme="navy"] .mk-add, :root[data-theme="charcoal"] .mk-add, :root[data-theme="lavender"] .mk-add, :root[data-theme="dark"] .dw-year .pl, :root[data-theme="navy"] .dw-year .pl, :root[data-theme="charcoal"] .dw-year .pl, :root[data-theme="lavender"] .dw-year .pl, :root[data-theme="dark"] .dw-sem .pl, :root[data-theme="navy"] .dw-sem .pl, :root[data-theme="charcoal"] .dw-sem .pl, :root[data-theme="lavender"] .dw-sem .pl {
   color: color-mix(in srgb, var(--accent) 34%, #FFFFFF);
 }
+
+/* 게임 세계 프로필의 «별의 길» 입구 — 아이 세계 문법(굵은 그림자 + 유리 빛) */
+.gm-go { display: flex; align-items: center; gap: 12px; width: 100%; margin: 12px 0 4px;
+  padding: 14px 16px; border-radius: 18px; font-family: inherit; text-align: left;
+  background-color: var(--g-panel); color: var(--g-ink);
+  background-image: linear-gradient(180deg, rgba(255,255,255,.26), rgba(255,255,255,0) 70%);
+  border: 1px solid rgba(255,255,255,.42); box-shadow: 0 4px 0 rgba(0,0,0,.14); }
+.gm-go > span { font-size: 24px; }
+.gm-go b { display: block; font-size: 16px; font-weight: 900; }
+.gm-go em { display: block; margin-top: 2px; font-size: 12.5px; font-style: normal;
+  font-weight: 700; color: var(--g-sub); }
