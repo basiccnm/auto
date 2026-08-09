@@ -2013,7 +2013,7 @@ async function handleAdminCorrectSchedule(request, db, id) {
 }
 
 // 유료 회원 페이지 — 등록된 자녀(테스트 포함) 목록.
-async function handleAdminMembers(db, request) {
+async function handleAdminMembers(db, request, url) {
   const { results } = await db
     .prepare(
       `SELECT children.*, schools.name AS school_name, schools.slug AS school_slug
@@ -2060,8 +2060,18 @@ async function handleAdminMembers(db, request) {
     notif: notifMap.get(token) || false,
     trial: trialSet.has(token),
   }));
+  /* 걸러 보기 (2026-08-10 대표님 요구 §7) — 「유료 / 무료를 별도 표시」.
+     ⚠ «유료»의 뜻을 한 곳에서 정한다: **결제 이력이 있고 환불이 아닌 것**이 하나라도 있으면 유료.
+       화면마다 다르게 세면 같은 회원이 표마다 다른 칸에 앉는다. */
+  const isPaid = (g) => (g.payments || []).some((p) => p.status !== "refunded");
+  const pay = (url && url.searchParams.get("pay")) || "";
+  const shown = pay === "paid" ? groups.filter(isPaid)
+    : pay === "free" ? groups.filter((g) => !isPaid(g))
+    : groups;
   const badges = await getAdminBadges(db);
-  return html(adminMembersPage(groups, isSubscriber(request), MAX_CHILDREN, badges));
+  return html(adminMembersPage(shown, isSubscriber(request), MAX_CHILDREN, badges, {
+    pay, nPaid: groups.filter(isPaid).length, nFree: groups.filter((g) => !isPaid(g)).length,
+  }));
 }
 
 // 관리자 네비 배지용 — 미처리 신고/의견 수(가벼운 COUNT).
@@ -2916,7 +2926,7 @@ export default {
 
       if (path === "/admin/school-search") return handleAdminSchoolSearch(db, url);
 
-      if (path === "/admin/members") return handleAdminMembers(db, request);
+      if (path === "/admin/members") return handleAdminMembers(db, request, url);
       if (path === "/admin/members/subscriber" && request.method === "POST")
         return handleAdminSubscriber(request);
       if (path === "/admin/members/dev-account" && request.method === "POST")

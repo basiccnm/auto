@@ -328,7 +328,7 @@ export function adminMonitorPage({ schoolCounts, lastSync, recentErrors, latestR
 }
 
 // ================= 유료 회원 (부모 중심 + 상세 모달) =================
-export function adminMembersPage(groups, subscriber = false, maxChildren = 3, badges) {
+export function adminMembersPage(groups, subscriber = false, maxChildren = 3, badges, filter = {}) {
   const gs = groups || [];
   const repOf = (g) => (g.account && g.account.nickname) ? g.account.nickname : (g.kids[0] ? g.kids[0].nickname : "-");
   /* ⚠ 「아이디가 확실히 있어야 한다」(대표님) — 목록에서 **누구인지 바로 보여야** 한다.
@@ -341,12 +341,18 @@ export function adminMembersPage(groups, subscriber = false, maxChildren = 3, ba
     const st = statePill(g.kids);
     const paid = (g.payments || []).some((p) => p.status !== "refunded");
     const school = g.kids.length ? `${escapeHtml(g.kids[0].school_name)}${g.kids.length > 1 ? ` 외 ${g.kids.length - 1}` : ""}` : "-";
+    /* 「한 계정에 자녀 몇 명인지」 뿐 아니라 **누가 있는지**가 목록에서 보여야 한다
+       (2026-08-10 대표님 요구 §8). 숫자만 있으면 목록에서 사람을 못 찾는다. */
+    const kidNames = g.kids.length
+      ? g.kids.map((k) => escapeHtml(k.nickname || "-")).slice(0, 3).join(" · ")
+        + (g.kids.length > 3 ? ` 외 ${g.kids.length - 3}` : "")
+      : "-";
     return `<div class="trow click" data-i="${i}">
       <div style="flex:1.6;display:flex;align-items:center;gap:9px;min-width:0"><span class="prov ${provClass(g.account && g.account.provider)}">${escapeHtml(provLabel(g.account && g.account.provider))}</span><span class="ell" style="min-width:0"><b style="display:block;font-size:14px;font-weight:700">${escapeHtml(repOf(g))}</b>${idOf(g) ? `<span style="display:block;font-size:12px;color:#6b7280">${escapeHtml(idOf(g))}</span>` : ""}</span></div>
-      <span style="width:70px;font-size:14px;color:#374151">${g.kids.length}명</span>
+      <span style="width:150px;font-size:13.5px;color:#374151"><b>${g.kids.length}명</b><span style="display:block;font-size:12px;color:#6b7280" class="ell">${kidNames}</span></span>
       <span class="ell" style="flex:1.2;font-size:14px;color:#374151">${school}</span>
       <span style="width:150px"><span class="pill ${st.cls}">${st.text}</span></span>
-      <span style="width:80px"><span class="pill ${paid ? "pill-active" : "pill-mut"}">${paid ? "있음" : "없음"}</span></span>
+      <span style="width:80px"><span class="pill ${paid ? "pill-active" : "pill-mut"}">${paid ? "유료" : "무료"}</span></span>
     </div>`;
   }).join("");
 
@@ -380,9 +386,15 @@ export function adminMembersPage(groups, subscriber = false, maxChildren = 3, ba
 
   const body = `
     <div class="hrow"><div class="hleft"><h2 class="h2">유료 회원</h2><span class="sub">부모 1명 = 1행 · ${gs.length}명 · 행을 누르면 자녀·결제·계정 전체</span></div>
-      <div class="search" style="width:240px"><span style="font-size:14px;color:#6b7280">🔍</span><input id="mq" placeholder="아이디·이메일·닉네임·자녀 별명" oninput="mFilt()"></div></div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <!-- 유료/무료 걸러 보기 (2026-08-10 대표님 요구 §7) — 「별도 표시」만으로는 못 찾는다. 걸러야 찾는다. -->
+        <a class="btn${filter.pay ? "" : " pri"}" href="/admin/members">전체 ${gs.length}</a>
+        <a class="btn${filter.pay === "paid" ? " pri" : ""}" href="/admin/members?pay=paid">유료 ${filter.nPaid == null ? "" : filter.nPaid}</a>
+        <a class="btn${filter.pay === "free" ? " pri" : ""}" href="/admin/members?pay=free">무료 ${filter.nFree == null ? "" : filter.nFree}</a>
+        <div class="search" style="width:240px"><span style="font-size:14px;color:#6b7280">🔍</span><input id="mq" placeholder="아이디·이메일·닉네임·자녀 별명" oninput="mFilt()"></div>
+      </div></div>
     <div class="card">
-      <div class="thead"><span style="flex:1.6">대표</span><span style="width:70px">자녀 수</span><span style="flex:1.2">학교</span><span style="width:150px">이용 상태</span><span style="width:80px">결제</span></div>
+      <div class="thead"><span style="flex:1.6">대표</span><span style="width:150px">자녀</span><span style="flex:1.2">학교</span><span style="width:150px">이용 상태</span><span style="width:80px">이용권</span></div>
       <div class="adm-scroll" style="max-height:440px;overflow-y:auto" id="mbody">${rows || `<div class="empty">등록된 회원이 없습니다.</div>`}</div>
     </div>
     <div class="card" style="background:#fafbfc">
@@ -428,7 +440,7 @@ export function adminMembersPage(groups, subscriber = false, maxChildren = 3, ba
           +'<a class="btn sm" style="color:#2563eb" href="/school/'+encodeURIComponent(c.slug)+'/?child='+c.id+'" target="_blank">화면 보기 ↗</a>'
           +'<button class="btn sm dng" onclick="delChild('+i+','+ci+')">삭제</button></div></div>';}).join('');
         var pays=m.payments.length?m.payments.map(function(p){return '<div class="trow" style="padding:11px 14px"><span style="width:84px;font-size:13.5px;color:#6b7280">'+esc(p.date)+'</span><span style="flex:1;font-size:14px;font-weight:700">'+esc(p.amountF)+'</span><span style="font-size:13.5px;color:#6b7280;margin-right:10px">'+p.months+'개월·'+p.children+'명·'+esc(p.method)+'</span><span class="pill '+(p.refunded?'pill-expired':'pill-active')+'">'+(p.refunded?'환불':'완료')+'</span></div>';}).join(''):'<div class="empty" style="padding:16px">결제 내역 없음</div>';
-        openModal('<div class="mh"><div style="display:flex;align-items:center;gap:10px"><span class="prov '+m.provCls+'">'+esc(m.prov)+'</span><div><h3>'+esc(m.rep)+'</h3><div class="sub">토큰 '+esc(m.token)+'… · 가입 '+esc(m.joined)+'</div></div></div><button class="x" onclick="closeModal()">✕</button></div>'
+        openModal('<div class="mh"><div style="display:flex;align-items:center;gap:10px"><span class="prov '+m.provCls+'">'+esc(m.prov)+'</span><div><h3>'+esc(m.rep)+'</h3><div class="sub">'+(m.loginId?esc(m.loginId)+' · ':'')+(m.email?esc(m.email)+' · ':'')+'가입 '+esc(m.joined)+'</div></div></div><button class="x" onclick="closeModal()">✕</button></div>'
           +'<div class="mb adm-scroll">'
           +'<div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap"><div class="kstat"><div class="l">최근 로그인</div><div class="v">'+esc(m.lastLogin)+'</div></div><div class="kstat"><div class="l">알림 신청</div><div class="v">'+esc(m.notif)+'</div></div><div class="kstat"><div class="l">무료체험</div><div class="v">'+esc(m.trial)+'</div></div></div>'
           +'<div class="seclabel">자녀 '+m.kids.length+'명</div><div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px">'+kids+'</div>'
@@ -445,7 +457,14 @@ export function adminMembersPage(groups, subscriber = false, maxChildren = 3, ba
           function(reason){postForm('/admin/members/adjust',{owner_token:m.ownerToken,days:days,reason:reason});},
           days>0?'늘리기':'줄이기', days<0);};
       window.delChild=function(i,ci){var c=MEMBERS[i].kids[ci];uiConfirmCb('자녀 삭제','"'+c.nickname+'" 자녀를 삭제합니다. 되돌릴 수 없습니다.',function(){postForm('/admin/members/'+c.id+'/delete');},'삭제',true);};
-      window.delMember=function(i){var m=MEMBERS[i];uiConfirmCb('회원 전체 삭제','"'+m.rep+'"(부모)의 모든 자녀를 삭제합니다. 계정·결제 기록은 보존됩니다.',function(){postForm('/admin/members/token-delete',{owner_token:m.ownerToken});},'삭제',true);};
+      /* 확인의 사다리 (2026-08-10 대표님 요구 §3) — 위험한 만큼만 확인을 요구한다.
+         자녀 삭제는 «예/아니오», **회원 전체 삭제는 이름을 직접 쳐야** 넘어간다.
+         ⚠ 버튼 하나로 남의 아이 기록이 통째로 사라지는 자리다. 손이 미끄러질 여지를 없앤다. */
+      window.delMember=function(i){var m=MEMBERS[i];
+        uiReasonCb('회원 전체 삭제','"'+m.rep+'"(부모)의 모든 자녀를 삭제합니다. 계정·결제 기록은 보존됩니다. 확인란에 대표 이름 "'+m.rep+'" 을 그대로 적어 주세요.',
+          function(typed){ if(typed!==m.rep){ showToast('이름이 다릅니다'); return; }
+            postForm('/admin/members/token-delete',{owner_token:m.ownerToken, reason:'회원 전체 삭제 확인: '+typed}); },
+          '삭제', true);};
       window.editChild=function(i,ci){var c=MEMBERS[i].kids[ci];
         openModal('<div class="mh"><h3>자녀 정보 수정</h3><button class="x" onclick="closeModal()">✕</button></div>'
           +'<form method="post" action="/admin/members/'+c.id+'/edit"><div class="mb"><div style="display:flex;flex-direction:column;gap:10px">'
