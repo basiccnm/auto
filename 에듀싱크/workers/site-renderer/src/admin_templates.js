@@ -58,8 +58,9 @@ function adminLayout({ title, active, body, badges = {} }) {
     ["banners", "배너 관리", "/admin/banners"],
     ["correct", "데이터 보정", "/admin/correct"],
     ["members", "유료 회원", "/admin/members"],
-    ["orders", "앱 주문", "/admin/orders"],
-    ["payments", "결제 관리", "/admin/payments"],
+    // 「앱 주문」과 「결제 관리」가 열이 겹치고 둘 다 0행이었다 — 운영자에겐 한 가지 일이다.
+    // 2026-08-10 대표님 요구 §9 로 **한 탭**으로 합쳤다(웹 결제는 /admin/payments 로 남겨 둔다).
+    ["orders", "결제", "/admin/orders"],
     ["inquiries", "문의", "/admin/inquiries"],
     ["flags", "대화 신고", "/admin/community"],
     ["reports", "오류 신고", "/admin/reports"],
@@ -527,6 +528,9 @@ const ORDER_STATUS = {
 };
 const ORDER_METHOD = { mock: "모의결제", bank_transfer: "무통장", pg: "카드(PG)", google_iap: "구글 인앱" };
 
+/* 결제 — **앱 인앱결제(orders)가 정본**이다. 옛 웹 더미결제(payments)는 따로 남아 있고
+   링크로만 닿는다. 표를 억지로 하나로 합치면 열이 안 맞아 둘 다 못 읽는 표가 된다.
+   ⚠ 두 표를 진짜 합치는 것은 웹 PG 를 붙일 때 함께 한다(그때 payments 를 orders 로 옮긴다). */
 export function adminOrdersPage(orders, { q = "", status = "" } = {}, badges) {
   const os = orders || [];
   const st = (s) => ORDER_STATUS[s] || { ko: s, cls: "pill-mut" };
@@ -559,12 +563,16 @@ export function adminOrdersPage(orders, { q = "", status = "" } = {}, badges) {
   }));
 
   const body = `
-    <div class="hrow"><div class="hleft"><h2 class="h2">앱 주문</h2>
+    <div class="hrow"><div class="hleft"><h2 class="h2">결제</h2>
       <span class="sub">유효 합계</span><span style="font-size:15px;font-weight:900;color:#2563eb">${won(total)}</span>
       ${waiting ? `<span class="pill pill-soon">입금대기 ${waiting}건</span>` : ""}</div>
       <form method="get" action="/admin/orders" class="search" style="width:220px"><span style="font-size:14px;color:#6b7280">🔍</span>
         <input type="hidden" name="s" value="${escapeHtml(status)}"><input name="q" value="${escapeHtml(q)}" placeholder="부모·자녀 이름 검색"></form></div>
-    <div style="display:flex;gap:6px;margin-bottom:12px">${chips}</div>
+    <div style="display:flex;gap:6px;margin-bottom:12px;align-items:center;flex-wrap:wrap">${chips}
+      <!-- 탭에서 「결제 관리」를 뺐다(요구 §9). 길까지 없애면 «잃어버린 화면»이 된다 → 여기 둔다. -->
+      <span style="flex:1"></span>
+      <a class="btn sm" href="/admin/payments" style="color:#6b7280">옛 웹 결제 기록 ↗</a>
+    </div>
     <div class="card">
       <div class="thead"><span style="width:96px">주문일</span><span style="flex:1">부모</span><span style="width:110px">자녀</span><span style="width:70px">기간</span><span style="width:86px;text-align:right">금액</span><span style="width:92px">수단</span><span style="width:86px">상태</span><span style="width:88px">이용 만료</span></div>
       <div class="adm-scroll" style="max-height:460px;overflow-y:auto" id="obody">${rows || `<div class="empty">주문이 없습니다.</div>`}</div>
