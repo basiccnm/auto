@@ -6185,7 +6185,8 @@ function nowDoing() {
         「(태권도학원 수업중)」 「(1교시 국어 수업중)」 「(방학기간 현재 일정 없음)」 「(주말 현재 일정 없음)」
      ⚠ 괄호까지가 한 덩어리다. t·s 는 다른 화면(nowCard)이 쓰므로 그대로 둔다. */
   if (inAct) return { t: `${esc(inAct.name)} 중`, s: `${esc(inAct.end_time)}까지`,
-    p: `(${esc(inAct.name)} 수업중)`, k: "act" };
+    // 「수업중」만으로는 언제 끝나는지 모른다 → **끝나는 시각**을 붙인다(대표님 2026-08-10)
+    p: `(${esc(inAct.name)} 수업중 ${esc(inAct.end_time)} 종료)`, k: "act" };
 
   if (hasClass) {
     for (let r = 0; r < grid.length; r++) {
@@ -6195,7 +6196,7 @@ function nowDoing() {
       if (now >= a0 && now < b0) {
         const v = subj(r);
         return { t: v ? `${r + 1}교시 ${esc(v)}` : `${r + 1}교시`, s: `${esc(p.end)}까지 ${left(b0 - now)}`,
-          p: `(${r + 1}교시 ${v ? `${esc(v)} ` : ""}수업중)`, k: "class" };
+          p: `(${r + 1}교시 ${v ? `${esc(v)} ` : ""}수업중 ${esc(p.end)} 종료)`, k: "class" };
       }
       const np = STUB.periods[r + 1];
       if (np && np.start && now >= b0 && now < toMin(np.start)) {
