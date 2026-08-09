@@ -3650,6 +3650,9 @@ const Screens = {
 
   // ── 6. 자녀 전환 = 캐릭터 선택 (정본 §10 — "여러 프로필 나열"이 아니라 캐릭터를 고르는 화면) ──
   switch: () => `
+    <!-- ⚠ 나가는 길이 없었다(화면 지도 2026-08-10). 아이를 «바꾸려다 그만두면» 갇힌다 —
+         특히 아이가 하나뿐이면 고를 것도 없이 막다른 길이다. -->
+    <a class="back" href="javascript:App.goBack()" aria-label="뒤로"><i aria-hidden="true" class="ti ti-chevron-left"></i></a>
     <h1 style="text-align:center;padding-top:26px">누구의 기록을 볼까요?</h1>
     <p class="sub" style="text-align:center">캐릭터를 고르면 그 자녀로 전환돼요</p>
     <div class="charselect">
@@ -3676,7 +3679,10 @@ const Screens = {
   upload: () => {
     const c = curView();
     const step = S.uploadStep;
+    /* ⚠ 나가는 길이 없었다(화면 지도 2026-08-10). 사진을 고르다 그만두면 갇힌다 —
+       ①촬영에서 아무것도 안 찍었을 때가 특히 그렇다. */
     const stepBar = `
+      <a class="back" href="javascript:App.goBack()" aria-label="뒤로"><i aria-hidden="true" class="ti ti-chevron-left"></i></a>
       <div class="steps">
         <span class="${step === 0 ? "on" : ""}">① 촬영</span>
         <span class="${step === 1 ? "on" : ""}">② 확인</span>

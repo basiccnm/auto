@@ -31,7 +31,10 @@ const bodyOf = (name) => {
   return src.slice(i, end);
 };
 const fnBody = (name) => {
-  const i = src.search(new RegExp("\nfunction\s+" + name + "\\b"));
+  /* 문자열 안의 백슬래시는 한 번 더 써야 정규식이 된다 — "\s+" 는 그냥 s+ 였다.
+     그래서 legalScreen·gameCard 같은 헬퍼를 못 찾았고, 그 안에 있던
+     뒤로가기를 놓쳐 「나가는 길 없음」이 부풀었다(2026-08-10 세 번째 헛다리). */
+  const i = src.indexOf(String.fromCharCode(10) + "function " + name + "(");
   return i < 0 ? "" : src.slice(i, i + 8000);
 };
 const resolved = (name) => {
@@ -41,22 +44,44 @@ const resolved = (name) => {
   return b;
 };
 
+/* ⚠ 「#이름」이 나온다고 다 **입구**가 아니다. 처음엔 그렇게 셌다가
+     game 이 27곳으로 나왔는데, 열어 보니 대부분 **나가는 길**(`href="#game"` 뒤로가기)과
+     **라우터 되돌림**(history.replaceState)이었다. 진짜 입구는 홈 카드·★ 둘뿐이다.
+   → 뒤로가기·되돌림·주석 줄은 빼고 센다. 안 그러면 «덤불»이 아닌 걸 덤불로 읽는다. */
+const NOT_ENTRY = /class="back"|history\.replaceState|goBack|^\s*[/*]|아니다|예전엔/;
 const inbound = new Map(screens.map((s) => [s, 0]));
-for (const m of src.matchAll(/['"`]#([a-zA-Z][\w-]*)['"`]/g)) {
-  if (inbound.has(m[1])) inbound.set(m[1], inbound.get(m[1]) + 1);
-}
+const lines = src.split(String.fromCharCode(10));
+/* ⚠ **입구 = 사람이 누르는 것**이다. `onclick=` 이나 `href="#…"` 이 있어야 입구다.
+     그냥 `location.hash = "#game";` 한 줄은 **일을 마치고 돌아가는 것**이지 입구가 아니다.
+     이걸 안 가르면 game 이 27곳 → 14곳으로만 줄고 여전히 «덤불»로 읽힌다. 실제 입구는 2곳이다. */
+const IS_ENTRY = /onclick=|href="#/;
+lines.forEach((ln) => {
+  if (NOT_ENTRY.test(ln) || !IS_ENTRY.test(ln)) return;
+  for (const m of ln.matchAll(/['"`]#([a-zA-Z][\w-]*)['"`]/g)) {
+    if (inbound.has(m[1])) inbound.set(m[1], inbound.get(m[1]) + 1);
+  }
+});
 
-const OUT = /subHeader\(|class="back"|App\.goBack\(|gm-back|lg-close|sub-back|hv3-ham|drawerOpen\(/;
+/* 나가는 길 = 뒤로가기 **또는** 그 화면을 끝내는 버튼.
+   ⚠ 뒤로 화살표만 찾으면 «막다른 화면이 의도인 곳»까지 잡는다 —
+     locked(이용권 사러 가기)·childtheme(테마 고르기)·childexpired(다시 연결하기)는
+     화살표는 없어도 나갈 버튼이 있다. 갇히지 않는다. */
+const OUT = /subHeader\(|class="back"|App\.goBack\(|gm-back|lg-close|sub-back|hv3-ham|drawerOpen\(|btn-primary|kd3-go|kd2-cta|lk-go/;
 const rows = screens.map((s) => ({ name: s, in: inbound.get(s), out: OUT.test(resolved(s)) }));
 
-const noExit = rows.filter((r) => r.in > 0 && !r.out);
-const dead = rows.filter((r) => r.in === 0);
-const many = rows.filter((r) => r.in >= 5).sort((a, b) => b.in - a.in);
+const noExit = rows.filter((r) => !r.out);
 
-console.log("화면 " + rows.length + "개\n");
-console.log("❌ 나가는 길이 없다 — " + noExit.length + "곳");
-noExit.forEach((r) => console.log("   " + r.name + "  (들어오는 길 " + r.in + ")"));
-console.log("\n⚠ 들어오는 길이 없다 — " + dead.length + "곳  (라우터가 직접 띄우는 화면일 수 있다)");
-dead.forEach((r) => console.log("   " + r.name));
-console.log("\n⚠ 입구가 5곳 이상 — " + many.length + "곳");
-many.forEach((r) => console.log("   " + r.name + "  " + r.in + "곳"));
+/* ⚠ 「입구 수」는 **믿을 수 없어서 뺐다.**
+     세 번 고쳤는데도 못 맞췄다 — 화면으로 가는 길이 세 가지다:
+       ① href="#x"  ② onclick="location.hash='#x'"  ③ onclick="App.무언가()" 안에서 이동
+     ③ 을 세려면 함수마다 무슨 hash 로 가는지 따라가야 하고, 그건 이 도구 몫이 아니다.
+     ①②만 세면 「입구 없음」이 25곳으로 뜬다 — 실제로는 다 열려 있다.
+   ⚠ 이 도구가 답할 수 있는 건 하나다: **들어갔는데 못 나오는 화면이 있는가.**
+     그것만 답한다. 못 하는 걸 하는 척하면 그 숫자를 믿고 엉뚱한 걸 고치게 된다.
+     (실제로 그럴 뻔했다 — 「game 입구 27곳 = 덤불」이라고 보고했는데 진짜 입구는 2곳이었다.) */
+console.log("화면 " + rows.length + "개 — 들어갔다가 못 나오는 곳을 찾는다");
+console.log(noExit.length ? "❌ 나가는 길이 없다 — " + noExit.length + "곳" : "✅ 모든 화면에 나가는 길이 있다");
+noExit.forEach((r) => console.log("   " + r.name));
+console.log("");
+console.log("※ 막다른 화면이 의도인 곳도 있다(childexpired: 연결이 끝났다는 안내).");
+console.log("※ 이 도구는 «입구 수»를 세지 않는다 — 위 주석 참고.");
