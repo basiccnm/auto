@@ -91,59 +91,64 @@ function adminLayout({ title, active, body, badges = {} }) {
   .adm-scroll::-webkit-scrollbar{width:10px;height:10px}
   .adm-scroll::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:6px;border:2px solid #fff}
   .adm-scroll::-webkit-scrollbar-track{background:transparent}
-  .wrap{padding:32px 24px 80px;max-width:1360px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
-  .eyebrow{font-size:12px;font-weight:800;letter-spacing:.14em;color:#2563eb;text-transform:uppercase}
+  /* ⚠ 2026-08-09: 「보기 어렵다」 지적을 숫자로 재서 고쳤다 —
+     · #9ca3af 회색 글씨가 흰 배경에서 **2.54:1** 이었다(기준 4.5) → #6b7280 (4.83:1)
+     · 글자가 11~13px 라 작았다 → 한 단계씩 키움
+     · max-width 를 1360px 로 고정해 창이 좁으면 가로로 밀렸다 → min(1360px, 100%)
+     ⚠ 관리자도 «읽는 화면»이다. 정보가 많다고 글씨를 줄이면 아무도 안 읽는다. */
+  .wrap{padding:32px 24px 80px;max-width:min(1360px, 100%);margin:0 auto;display:flex;flex-direction:column;gap:20px}
+  .eyebrow{font-size:13.5px;font-weight:800;letter-spacing:.14em;color:#2563eb;text-transform:uppercase}
   .apptitle{margin:5px 0 3px;font-size:25px;font-weight:900;letter-spacing:-.02em}
   .appdesc{margin:0;font-size:14px;color:#6b7280}
   .app{background:#f3f4f6;border:1px solid #cbd2dc;border-radius:16px;overflow:hidden;box-shadow:0 30px 70px -30px rgba(17,24,39,.4)}
   .topbar{background:#111827;padding:11px 22px;display:flex;align-items:center;gap:12px}
   .logo{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:7px;background:#2563eb;color:#fff;font-weight:900;font-size:14px}
   .topbar .nm{font-size:14px;font-weight:800;color:#fff}.topbar .nm span{color:#9aa3b2;font-weight:600}
-  .topbar .env{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#9aa3b2}
+  .topbar .env{margin-left:auto;display:inline-flex;align-items:center;gap:6px;font-size:13.5px;color:#9aa3b2}
   .topbar .dot{width:7px;height:7px;border-radius:50%;background:#22c55e}
-  .topbar .who{font-size:12px;color:#cbd2dc;border-left:1px solid #374151;padding-left:12px}
+  .topbar .who{font-size:13.5px;color:#cbd2dc;border-left:1px solid #374151;padding-left:12px}
   nav.tabs{background:#fff;border-bottom:1px solid #e5e7eb;padding:0 14px;display:flex;gap:2px;overflow-x:auto}
   .tab{padding:13px 16px;font-size:14px;font-weight:600;color:#6b7280;white-space:nowrap;border-bottom:2px solid transparent;margin-bottom:-1px}
   .tab:hover{color:#374151}
   .tab.on{color:#2563eb;font-weight:800;border-bottom-color:#2563eb}
-  .tabbadge{margin-left:7px;display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#dc2626;color:#fff;font-size:11px;font-weight:800;vertical-align:middle}
+  .tabbadge{margin-left:7px;display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:#dc2626;color:#fff;font-size:13.5px;font-weight:800;vertical-align:middle}
   .pane{padding:24px 26px 30px;display:flex;flex-direction:column;gap:20px}
   .h2{margin:0;font-size:17px;font-weight:800;color:#111827}
-  .sub{font-size:12px;color:#9ca3af}
+  .sub{font-size:13.5px;color:#6b7280}
   .hrow{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
   .hleft{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
   .card{background:#fff;border:1px solid #e5e7eb;border-radius:13px;overflow:hidden}
-  .thead{display:flex;align-items:center;padding:11px 18px;background:#f9fafb;border-bottom:1px solid #e5e7eb;font-size:11px;font-weight:800;color:#6b7280}
+  .thead{display:flex;align-items:center;padding:11px 18px;background:#f9fafb;border-bottom:1px solid #e5e7eb;font-size:13.5px;font-weight:800;color:#6b7280}
   .trow{display:flex;align-items:center;padding:13px 18px;border-bottom:1px solid #f3f4f6}
   .trow.click{cursor:pointer}.trow.click:hover{background:#f9fafb}
   .ell{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-  .pill{display:inline-flex;align-items:center;font-size:11px;font-weight:800;border-radius:20px;padding:3px 10px;white-space:nowrap}
+  .pill{display:inline-flex;align-items:center;font-size:13.5px;font-weight:800;border-radius:20px;padding:3px 10px;white-space:nowrap}
   .pill-active{color:#15803d;background:#dcfce7}.pill-soon{color:#b45309;background:#fef3c7}
   .pill-expired{color:#b91c1c;background:#fee2e2}.pill-test{color:#6d28d9;background:#ede9fe}
   .pill-mut{color:#6b7280;background:#f3f4f6}.pill-blue{color:#1d4ed8;background:#dbeafe}
-  .prov{display:inline-flex;align-items:center;justify-content:center;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:800}
+  .prov{display:inline-flex;align-items:center;justify-content:center;padding:2px 8px;border-radius:6px;font-size:13.5px;font-weight:800}
   .prov-kakao{background:#fee500;color:#3c1e1e}.prov-naver{background:#03c75a;color:#fff}
   .prov-google{background:#fff;border:1px solid #e5e7eb;color:#374151}.prov-none{background:#f3f4f6;color:#6b7280}
   .search{display:flex;align-items:center;gap:7px;background:#fff;border:1px solid #e5e7eb;border-radius:9px;padding:8px 12px}
-  .search input{flex:1;border:none;outline:none;background:transparent;font-size:13px;color:#111827}
-  .btn{padding:9px 15px;border-radius:9px;border:1px solid #e5e7eb;background:#fff;color:#374151;font-size:13px;font-weight:700;cursor:pointer}
+  .search input{flex:1;border:none;outline:none;background:transparent;font-size:14px;color:#111827}
+  .btn{padding:9px 15px;border-radius:9px;border:1px solid #e5e7eb;background:#fff;color:#374151;font-size:14px;font-weight:700;cursor:pointer}
   .btn:hover{border-color:#c7cdd6}
   .btn.pri{background:#2563eb;border-color:#2563eb;color:#fff}.btn.pri:hover{filter:brightness(1.06)}
   .btn.dng{border-color:#fecaca;color:#dc2626}.btn.warn{border-color:#fed7aa;color:#c2410c}
-  .btn.sm{padding:6px 11px;font-size:12px}
-  .code{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;background:#f3f4f6;color:#6b7280;padding:1px 6px;border-radius:5px}
-  .empty{padding:40px;text-align:center;color:#9ca3af;font-size:14px}
-  .note{font-size:12px;color:#9ca3af;line-height:1.5}
+  .btn.sm{padding:6px 11px;font-size:13.5px}
+  .code{font-family:ui-monospace,Menlo,monospace;font-size:14px;background:#f3f4f6;color:#6b7280;padding:1px 6px;border-radius:5px}
+  .empty{padding:40px;text-align:center;color:#6b7280;font-size:14px}
+  .note{font-size:13.5px;color:#6b7280;line-height:1.5}
   .note.ok{color:#15803d;background:#dcfce7;padding:10px 14px;border-radius:9px;font-weight:700}
   /* 데이터 화면(2026-07-28) — 표를 골라 넣고·고치고·지운다 */
-  .inp{padding:9px 12px;border:1px solid #e5e7eb;border-radius:9px;background:#fff;font-size:13px;font-family:inherit;color:#111827;width:100%}
-  .fl{display:block;margin:12px 0 4px;font-size:12px;font-weight:700;color:#374151}
+  .inp{padding:9px 12px;border:1px solid #e5e7eb;border-radius:9px;background:#fff;font-size:14px;font-family:inherit;color:#111827;width:100%}
+  .fl{display:block;margin:12px 0 4px;font-size:13.5px;font-weight:700;color:#374151}
   .fl .mut{font-weight:400}
-  .mut{color:#9ca3af}
+  .mut{color:#6b7280}
   .row{display:flex;flex-wrap:wrap}
   .tblwrap{background:#fff;border:1px solid #e5e7eb;border-radius:13px}
-  .tbl{width:100%;border-collapse:collapse;font-size:12.5px;white-space:nowrap}
-  .tbl th{position:sticky;top:0;background:#f9fafb;text-align:left;padding:10px 12px;font-size:11px;font-weight:800;color:#6b7280;border-bottom:1px solid #e5e7eb}
+  .tbl{width:100%;border-collapse:collapse;font-size:13.5px;white-space:nowrap}
+  .tbl th{position:sticky;top:0;background:#f9fafb;text-align:left;padding:10px 12px;font-size:13.5px;font-weight:800;color:#6b7280;border-bottom:1px solid #e5e7eb}
   .tbl td{padding:10px 12px;border-bottom:1px solid #f3f4f6;max-width:260px;overflow:hidden;text-overflow:ellipsis}
   .tbl tbody tr:hover{background:#f9fafb}
   #box form{padding:0 20px 20px}
@@ -154,27 +159,27 @@ function adminLayout({ title, active, body, badges = {} }) {
   #box{width:560px;max-width:100%;max-height:84vh;background:#fff;border-radius:16px;overflow:hidden;display:flex;flex-direction:column;animation:popIn .22s ease;box-shadow:0 30px 60px -20px rgba(0,0,0,.4)}
   #box .mh{padding:18px 22px;border-bottom:1px solid #e5e7eb;display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
   #box .mh h3{margin:0;font-size:17px;font-weight:900;color:#111827}
-  #box .mh .x{cursor:pointer;font-size:20px;color:#9ca3af;line-height:1;background:none;border:none}
+  #box .mh .x{cursor:pointer;font-size:20px;color:#6b7280;line-height:1;background:none;border:none}
   #box .mb{padding:20px 22px;overflow-y:auto}
   #box .mf{padding:14px 22px;border-top:1px solid #e5e7eb;background:#f9fafb;display:flex;gap:8px;flex-wrap:wrap}
-  .krow{display:flex;justify-content:space-between;padding:10px 14px;background:#f9fafb;border-radius:9px;font-size:13px}
+  .krow{display:flex;justify-content:space-between;padding:10px 14px;background:#f9fafb;border-radius:9px;font-size:14px}
   .kstat{flex:1;min-width:110px;background:#f9fafb;border-radius:9px;padding:10px 12px}
-  .kstat .l{font-size:11px;color:#9ca3af}.kstat .v{font-size:13px;font-weight:700;color:#111827}
-  .seclabel{font-size:13px;font-weight:800;color:#6b7280;margin-bottom:8px}
+  .kstat .l{font-size:13.5px;color:#6b7280}.kstat .v{font-size:14px;font-weight:700;color:#111827}
+  .seclabel{font-size:14px;font-weight:800;color:#6b7280;margin-bottom:8px}
   /* confirm + toast */
   #cf{position:fixed;inset:0;z-index:60;background:rgba(17,24,39,.55);display:none;align-items:center;justify-content:center;padding:40px;animation:fadeIn .18s ease}
   #cf.on{display:flex}
   #cf .cbox{width:380px;max-width:100%;background:#fff;border-radius:16px;padding:24px;animation:popIn .2s ease;box-shadow:0 30px 60px -20px rgba(0,0,0,.4)}
   #cf .ct{font-size:17px;font-weight:900;margin-bottom:8px}#cf .cbd{font-size:14px;color:#6b7280;line-height:1.6;margin-bottom:20px}
   #cf .cbtns{display:flex;gap:10px;justify-content:flex-end}
-  #toast{position:fixed;left:50%;bottom:34px;transform:translateX(-50%);z-index:70;background:#111827;color:#fff;font-size:13px;font-weight:700;padding:12px 20px;border-radius:24px;box-shadow:0 10px 30px -8px rgba(0,0,0,.5);display:none;animation:popIn .2s ease}
+  #toast{position:fixed;left:50%;bottom:34px;transform:translateX(-50%);z-index:70;background:#111827;color:#fff;font-size:14px;font-weight:700;padding:12px 20px;border-radius:24px;box-shadow:0 10px 30px -8px rgba(0,0,0,.5);display:none;animation:popIn .2s ease}
   #toast.on{display:block}
   /* school-search dropdown */
   .sbox{position:relative;max-width:460px}
   .sres{position:absolute;top:52px;left:0;right:0;z-index:5;background:#fff;border:1px solid #e5e7eb;border-radius:10px;box-shadow:0 12px 30px -10px rgba(0,0,0,.2);overflow:hidden;display:none}
   .sres.on{display:block}
   .sres .it{cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid #f3f4f6}
-  .sres .it:hover{background:#eff6ff}.sres .it .nm{font-size:13px;font-weight:700;color:#111827}.sres .it .mt{font-size:12px;color:#9ca3af}
+  .sres .it:hover{background:#eff6ff}.sres .it .nm{font-size:14px;font-weight:700;color:#111827}.sres .it .mt{font-size:13.5px;color:#6b7280}
   @media(max-width:640px){.pane{padding:18px 14px 24px}.wrap{padding:20px 12px 60px}}
 </style>
 </head><body>
@@ -238,43 +243,43 @@ export function adminMonitorPage({ schoolCounts, lastSync, recentErrors, latestR
   const covCard = (label, n, color) => {
     const p = pct(n);
     return `<div class="card" style="padding:18px 20px;display:flex;flex-direction:column">
-      <div style="font-size:12px;font-weight:700;color:#6b7280">${label}</div>
+      <div style="font-size:13.5px;font-weight:700;color:#6b7280">${label}</div>
       <div style="font-size:30px;font-weight:900;letter-spacing:-.02em;margin:2px 0">${Number(n).toLocaleString()}</div>
       <div class="sub" style="margin-bottom:auto">전체의 ${p}%</div>
       <div style="height:7px;background:#f3f4f6;border-radius:4px;overflow:hidden;margin-top:12px"><div style="height:100%;background:${color};border-radius:4px;width:${p}%"></div></div>
     </div>`;
   };
 
-  const syncFmt = (v) => v ? `<span style="color:#16a34a">${escapeHtml(String(v).slice(0, 10))}</span>` : `<span style="color:#9ca3af">없음</span>`;
+  const syncFmt = (v) => v ? `<span style="color:#16a34a">${escapeHtml(String(v).slice(0, 10))}</span>` : `<span style="color:#6b7280">없음</span>`;
   const syncRows = (lastSync || []).map((s) => `<div class="trow" data-nm="${escapeHtml(s.name)}" style="padding:11px 16px">
-    <div class="ell" style="flex:1"><div style="font-size:13px;font-weight:700;color:#111827" class="ell">${escapeHtml(s.name)}</div><div class="sub">${escapeHtml((s.school_kind || "").replace("학교", ""))}</div></div>
-    <span style="width:56px;font-size:11px">${syncFmt(s.last_meal)}</span>
-    <span style="width:56px;font-size:11px">${syncFmt(s.last_timetable)}</span>
-    <span style="width:64px;font-size:11px">${syncFmt(s.last_schedule)}</span>
+    <div class="ell" style="flex:1"><div style="font-size:14px;font-weight:700;color:#111827" class="ell">${escapeHtml(s.name)}</div><div class="sub">${escapeHtml((s.school_kind || "").replace("학교", ""))}</div></div>
+    <span style="width:56px;font-size:13.5px">${syncFmt(s.last_meal)}</span>
+    <span style="width:56px;font-size:13.5px">${syncFmt(s.last_timetable)}</span>
+    <span style="width:64px;font-size:13.5px">${syncFmt(s.last_schedule)}</span>
   </div>`).join("");
 
   const errRows = (recentErrors || []).map((e) => `<div style="padding:12px 16px;border-bottom:1px solid #f3f4f6">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px"><span style="font-size:11px;font-weight:800;color:#b91c1c;background:#fef2f2;border-radius:5px;padding:2px 7px">${escapeHtml(e.source)}</span><span class="sub tnum">${escapeHtml(String(e.occurred_at || "").slice(0, 16).replace("T", " "))}</span></div>
-    <div style="font-size:12px;font-weight:700;color:#374151">${escapeHtml(e.school_name || e.target_school_id || "(전체)")}</div>
-    <div style="font-size:12px;color:#6b7280;line-height:1.4">${escapeHtml(e.error_message)}</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:3px"><span style="font-size:13.5px;font-weight:800;color:#b91c1c;background:#fef2f2;border-radius:5px;padding:2px 7px">${escapeHtml(e.source)}</span><span class="sub tnum">${escapeHtml(String(e.occurred_at || "").slice(0, 16).replace("T", " "))}</span></div>
+    <div style="font-size:13.5px;font-weight:700;color:#374151">${escapeHtml(e.school_name || e.target_school_id || "(전체)")}</div>
+    <div style="font-size:13.5px;color:#6b7280;line-height:1.4">${escapeHtml(e.error_message)}</div>
   </div>`).join("");
 
   const runBlock = latestRun ? `
     <div class="card" style="padding:18px 20px;display:flex;align-items:center;gap:24px;flex-wrap:wrap">
       <div style="min-width:200px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span style="font-size:15px;font-weight:800">${escapeHtml(latestRun.job_name)}</span><span class="pill ${latestRun.status === "done" ? "pill-active" : latestRun.status === "failed" ? "pill-expired" : "pill-blue"}">${escapeHtml(latestRun.status)}</span></div><div class="sub">시작 ${escapeHtml(latestRun.started_at || "-")} · 종료 ${escapeHtml(latestRun.finished_at || "—")}</div></div>
-      <div style="flex:1;min-width:200px"><div style="display:flex;justify-content:space-between;font-size:12px;color:#6b7280;margin-bottom:6px"><span>처리 진행률</span><span style="font-weight:800;color:#111827">${escapeHtml(latestRun.completed)} / ${escapeHtml(latestRun.total ?? "?")}</span></div><div style="height:10px;background:#f3f4f6;border-radius:5px;overflow:hidden"><div style="height:100%;background:linear-gradient(90deg,#2563eb,#3b82f6);width:${latestRun.total ? Math.round((latestRun.completed / latestRun.total) * 100) : 0}%"></div></div></div>
+      <div style="flex:1;min-width:200px"><div style="display:flex;justify-content:space-between;font-size:13.5px;color:#6b7280;margin-bottom:6px"><span>처리 진행률</span><span style="font-weight:800;color:#111827">${escapeHtml(latestRun.completed)} / ${escapeHtml(latestRun.total ?? "?")}</span></div><div style="height:10px;background:#f3f4f6;border-radius:5px;overflow:hidden"><div style="height:100%;background:linear-gradient(90deg,#2563eb,#3b82f6);width:${latestRun.total ? Math.round((latestRun.completed / latestRun.total) * 100) : 0}%"></div></div></div>
     </div>` : `<div class="card" style="padding:18px 20px"><span class="sub">아직 배치 실행 기록이 없습니다.</span></div>`;
 
   const body = `
     <div><div class="hleft" style="margin-bottom:12px"><h2 class="h2">적재 현황</h2><span class="sub">전국 데이터 채움 상태</span></div>
       <div style="display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:14px">
         <div class="card" style="padding:18px 20px">
-          <div style="font-size:12px;font-weight:700;color:#6b7280">전체 학교</div>
-          <div style="font-size:30px;font-weight:900;letter-spacing:-.02em;margin:2px 0 12px">${Number(schools).toLocaleString()}<span style="font-size:15px;font-weight:700;color:#9ca3af">개교</span></div>
+          <div style="font-size:13.5px;font-weight:700;color:#6b7280">전체 학교</div>
+          <div style="font-size:30px;font-weight:900;letter-spacing:-.02em;margin:2px 0 12px">${Number(schools).toLocaleString()}<span style="font-size:15px;font-weight:700;color:#6b7280">개교</span></div>
           <div style="display:flex;gap:8px">
-            <div style="flex:1;background:#f3f4f6;border-radius:8px;padding:8px 10px"><div style="font-size:11px;color:#6b7280">초등</div><div style="font-size:15px;font-weight:800">${Number(kind["초등학교"] || 0).toLocaleString()}</div></div>
-            <div style="flex:1;background:#f3f4f6;border-radius:8px;padding:8px 10px"><div style="font-size:11px;color:#6b7280">중학</div><div style="font-size:15px;font-weight:800">${Number(kind["중학교"] || 0).toLocaleString()}</div></div>
-            <div style="flex:1;background:#f3f4f6;border-radius:8px;padding:8px 10px"><div style="font-size:11px;color:#6b7280">고교</div><div style="font-size:15px;font-weight:800">${Number(kind["고등학교"] || 0).toLocaleString()}</div></div>
+            <div style="flex:1;background:#f3f4f6;border-radius:8px;padding:8px 10px"><div style="font-size:13.5px;color:#6b7280">초등</div><div style="font-size:15px;font-weight:800">${Number(kind["초등학교"] || 0).toLocaleString()}</div></div>
+            <div style="flex:1;background:#f3f4f6;border-radius:8px;padding:8px 10px"><div style="font-size:13.5px;color:#6b7280">중학</div><div style="font-size:15px;font-weight:800">${Number(kind["중학교"] || 0).toLocaleString()}</div></div>
+            <div style="flex:1;background:#f3f4f6;border-radius:8px;padding:8px 10px"><div style="font-size:13.5px;color:#6b7280">고교</div><div style="font-size:15px;font-weight:800">${Number(kind["고등학교"] || 0).toLocaleString()}</div></div>
           </div>
         </div>
         ${covCard("학사일정 적재", totals.schedules || 0, "#16a34a")}
@@ -286,7 +291,7 @@ export function adminMonitorPage({ schoolCounts, lastSync, recentErrors, latestR
     <div style="display:grid;grid-template-columns:1.4fr 1fr;gap:22px;align-items:start">
       <div>
         <div class="hrow" style="margin-bottom:12px"><div class="hleft"><h2 class="h2">학교별 최근 갱신일</h2><span class="sub">최근 ${(lastSync || []).length}개교</span></div>
-          <div class="search" style="width:220px"><span style="font-size:13px;color:#9ca3af">🔍</span><input id="monq" placeholder="학교명 필터" oninput="monFilt()"></div></div>
+          <div class="search" style="width:220px"><span style="font-size:14px;color:#6b7280">🔍</span><input id="monq" placeholder="학교명 필터" oninput="monFilt()"></div></div>
         <div class="card">
           <div class="thead"><span style="flex:1">학교</span><span style="width:56px">급식</span><span style="width:56px">시간표</span><span style="width:64px">학사일정</span></div>
           <div class="adm-scroll" style="max-height:300px;overflow-y:auto" id="monbody">${syncRows || `<div class="empty">데이터 없음</div>`}</div>
@@ -317,8 +322,8 @@ export function adminMembersPage(groups, subscriber = false, maxChildren = 3, ba
     const school = g.kids.length ? `${escapeHtml(g.kids[0].school_name)}${g.kids.length > 1 ? ` 외 ${g.kids.length - 1}` : ""}` : "-";
     return `<div class="trow click" data-i="${i}">
       <div style="flex:1.6;display:flex;align-items:center;gap:9px;min-width:0"><span class="prov ${provClass(g.account && g.account.provider)}">${escapeHtml(provLabel(g.account && g.account.provider))}</span><span class="ell" style="font-size:14px;font-weight:700">${escapeHtml(repOf(g))}</span></div>
-      <span style="width:70px;font-size:13px;color:#374151">${g.kids.length}명</span>
-      <span class="ell" style="flex:1.2;font-size:13px;color:#374151">${school}</span>
+      <span style="width:70px;font-size:14px;color:#374151">${g.kids.length}명</span>
+      <span class="ell" style="flex:1.2;font-size:14px;color:#374151">${school}</span>
       <span style="width:150px"><span class="pill ${st.cls}">${st.text}</span></span>
       <span style="width:80px"><span class="pill ${paid ? "pill-active" : "pill-mut"}">${paid ? "있음" : "없음"}</span></span>
     </div>`;
@@ -349,13 +354,13 @@ export function adminMembersPage(groups, subscriber = false, maxChildren = 3, ba
 
   const body = `
     <div class="hrow"><div class="hleft"><h2 class="h2">유료 회원</h2><span class="sub">부모 1명 = 1행 · ${gs.length}명 · 행을 누르면 자녀·결제·계정 전체</span></div>
-      <div class="search" style="width:240px"><span style="font-size:13px;color:#9ca3af">🔍</span><input id="mq" placeholder="닉네임·자녀 별명 검색" oninput="mFilt()"></div></div>
+      <div class="search" style="width:240px"><span style="font-size:14px;color:#6b7280">🔍</span><input id="mq" placeholder="닉네임·자녀 별명 검색" oninput="mFilt()"></div></div>
     <div class="card">
       <div class="thead"><span style="flex:1.6">대표</span><span style="width:70px">자녀 수</span><span style="flex:1.2">학교</span><span style="width:150px">이용 상태</span><span style="width:80px">결제</span></div>
       <div class="adm-scroll" style="max-height:440px;overflow-y:auto" id="mbody">${rows || `<div class="empty">등록된 회원이 없습니다.</div>`}</div>
     </div>
     <div class="card" style="background:#fafbfc">
-      <div style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:13px 16px" onclick="var d=document.getElementById('devbox');d.style.display=d.style.display==='none'?'block':'none'"><span style="font-size:13px;font-weight:700;color:#6b7280">🧰 개발/QA 보조 도구 (유료모드 토글 · 테스트 자녀 등록)</span><span class="sub">⌄</span></div>
+      <div style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;padding:13px 16px" onclick="var d=document.getElementById('devbox');d.style.display=d.style.display==='none'?'block':'none'"><span style="font-size:14px;font-weight:700;color:#6b7280">🧰 개발/QA 보조 도구 (유료모드 토글 · 테스트 자녀 등록)</span><span class="sub">⌄</span></div>
       <div id="devbox" style="display:none;padding:0 16px 16px;display:none">
         <form method="post" action="/admin/members/subscriber" style="display:inline"><input type="hidden" name="action" value="${subscriber ? "off" : "on"}"><button class="btn ${subscriber ? "dng" : ""}">${subscriber ? "유료모드 끄기" : "이 브라우저 유료 가입자로 켜기"}</button></form>
         <!-- QA 계정 연결 — 로그인 게이트(users 행 유무)를 통과시켜 /mypage·/register-child 등을 검증 가능하게 한다.
@@ -366,9 +371,9 @@ export function adminMembersPage(groups, subscriber = false, maxChildren = 3, ba
         <form method="post" action="/admin/members/dev-seed" style="display:inline;margin-left:8px"><button class="btn">QA 계정 + 데모 데이터 한 번에</button></form>
         <div style="margin-top:12px"><div class="seclabel">테스트 자녀 등록 (학교 이름 검색)</div>
           <form method="post" action="/admin/members/add-test-child">
-            <div class="sbox"><div class="search"><span style="font-size:13px;color:#9ca3af">🏫</span><input id="tcq" placeholder="학교명 입력" autocomplete="off"></div><div class="sres" id="tcres"></div></div>
+            <div class="sbox"><div class="search"><span style="font-size:14px;color:#6b7280">🏫</span><input id="tcq" placeholder="학교명 입력" autocomplete="off"></div><div class="sres" id="tcres"></div></div>
             <input type="hidden" name="school_slug" id="tcslug" required>
-            <div id="tcpick" style="font-size:12px;color:#16a34a;font-weight:700;margin:6px 0"></div>
+            <div id="tcpick" style="font-size:13.5px;color:#16a34a;font-weight:700;margin:6px 0"></div>
             <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
               <input class="btn" style="cursor:text" name="grade" placeholder="학년" required>
               <input class="btn" style="cursor:text" name="class_name" placeholder="반(선택)">
@@ -392,18 +397,18 @@ export function adminMembersPage(groups, subscriber = false, maxChildren = 3, ba
       window.memModal=function(i){var m=MEMBERS[i];
         var kids=m.kids.map(function(c,ci){return '<div style="border:1px solid #e5e7eb;border-radius:11px;padding:12px 14px">'
           +'<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px"><span style="font-size:14px;font-weight:800">'+esc(c.nickname)+'</span><span class="pill '+c.pillCls+'">'+esc(c.pillText)+'</span></div>'
-          +'<div style="font-size:12px;color:#6b7280;margin-bottom:8px">'+esc(c.school)+' · '+esc(c.gradeClass)+' · 커뮤니티 '+esc(c.community)+'</div>'
+          +'<div style="font-size:13.5px;color:#6b7280;margin-bottom:8px">'+esc(c.school)+' · '+esc(c.gradeClass)+' · 커뮤니티 '+esc(c.community)+'</div>'
           +'<div style="display:flex;gap:8px"><button class="btn sm" onclick="editChild('+i+','+ci+')">수정</button>'
           +'<a class="btn sm" style="color:#2563eb" href="/school/'+encodeURIComponent(c.slug)+'/?child='+c.id+'" target="_blank">화면 보기 ↗</a>'
           +'<button class="btn sm dng" onclick="delChild('+i+','+ci+')">삭제</button></div></div>';}).join('');
-        var pays=m.payments.length?m.payments.map(function(p){return '<div class="trow" style="padding:11px 14px"><span style="width:84px;font-size:12px;color:#6b7280">'+esc(p.date)+'</span><span style="flex:1;font-size:13px;font-weight:700">'+esc(p.amountF)+'</span><span style="font-size:12px;color:#6b7280;margin-right:10px">'+p.months+'개월·'+p.children+'명·'+esc(p.method)+'</span><span class="pill '+(p.refunded?'pill-expired':'pill-active')+'">'+(p.refunded?'환불':'완료')+'</span></div>';}).join(''):'<div class="empty" style="padding:16px">결제 내역 없음</div>';
+        var pays=m.payments.length?m.payments.map(function(p){return '<div class="trow" style="padding:11px 14px"><span style="width:84px;font-size:13.5px;color:#6b7280">'+esc(p.date)+'</span><span style="flex:1;font-size:14px;font-weight:700">'+esc(p.amountF)+'</span><span style="font-size:13.5px;color:#6b7280;margin-right:10px">'+p.months+'개월·'+p.children+'명·'+esc(p.method)+'</span><span class="pill '+(p.refunded?'pill-expired':'pill-active')+'">'+(p.refunded?'환불':'완료')+'</span></div>';}).join(''):'<div class="empty" style="padding:16px">결제 내역 없음</div>';
         openModal('<div class="mh"><div style="display:flex;align-items:center;gap:10px"><span class="prov '+m.provCls+'">'+esc(m.prov)+'</span><div><h3>'+esc(m.rep)+'</h3><div class="sub">토큰 '+esc(m.token)+'… · 가입 '+esc(m.joined)+'</div></div></div><button class="x" onclick="closeModal()">✕</button></div>'
           +'<div class="mb adm-scroll">'
           +'<div style="display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap"><div class="kstat"><div class="l">최근 로그인</div><div class="v">'+esc(m.lastLogin)+'</div></div><div class="kstat"><div class="l">알림 신청</div><div class="v">'+esc(m.notif)+'</div></div><div class="kstat"><div class="l">무료체험</div><div class="v">'+esc(m.trial)+'</div></div></div>'
           +'<div class="seclabel">자녀 '+m.kids.length+'명</div><div style="display:flex;flex-direction:column;gap:8px;margin-bottom:20px">'+kids+'</div>'
           +'<div class="seclabel">결제 내역 '+m.payments.length+'건</div><div class="card" style="margin-bottom:20px">'+pays+'</div>'
           +'<div style="background:#f9fafb;border-radius:11px;padding:14px"><div class="seclabel">부모 단위 액션</div>'
-          +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap"><span style="font-size:12px;color:#6b7280">이용기간</span>'
+          +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap"><span style="font-size:13.5px;color:#6b7280">이용기간</span>'
           +'<button class="btn sm" onclick="adjM('+i+',-30)">-30일</button><button class="btn sm" onclick="adjM('+i+',-7)">-7일</button><button class="btn sm" onclick="adjM('+i+',7)">+7일</button><button class="btn sm pri" onclick="adjM('+i+',30)">+30일</button></div>'
           +'<button class="btn dng" style="width:100%" onclick="delMember('+i+')">회원(부모) 전체 삭제</button></div>'
           +'</div>');
@@ -414,9 +419,9 @@ export function adminMembersPage(groups, subscriber = false, maxChildren = 3, ba
       window.editChild=function(i,ci){var c=MEMBERS[i].kids[ci];
         openModal('<div class="mh"><h3>자녀 정보 수정</h3><button class="x" onclick="closeModal()">✕</button></div>'
           +'<form method="post" action="/admin/members/'+c.id+'/edit"><div class="mb"><div style="display:flex;flex-direction:column;gap:10px">'
-          +'<label style="font-size:12px;color:#6b7280">별명<br><input class="btn" style="cursor:text;width:100%;margin-top:4px" name="nickname" value="'+esc(c.nickname)+'" required></label>'
-          +'<label style="font-size:12px;color:#6b7280">학년<br><input class="btn" style="cursor:text;width:100%;margin-top:4px" name="grade" value="'+esc(c.grade)+'" required></label>'
-          +'<label style="font-size:12px;color:#6b7280">반<br><input class="btn" style="cursor:text;width:100%;margin-top:4px" name="class_name" value="'+esc(c.className)+'" placeholder="비우면 없음"></label>'
+          +'<label style="font-size:13.5px;color:#6b7280">별명<br><input class="btn" style="cursor:text;width:100%;margin-top:4px" name="nickname" value="'+esc(c.nickname)+'" required></label>'
+          +'<label style="font-size:13.5px;color:#6b7280">학년<br><input class="btn" style="cursor:text;width:100%;margin-top:4px" name="grade" value="'+esc(c.grade)+'" required></label>'
+          +'<label style="font-size:13.5px;color:#6b7280">반<br><input class="btn" style="cursor:text;width:100%;margin-top:4px" name="class_name" value="'+esc(c.className)+'" placeholder="비우면 없음"></label>'
           +'</div></div><div class="mf"><span style="flex:1"></span><button type="button" class="btn" onclick="closeModal()">취소</button><button type="submit" class="btn pri">저장</button></div></form>');
       };
     </script>`;
@@ -441,14 +446,14 @@ export function adminOrdersPage(orders, { q = "", status = "" } = {}, badges) {
   const os = orders || [];
   const st = (s) => ORDER_STATUS[s] || { ko: s, cls: "pill-mut" };
   const rows = os.map((o, i) => `<div class="trow click" data-i="${i}"${o.status === "cancelled" || o.status === "expired" ? ' style="opacity:.55"' : ""}>
-    <span style="width:96px;font-size:12px;color:#6b7280" class="tnum">${fmtD(o.created_at)}</span>
-    <span class="ell" style="flex:1;font-size:13px;font-weight:700">${escapeHtml(o.parent_name || "(이름 없음)")}</span>
-    <span class="ell" style="width:110px;font-size:12px;color:#374151">${escapeHtml(o.child_nickname || "(삭제된 자녀)")}</span>
-    <span style="width:70px;font-size:12px;color:#374151">${o.months}개월</span>
-    <span style="width:86px;text-align:right;font-size:13px;font-weight:800" class="tnum">${won(o.amount)}</span>
-    <span style="width:92px;font-size:12px;color:#374151">${escapeHtml(ORDER_METHOD[o.method] || o.method)}</span>
+    <span style="width:96px;font-size:13.5px;color:#6b7280" class="tnum">${fmtD(o.created_at)}</span>
+    <span class="ell" style="flex:1;font-size:14px;font-weight:700">${escapeHtml(o.parent_name || "(이름 없음)")}</span>
+    <span class="ell" style="width:110px;font-size:13.5px;color:#374151">${escapeHtml(o.child_nickname || "(삭제된 자녀)")}</span>
+    <span style="width:70px;font-size:13.5px;color:#374151">${o.months}개월</span>
+    <span style="width:86px;text-align:right;font-size:14px;font-weight:800" class="tnum">${won(o.amount)}</span>
+    <span style="width:92px;font-size:13.5px;color:#374151">${escapeHtml(ORDER_METHOD[o.method] || o.method)}</span>
     <span style="width:86px"><span class="pill ${st(o.status).cls}">${st(o.status).ko}</span></span>
-    <span style="width:88px;font-size:12px;color:#6b7280" class="tnum">${fmtD(o.expires_at)}</span>
+    <span style="width:88px;font-size:13.5px;color:#6b7280" class="tnum">${fmtD(o.expires_at)}</span>
   </div>`).join("");
 
   // 「이 달에 실제로 들어온 돈」이 아니라 «유효 이용권 합계»다 — 취소·만료는 뺀다.
@@ -472,7 +477,7 @@ export function adminOrdersPage(orders, { q = "", status = "" } = {}, badges) {
     <div class="hrow"><div class="hleft"><h2 class="h2">앱 주문</h2>
       <span class="sub">유효 합계</span><span style="font-size:15px;font-weight:900;color:#2563eb">${won(total)}</span>
       ${waiting ? `<span class="pill pill-soon">입금대기 ${waiting}건</span>` : ""}</div>
-      <form method="get" action="/admin/orders" class="search" style="width:220px"><span style="font-size:13px;color:#9ca3af">🔍</span>
+      <form method="get" action="/admin/orders" class="search" style="width:220px"><span style="font-size:14px;color:#6b7280">🔍</span>
         <input type="hidden" name="s" value="${escapeHtml(status)}"><input name="q" value="${escapeHtml(q)}" placeholder="부모·자녀 이름 검색"></form></div>
     <div style="display:flex;gap:6px;margin-bottom:12px">${chips}</div>
     <div class="card">
@@ -487,12 +492,12 @@ export function adminOrdersPage(orders, { q = "", status = "" } = {}, badges) {
         var canConfirm=(o.status==='awaiting_deposit'||o.status==='confirmed'||o.status==='pending');
         var canCancel=(o.status==='pending'||o.status==='awaiting_deposit');
         openModal('<div class="mh"><div><h3>'+esc(o.parent)+' · '+esc(o.child)+'</h3><div class="sub">주문 '+esc(o.date)+' · #'+o.id+'</div></div><button class="x" onclick="closeModal()">✕</button></div>'
-          +'<div class="mb"><div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px"><span style="font-size:13px;color:#6b7280">'+o.months+'개월</span><span style="font-size:26px;font-weight:900">'+esc(o.amountF)+'</span></div>'
+          +'<div class="mb"><div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px"><span style="font-size:14px;color:#6b7280">'+o.months+'개월</span><span style="font-size:26px;font-weight:900">'+esc(o.amountF)+'</span></div>'
           +'<div style="display:flex;flex-direction:column;gap:8px">'
           +'<div class="krow"><span>상태</span><b>'+esc(o.statusKo)+'</b></div>'
           +'<div class="krow"><span>수단</span><b>'+esc(o.method)+'</b></div>'
           +(o.payer?'<div class="krow"><span>입금자명</span><b>'+esc(o.payer)+'</b></div>':'')
-          +(o.token?'<div class="krow"><span>구매 토큰</span><b style="font-size:11px">'+esc(o.token)+'</b></div>':'')
+          +(o.token?'<div class="krow"><span>구매 토큰</span><b style="font-size:13.5px">'+esc(o.token)+'</b></div>':'')
           +'<div class="krow"><span>입금확인</span><b>'+esc(o.confirmed)+'</b></div>'
           +'<div class="krow"><span>이용 시작</span><b>'+esc(o.activated)+'</b></div>'
           +'<div class="krow"><span>이용 만료</span><b>'+esc(o.expires)+'</b></div>'
@@ -511,11 +516,11 @@ export function adminPaymentsPage(payments, q, nameMap = {}, badges) {
   const ps = payments || [];
   const nameOf = (p) => p.payer_name || nameMap[p.owner_token] || (String(p.owner_token).slice(0, 8) + "…");
   const rows = ps.map((p, i) => `<div class="trow click" data-i="${i}"${p.status === "refunded" ? ' style="opacity:.55"' : ""}>
-    <span style="width:96px;font-size:12px;color:#6b7280" class="tnum">${fmtD(p.created_at)}</span>
-    <span class="ell" style="flex:1;font-size:13px;font-weight:700">${escapeHtml(nameOf(p))}${p.payer_name ? "" : ' <span class="code">토큰</span>'}</span>
-    <span style="width:90px;text-align:right;font-size:13px;font-weight:800" class="tnum">${won(p.amount)}</span>
-    <span style="width:96px;font-size:12px;color:#374151">${p.months}개월·${p.child_count}명</span>
-    <span style="width:120px;font-size:12px;color:#374151">${escapeHtml(METHOD_KO[p.method] || p.method)}${p.auto_renew ? " · 자동" : ""}</span>
+    <span style="width:96px;font-size:13.5px;color:#6b7280" class="tnum">${fmtD(p.created_at)}</span>
+    <span class="ell" style="flex:1;font-size:14px;font-weight:700">${escapeHtml(nameOf(p))}${p.payer_name ? "" : ' <span class="code">토큰</span>'}</span>
+    <span style="width:90px;text-align:right;font-size:14px;font-weight:800" class="tnum">${won(p.amount)}</span>
+    <span style="width:96px;font-size:13.5px;color:#374151">${p.months}개월·${p.child_count}명</span>
+    <span style="width:120px;font-size:13.5px;color:#374151">${escapeHtml(METHOD_KO[p.method] || p.method)}${p.auto_renew ? " · 자동" : ""}</span>
     <span style="width:80px"><span class="pill ${p.status === "refunded" ? "pill-expired" : "pill-active"}">${p.status === "refunded" ? "환불됨" : "결제완료"}</span></span>
   </div>`).join("");
   const total = ps.filter((p) => p.status !== "refunded").reduce((a, p) => a + Number(p.amount), 0);
@@ -530,7 +535,7 @@ export function adminPaymentsPage(payments, q, nameMap = {}, badges) {
 
   const body = `
     <div class="hrow"><div class="hleft"><h2 class="h2">결제 관리</h2><span class="sub">유효 합계</span><span style="font-size:15px;font-weight:900;color:#2563eb">${won(total)}</span></div>
-      <form method="get" action="/admin/payments" class="search" style="width:220px"><span style="font-size:13px;color:#9ca3af">🔍</span><input name="q" value="${escapeHtml(q || "")}" placeholder="이름·토큰 검색"></form></div>
+      <form method="get" action="/admin/payments" class="search" style="width:220px"><span style="font-size:14px;color:#6b7280">🔍</span><input name="q" value="${escapeHtml(q || "")}" placeholder="이름·토큰 검색"></form></div>
     <div class="card">
       <div class="thead"><span style="width:96px">결제일</span><span style="flex:1">이름</span><span style="width:90px;text-align:right">금액</span><span style="width:96px">기간·자녀</span><span style="width:120px">수단</span><span style="width:80px">상태</span></div>
       <div class="adm-scroll" style="max-height:440px;overflow-y:auto" id="pbody">${rows || `<div class="empty">결제 내역이 없습니다.</div>`}</div>
@@ -542,7 +547,7 @@ export function adminPaymentsPage(payments, q, nameMap = {}, badges) {
       window.payModal=function(i){var p=PAYS[i];
         openModal('<div class="mh"><div><h3>'+esc(p.name)+'</h3><div class="sub">결제 '+esc(p.date)+' · 토큰 '+esc(p.token)+'…</div></div><button class="x" onclick="closeModal()">✕</button></div>'
           +'<form method="post" action="/admin/payments/'+p.id+'/edit"><div class="mb">'
-          +'<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px"><span style="font-size:13px;color:#6b7280">결제 금액</span><span style="font-size:26px;font-weight:900">'+esc(p.amountF)+'</span></div>'
+          +'<div style="display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px"><span style="font-size:14px;color:#6b7280">결제 금액</span><span style="font-size:26px;font-weight:900">'+esc(p.amountF)+'</span></div>'
           +'<div style="display:flex;flex-direction:column;gap:8px">'
           +'<label class="krow"><span>결제자 이름</span><input name="payer_name" value="'+esc(p.payer_name)+'" placeholder="'+(p.accountName?('계정: '+esc(p.accountName)):'PG 연동 후 자동')+'" style="border:1px solid #e5e7eb;border-radius:7px;padding:5px 8px;text-align:right"></label>'
           +'<label class="krow"><span>금액(수정)</span><input name="amount" type="number" value="'+p.amount+'" style="width:120px;border:1px solid #e5e7eb;border-radius:7px;padding:5px 8px;text-align:right"></label>'
@@ -562,7 +567,7 @@ export function adminPaymentsPage(payments, q, nameMap = {}, badges) {
 export function adminCorrectPage(school, meals, schedules, editLog = [], badges) {
   const searchBox = `
     <div class="sbox">
-      <div class="search" style="padding:10px 14px"><span style="font-size:14px;color:#9ca3af">🏫</span><input id="cq" placeholder="학교명 입력 (예: 대치, 반포) — 코드·번호 몰라도 됩니다" autocomplete="off" style="font-size:14px"></div>
+      <div class="search" style="padding:10px 14px"><span style="font-size:14px;color:#6b7280">🏫</span><input id="cq" placeholder="학교명 입력 (예: 대치, 반포) — 코드·번호 몰라도 됩니다" autocomplete="off" style="font-size:14px"></div>
       <div class="sres" id="cres"></div>
     </div>
     <script>(function(){var inp=document.getElementById('cq'),box=document.getElementById('cres');if(inp)attachSchoolSearch(inp,box,function(name,slug){location.href='/admin/correct?school_slug='+encodeURIComponent(slug);});})();</script>`;
@@ -570,18 +575,18 @@ export function adminCorrectPage(school, meals, schedules, editLog = [], badges)
   const logRows = (editLog || []).map((l) => `<div style="padding:12px 14px;border-bottom:1px solid #f3f4f6">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px"><span class="sub">${escapeHtml(String(l.edited_at).slice(0, 16).replace("T", " "))} · ${escapeHtml(l.field_name)}</span>
       <form method="post" action="/admin/correct/undo" style="display:inline" onsubmit="return cfUndo(event,this)"><input type="hidden" name="log_id" value="${l.id}"><button class="btn sm" style="padding:2px 8px;border:none;color:#2563eb;background:none">원복</button></form></div>
-    <div style="font-size:12px;color:#374151"><span style="text-decoration:line-through;color:#9ca3af">${escapeHtml((l.old_value || "").slice(0, 40))}</span> → <b>${escapeHtml((l.new_value || "").slice(0, 40))}</b></div>
+    <div style="font-size:13.5px;color:#374151"><span style="text-decoration:line-through;color:#6b7280">${escapeHtml((l.old_value || "").slice(0, 40))}</span> → <b>${escapeHtml((l.new_value || "").slice(0, 40))}</b></div>
   </div>`).join("");
   const logCard = `<div class="seclabel">🕘 수정 이력 (최근 ${(editLog || []).length}건)</div><div class="card"><div class="adm-scroll" style="max-height:420px;overflow-y:auto">${logRows || `<div class="empty">수정 이력이 없습니다.</div>`}</div></div><div class="note" style="margin-top:10px">⚠ NEIS 재적재 시 수동 수정이 덮어써질 수 있습니다(이력으로 추적).</div>`;
 
   let selBlock = `<div class="empty">위에서 학교를 검색해 선택하면 급식·학사일정 보정 화면이 나타납니다.</div>`;
   if (school) {
     const mealRows = (meals || []).map((m) => `<div class="trow" style="padding:11px 14px;gap:12px">
-      <span style="width:52px;font-size:12px;color:#6b7280">${escapeHtml(m.meal_date)}</span>
+      <span style="width:52px;font-size:13.5px;color:#6b7280">${escapeHtml(m.meal_date)}</span>
       <form method="post" action="/admin/correct/meals/${m.id}" style="flex:1;display:flex;gap:8px"><input class="btn" style="cursor:text;flex:1;text-align:left" name="dishes" value="${escapeHtml(m.dishes)}"><button class="btn sm pri" type="submit">저장</button></form>
     </div>`).join("");
     const schRows = (schedules || []).map((s) => `<div class="trow" style="padding:11px 14px;gap:12px">
-      <span style="width:52px;font-size:12px;color:#6b7280">${escapeHtml(s.event_date)}</span>
+      <span style="width:52px;font-size:13.5px;color:#6b7280">${escapeHtml(s.event_date)}</span>
       <form method="post" action="/admin/correct/schedules/${s.id}" style="flex:1;display:flex;gap:8px"><input class="btn" style="cursor:text;flex:1;text-align:left" name="event_name" value="${escapeHtml(s.event_name)}"><button class="btn sm pri" type="submit">저장</button></form>
     </div>`).join("");
     selBlock = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start">
@@ -609,10 +614,10 @@ export function adminBannersPage(banners, badges) {
   const TYPE_KO = { adsense: "애드센스", coupang: "쿠팡", house: "하우스", b2b: "B2B 학원" };
   const rows = (banners || []).map((b) => `<div class="trow" style="align-items:center">
     <span style="width:50px;font-size:14px;font-weight:900;color:#2563eb">${escapeHtml(b.slot)}</span>
-    <span style="width:90px;font-size:12px;color:#374151">${escapeHtml(TYPE_KO[b.banner_type] || b.banner_type)}</span>
-    <span class="ell" style="flex:1;font-size:13px;font-weight:700">${escapeHtml(b.advertiser_name || "-")}</span>
-    <span style="width:130px;font-size:12px;color:#6b7280">${escapeHtml(b.region_office_code || "전체")}</span>
-    <span style="width:120px;font-size:12px;color:#6b7280">${escapeHtml(b.starts_at || "-")}~${escapeHtml(b.ends_at || "-")}</span>
+    <span style="width:90px;font-size:13.5px;color:#374151">${escapeHtml(TYPE_KO[b.banner_type] || b.banner_type)}</span>
+    <span class="ell" style="flex:1;font-size:14px;font-weight:700">${escapeHtml(b.advertiser_name || "-")}</span>
+    <span style="width:130px;font-size:13.5px;color:#6b7280">${escapeHtml(b.region_office_code || "전체")}</span>
+    <span style="width:120px;font-size:13.5px;color:#6b7280">${escapeHtml(b.starts_at || "-")}~${escapeHtml(b.ends_at || "-")}</span>
     <span style="width:60px"><span class="pill ${b.paid ? "pill-active" : "pill-soon"}">${b.paid ? "완료" : "미납"}</span></span>
     <span style="width:210px;display:flex;align-items:center;justify-content:flex-end;gap:8px">
       <span class="pill ${b.active ? "pill-blue" : "pill-mut"}">${b.active ? "게시중" : "숨김"}</span>
@@ -633,7 +638,7 @@ export function adminBannersPage(banners, badges) {
       <input class="btn" style="cursor:text" name="region_office_code" value="${escapeHtml(b.region_office_code || "")}" placeholder="노출지역(교육청코드)">
       <div style="display:flex;gap:8px"><input class="btn" style="cursor:text;flex:1" name="starts_at" value="${escapeHtml(b.starts_at || "")}" placeholder="시작"><input class="btn" style="cursor:text;flex:1" name="ends_at" value="${escapeHtml(b.ends_at || "")}" placeholder="종료"></div>
       <textarea class="btn" style="cursor:text;min-height:52px" name="code_snippet" placeholder="코드 스니펫">${escapeHtml(b.code_snippet || "")}</textarea>
-      <label style="font-size:12px;color:#6b7280"><input type="checkbox" name="paid" ${b.paid ? "checked" : ""}> 결제완료</label>
+      <label style="font-size:13.5px;color:#6b7280"><input type="checkbox" name="paid" ${b.paid ? "checked" : ""}> 결제완료</label>
       <div><button class="btn pri" type="submit">저장</button></div>
     </form>
   </div>`).join("");
@@ -658,7 +663,7 @@ export function adminBannersPage(banners, badges) {
         <input class="btn" style="cursor:text" name="advertiser_name" placeholder="광고주명(B2B)">
         <input class="btn" style="cursor:text" name="region_office_code" placeholder="노출지역 교육청코드(비우면 전체)">
         <div style="display:flex;gap:8px"><input class="btn" style="cursor:text;flex:1" type="date" name="starts_at"><input class="btn" style="cursor:text;flex:1" type="date" name="ends_at"></div>
-        <label style="font-size:12px;color:#6b7280"><input type="checkbox" name="paid" value="1"> 결제완료</label>
+        <label style="font-size:13.5px;color:#6b7280"><input type="checkbox" name="paid" value="1"> 결제완료</label>
         <div><button class="btn pri" type="submit">등록</button></div>
       </form>
     </div>
@@ -680,12 +685,12 @@ export function adminInquiriesPage(items, { q = "", status = "" } = {}, badges) 
   const list = items || [];
   const stOf = (s) => INQ_STATUS[s] || INQ_STATUS.open;
   const rows = list.map((r, i) => `<div class="trow click" data-i="${i}"${r.status === "closed" ? ' style="opacity:.55"' : ""}>
-    <span style="width:96px;font-size:12px;color:#6b7280" class="tnum">${fmtD(r.created_at)}</span>
+    <span style="width:96px;font-size:13.5px;color:#6b7280" class="tnum">${fmtD(r.created_at)}</span>
     <span style="width:78px"><span class="pill ${INQ_CAT_CLS[r.category] || "pill-mut"}">${escapeHtml(INQ_CAT[r.category] || "기타")}</span></span>
-    <span class="ell" style="flex:1;font-size:13px;font-weight:700">${escapeHtml(r.title)}</span>
-    <span class="ell" style="width:120px;font-size:12px;color:#374151">${escapeHtml(r.parent_name || "(이름 없음)")}</span>
+    <span class="ell" style="flex:1;font-size:14px;font-weight:700">${escapeHtml(r.title)}</span>
+    <span class="ell" style="width:120px;font-size:13.5px;color:#374151">${escapeHtml(r.parent_name || "(이름 없음)")}</span>
     <span style="width:78px"><span class="pill ${stOf(r.status).cls}">${stOf(r.status).ko}</span></span>
-    <span style="width:70px;font-size:11px;color:#9ca3af">${r.status === "answered" && !r.seen_at ? "안 읽음" : r.seen_at ? "읽음" : ""}</span>
+    <span style="width:70px;font-size:13.5px;color:#6b7280">${r.status === "answered" && !r.seen_at ? "안 읽음" : r.seen_at ? "읽음" : ""}</span>
   </div>`).join("");
 
   const open = list.filter((r) => r.status === "open").length;
@@ -704,7 +709,7 @@ export function adminInquiriesPage(items, { q = "", status = "" } = {}, badges) 
   const body = `
     <div class="hrow"><div class="hleft"><h2 class="h2">문의</h2>
       <span class="sub">미답변 ${open} / 전체 ${list.length} · 미답변 우선</span></div>
-      <form method="get" action="/admin/inquiries" class="search" style="width:220px"><span style="font-size:13px;color:#9ca3af">🔍</span>
+      <form method="get" action="/admin/inquiries" class="search" style="width:220px"><span style="font-size:14px;color:#6b7280">🔍</span>
         <input type="hidden" name="s" value="${escapeHtml(status)}"><input name="q" value="${escapeHtml(q)}" placeholder="제목·내용·이름 검색"></form></div>
     <div style="display:flex;gap:6px;margin-bottom:12px">${chips}</div>
     <div class="card">
@@ -718,10 +723,10 @@ export function adminInquiriesPage(items, { q = "", status = "" } = {}, badges) 
       window.inqModal=function(i){var q=INQ[i];
         openModal('<div class="mh"><div><h3>'+esc(q.title)+'</h3><div class="sub">'+esc(q.cat)+' · '+esc(q.parent)+(q.child?' · 자녀 '+esc(q.child):'')+' · '+esc(q.date)+'</div></div><button class="x" onclick="closeModal()">✕</button></div>'
           +'<form method="post" action="/admin/inquiries/'+q.id+'/answer"><div class="mb">'
-          +'<div style="white-space:pre-wrap;font-size:13px;line-height:1.6;color:#374151;background:#f9fafb;border-radius:8px;padding:12px;margin-bottom:12px">'+esc(q.body)+'</div>'
+          +'<div style="white-space:pre-wrap;font-size:14px;line-height:1.6;color:#374151;background:#f9fafb;border-radius:8px;padding:12px;margin-bottom:12px">'+esc(q.body)+'</div>'
           +(q.meta?'<div class="sub" style="margin-bottom:10px;word-break:break-all">'+esc(q.meta)+'</div>':'')
           +(q.email?'<div class="krow" style="margin-bottom:10px"><span>회신 메일</span><b>'+esc(q.email)+'</b></div>':'')
-          +'<label style="font-size:12px;color:#6b7280">답변<br><textarea class="btn" style="cursor:text;width:100%;min-height:120px;margin-top:4px;text-align:left" name="answer" required>'+esc(q.answer)+'</textarea></label>'
+          +'<label style="font-size:13.5px;color:#6b7280">답변<br><textarea class="btn" style="cursor:text;width:100%;min-height:120px;margin-top:4px;text-align:left" name="answer" required>'+esc(q.answer)+'</textarea></label>'
           +(q.answered!=='-'?'<div class="sub" style="margin-top:8px">답변 '+esc(q.answered)+(q.seen?' · 읽음 '+esc(q.seen):' · 아직 안 읽음')+'</div>':'')
           +'</div><div class="mf"><button type="submit" class="btn pri">답변 저장</button><span style="flex:1"></span>'
           +(q.status!=='closed'?'<button type="button" class="btn" onclick="closeInq('+q.id+')">종료</button>':'')+'</div></form>');
@@ -772,10 +777,10 @@ export function adminCommunityPage(rows, bans, badges) {
     <div class="card">
       ${(bans || []).length ? (bans || []).map((b) => `
         <div class="trow" style="align-items:center">
-          <span class="ell" style="flex:1;font-size:13px;font-weight:700">${escapeHtml(b.parent_name || "(이름 없음)")}
+          <span class="ell" style="flex:1;font-size:14px;font-weight:700">${escapeHtml(b.parent_name || "(이름 없음)")}
             <span class="code">${escapeHtml(String(b.owner_token).slice(0, 8))}</span></span>
-          <span style="width:150px;font-size:12px;color:#6b7280">${b.until ? fmtD(b.until) + "까지" : "무기한"}</span>
-          <span class="ell" style="width:160px;font-size:12px;color:#6b7280">${escapeHtml(b.reason || "")}</span>
+          <span style="width:150px;font-size:13.5px;color:#6b7280">${b.until ? fmtD(b.until) + "까지" : "무기한"}</span>
+          <span class="ell" style="width:160px;font-size:13.5px;color:#6b7280">${escapeHtml(b.reason || "")}</span>
           <form method="post" action="/admin/community/unban" style="display:inline">
             <input type="hidden" name="owner_token" value="${escapeHtml(b.owner_token)}">
             <button class="btn sm" style="border:none;color:#2563eb;background:none">풀기</button>
@@ -806,7 +811,7 @@ function queuePage({ title, active, sub, items, isReports, badges }) {
     const resolveAction = isReports ? `/admin/reports/${r.id}/resolve` : `/admin/feedback/${r.id}/resolve`;
     return `<div style="display:flex;align-items:flex-start;gap:14px;padding:14px 18px;border-bottom:1px solid #f3f4f6${done ? ";opacity:.6" : ""}">
       <span class="pill ${catClass(r.category)}" style="flex-shrink:0">${escapeHtml(r.category || "기타")}</span>
-      <div style="flex:1;min-width:0"><div style="font-size:13px;color:#374151;line-height:1.5">${escapeHtml(r.message)}</div><div class="sub" style="margin-top:3px">${meta}</div></div>
+      <div style="flex:1;min-width:0"><div style="font-size:14px;color:#374151;line-height:1.5">${escapeHtml(r.message)}</div><div class="sub" style="margin-top:3px">${meta}</div></div>
       <span class="pill ${done ? "pill-mut" : "pill-soon"}">${done ? "처리됨" : "미처리"}</span>
       <div style="display:flex;align-items:center;gap:10px">
         ${isReports && r.school_slug ? `<a class="btn sm" style="border:none;color:#6b7280" href="/school/${encodeURIComponent(r.school_slug)}/?tab=overview" target="_blank">화면 보기 ↗</a>` : ""}
