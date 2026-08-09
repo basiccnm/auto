@@ -6406,10 +6406,17 @@ function mealTab() {
             ${m.dishes.map((d) => {
               const bad = d.allergens.filter((a) => S.myAllergens.includes(a));
               const hit = q && d.name.includes(q);
-              // 걸린 메뉴만 점선 밑줄 + 원인. 안 걸리면 평범한 글자 그대로 — 줄이 밀리지 않는다.
+              /* ⚠ NEIS 는 이름 뒤에 알레르기 번호를 «(5.6.12)» 로 붙여서 준다.
+                 그걸 이름과 같은 크기로 두면 「호박잎된장국 (5.6.12)」이 한 덩어리로 읽혀
+                 반찬 이름이 눈에 안 들어온다(대표님 지적 08-09).
+                 → 번호를 떼어 작고 흐리게. 이름만 굵게 남긴다. */
+              const mm = String(d.name).match(/^(.*?)\s*\(([\d.\s]+)\)\s*$/);
+              const nm = mm ? mm[1] : d.name;
+              const no = mm ? mm[2].trim() : "";
+              const body = `${hit ? `<mark>${esc(nm)}</mark>` : esc(nm)}${no ? `<em class="ml-no">${esc(no)}</em>` : ""}`;
               return bad.length
-                ? `<span class="bad">${hit ? `<mark>${esc(d.name)}</mark>` : esc(d.name)}<i>${bad.map((a) => ALLERGEN_KO[a]).join("·")}</i></span>`
-                : `<span>${hit ? `<mark>${esc(d.name)}</mark>` : esc(d.name)}</span>`;
+                ? `<span class="bad">${body}<i>${bad.map((a) => ALLERGEN_KO[a]).join("·")}</i></span>`
+                : `<span>${body}</span>`;
             }).join("")}
           </div>
         </div>`).join("")}

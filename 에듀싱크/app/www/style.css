@@ -6805,3 +6805,28 @@ body {
                     color-mix(in srgb, var(--bg) 62%, transparent)),
     var(--art-img);
 }
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   🍚 급식을 읽기 쉽게 (2026-08-09) — 「급식도 보기 어렵지?」
+
+   무엇이 문제였나 —
+     ① `.ml-dishes` 가 flex-wrap 이라 반찬이 **줄줄이 이어 붙었다.**
+        「기장밥 호박잎된장국 (5.6.12) 콩나물무침 (5)」 — 어디서 끊기는지 알 수 없다.
+     ② 알레르기 번호가 반찬 이름과 **같은 크기**라 한 덩어리로 읽혔다.
+   → 한 줄에 하나씩, 번호는 작고 흐리게. 홈 카드처럼 «한 줄 = 한 가지».
+   ══════════════════════════════════════════════════════════════════════ */
+:root .ml-dishes { display: grid; grid-template-columns: 1fr; gap: 0; font-size: 15.5px; }
+:root .ml-dishes > span { display: flex; align-items: baseline; gap: 6px;
+  padding: 9px 2px; border-bottom: 1px solid color-mix(in srgb, var(--ink) 7%, transparent); }
+:root .ml-dishes > span:last-child { border-bottom: none; }
+:root .ml-dishes .ml-no { font-style: normal; font-size: 11.5px; font-weight: 600;
+  color: var(--muted); letter-spacing: .2px; }
+
+/* 날짜 머리 — 홈처럼 숫자를 크게. 「20 수」가 한눈에 들어와야 한다 */
+:root .ml-dnum { font-size: 22px; font-weight: 900; }
+:root .ml-dwd { font-size: 14px; font-weight: 700; }
+/* 끼니 머리 — 「점심 · 560.6 Kcal」을 한 줄로 묶어 반찬과 구분 */
+:root .ml-mhd { margin-top: 12px; padding-bottom: 6px; }
+:root .ml-mhd b { font-size: 14.5px; font-weight: 900; color: var(--ink); }
+:root .ml-mhd span { font-size: 12.5px; font-weight: 700; }
