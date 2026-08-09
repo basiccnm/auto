@@ -7080,3 +7080,12 @@ body {
   color: #fff;
   text-shadow: 0 1px 3px rgba(0, 0, 0, .55), 0 0 10px rgba(0, 0, 0, .35);
 }
+
+/* 메뉴 버튼 위 «안 읽은 개수» — 상단의 종을 걷어내면서 여기로 옮겼다(2026-08-09).
+   그림 위에 얹히므로 숫자에도 테두리를 줘서 어떤 일러스트에서도 읽히게 한다. */
+:root #screen:has(.hv3-art) .hv3-ham { position: relative; }
+:root #screen:has(.hv3-art) .hv3-ham .hd-badge {
+  position: absolute; top: -2px; right: -4px; min-width: 18px; height: 18px; padding: 0 5px;
+  display: grid; place-items: center; border-radius: 9px; background: #D01B63; color: #fff;
+  font-size: 11px; font-weight: 900; line-height: 1;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, .85); }

@@ -2592,7 +2592,7 @@ const Screens = {
       ${S.kidMode
         ? `<button class="hv3-ham" onclick="App.kidModeOff()" aria-label="부모 모드로 나가기">
              <i aria-hidden="true" class="ti ti-lock"></i></button>`
-        : `<button class="hv3-ham" onclick="App.drawerOpen()" aria-label="메뉴"><i aria-hidden="true" class="ti ti-menu-2"></i></button>`}
+        : `<button class="hv3-ham" onclick="App.drawerOpen()" aria-label="메뉴${unread ? ` · 안 읽음 ${unread}개` : ""}"><i aria-hidden="true" class="ti ti-menu-2"></i>${unread ? `<span class="hd-badge">${unread}</span>` : ""}</button>`}
       <!-- 아이가 없으면(구경 중) 자녀칩 자리에 **앱 이름**만 둔다(2026-08-04 지시).
            ⚠ 여기에 「가입하기」 버튼을 뒀다가 걷어냈다. 들어오자마자 가입을 들이밀면
              «구경하러 왔는데 문 앞에서 붙잡는» 꼴이다. 가입 길은 서랍(☰)에 있으면 족하다.
@@ -2601,13 +2601,11 @@ const Screens = {
            아이를 바꾸는 길은 **서랍 안**에 그대로 있다(hv3-drwho) — 입구가 둘일 이유가 없고,
            맨 위 줄이 비면 그림이 더 크게 보인다. -->
       <span class="hd-gap"></span>
-      <!-- 서랍은 저빈도지만 «이 앱이 뭐 하는 앱인가»를 말하는 자리다 — 항상 보이게 둔다(§1) -->
-      <button class="hd-box" onclick="location.hash='#timeline'" aria-label="서랍">
-        <i aria-hidden="true" class="ti ti-archive"></i>
-      </button>
-      <button class="hd-bell" onclick="location.hash='#notify'" aria-label="알림${unread ? ` ${unread}개` : ""}">
-        <i aria-hidden="true" class="ti ti-bell"></i>${unread ? `<span class="hd-badge">${unread}</span>` : ""}
-      </button>
+      <!-- 서랍·알림 아이콘을 걷어냈다(대표님 지시 2026-08-09).
+           **메뉴 안에 「서랍」과 「대화」가 이미 있다** — 입구가 둘일 이유가 없고,
+           맨 위 줄이 비면 그림이 더 크게 보인다(자녀 칩을 걷어낸 것과 같은 이유).
+           안 읽은 개수는 **메뉴 버튼 위 숫자**로 옮겼다 — 새 알림이 온 걸 홈에서 모르면
+           그건 기능이 준 것이다. -->
     </div>
 
     <!-- 일러스트 헤더 + 전광판.
