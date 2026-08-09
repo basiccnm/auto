@@ -3631,7 +3631,7 @@ body { font-weight: 500; }
        .btn-primary, .btn-line, .act-del, .cl-on, .ms-need) {
   display: inline-flex; align-items: center; justify-content: center; gap: 7px;
 }
-.kd2-supadd button, .lg-eye { gap: 5px; }
+.kd2-supadd button { gap: 5px; }
 :where(.lg-links a, .lg-eye) i.ti { font-size: 14px; opacity: .85; }
 :where(.kd2-cta, .kd3-go, .lg-go, .btn-primary) i.ti { font-size: 17px; }
 
@@ -4835,7 +4835,7 @@ body:has(#tabbar.hidden) #screen:has(.ib),
 .hd-top { height: 44px; margin-bottom: 2px; }
 #screen:has(.hv3-art) .hd-bell,
 #screen:has(.hv3-art) .hd-box { width: 38px; height: 38px; }
-.hd-bell, .hd-box { width: 38px; height: 38px; }
+.hd-bell { width: 38px; height: 38px; }
 .hd-bell i, .hd-box i { font-size: 18px; }
 /* 두 원을 하나의 묶음으로 붙여 세로 가운데를 맞춘다 */
 .hd-top { gap: 6px; }
@@ -4850,8 +4850,7 @@ body:has(#tabbar.hidden) #screen:has(.ib),
      줄 높이(44)만큼 늘려 버렸고, `border-radius:50%` 라 그대로 타원이 됐다.
      → `flex: none` 으로 늘어나지 못하게 막는다. 원은 폭·높이가 같아야 원이다.
    ⚠ 상단 여백이 넓다는 지적 — 홈은 그림 띠가 바로 오므로 위 여백을 줄인다.
-     다른 화면은 그대로 둔다(그쪽은 제목이 와서 여백이 필요하다). */
-.hd-bell, .hd-box { flex: none; padding: 0; }
+     다른 화면은 그대로 둔다(그쪽은 제목이 와서 여백이 필요하다). */ .hd-bell { flex: none; padding: 0; }
 #screen:has(.hv3-art) { padding-top: 6px; }
 
 /* ── 시계 (2026-08-04 지시) ────────────────────────────────────────
@@ -4876,8 +4875,7 @@ body:has(#tabbar.hidden) #screen:has(.ib),
 /* ⚠ 원형 버튼이 **38×44 타원**이던 진짜 원인 — 1266행의 전역 `button { min-height:44px }`.
    폭·높이를 38 로 줘도 min-height 가 44 로 밀어 올려 원이 찌그러졌다.
    ⚠ 터치 44px 규칙 자체는 옳다. 다만 여기는 **줄 높이 44px 안에 든 아이콘 버튼**이라
-     손가락이 닿는 면적은 그대로다 → 이 둘만 예외로 푼다. */
-.hd-bell, .hd-box { min-height: 0; }
+     손가락이 닿는 면적은 그대로다 → 이 둘만 예외로 푼다. */ .hd-bell { min-height: 0; }
 
 /* ═══ 홈 카드 정리 (2026-08-04 지시) ═══════════════════════════════
    ① 카드가 «흰 종이»였다 → 테마 배경보다 **한두 톤 진한 색**으로 바꿨다(토큰 재생성).
@@ -4888,10 +4886,7 @@ body:has(#tabbar.hidden) #screen:has(.ib),
 /* 카드 위 글자 — 제목·본문·보조를 **한 색 계열**로 묶는다(대조색 하나) */
 .hv3-card .hv3-ct b,
 .hv3-sup-btn > b { color: var(--art-ink); }
-.hv3-none,
-.hv3-sup-btn .ok,
-.hv3-sup-btn .go,
-.hv3-cv.off { color: color-mix(in srgb, var(--art-ink) 62%, transparent); }
+.hv3-sup-btn .ok, .hv3-sup-btn .go, .hv3-cv.off { color: color-mix(in srgb, var(--art-ink) 62%, transparent); }
 .hv3-cv { color: var(--art-ink); }
 
 /* 준비물 — 상자 없애고 아이콘만 흰색 */
@@ -4976,10 +4971,7 @@ body:has(#tabbar.hidden) #screen:has(.ib),
 /* 내용이 있으면 한 줄 아래로 펼친다 */
 .hv3-card .hv3-evs { margin-top: 8px; }
 
-/* 상단 아이콘 — 테마가 정한 색 + 옅은 그늘 */
-#screen:has(.hv3-art) .hv3-ham,
-#screen:has(.hv3-art) .hd-bell,
-#screen:has(.hv3-art) .hd-box { color: var(--art-ink); }
+/* 상단 아이콘 — 테마가 정한 색 + 옅은 그늘 */ #screen:has(.hv3-art) .hv3-ham { color: var(--art-ink); }
 #screen:has(.hv3-art) .hv3-ham i,
 #screen:has(.hv3-art) .hd-bell i,
 #screen:has(.hv3-art) .hd-box i {
@@ -4988,9 +4980,7 @@ body:has(#tabbar.hidden) #screen:has(.ib),
 :root[data-theme="dark"] #screen:has(.hv3-art) .hv3-ham i,
 :root[data-theme="dark"] #screen:has(.hv3-art) .hd-bell i,
 :root[data-theme="dark"] #screen:has(.hv3-art) .hd-box i { text-shadow: 0 0 6px rgba(0,0,0,.5); }
-/* 원형 바탕은 없앤다 — 아이콘만 그림 위에 놓는다(지시: 카드색과 같게 → 결국 안 보인다) */
-#screen:has(.hv3-art) .hd-bell,
-#screen:has(.hv3-art) .hd-box { background: none; box-shadow: none; }
+/* 원형 바탕은 없앤다 — 아이콘만 그림 위에 놓는다(지시: 카드색과 같게 → 결국 안 보인다) */ #screen:has(.hv3-art) .hd-bell { background: none; box-shadow: none; }
 
 /* ── 일러스트를 더 보이게 + 시계를 그림에 걸치기 (2026-08-04 지시) ──────
    ⚠ 그림 위에 글씨가 얹히면 테마마다 대비가 흔들린다 → 걸치는 자리에 **옅은 그늘**을 깐다.
@@ -5017,13 +5007,9 @@ body:has(#tabbar.hidden) #screen:has(.ib),
       밝은 그림 위에선 옅게 깔려 **어느 그림에서도 성립**한다.
    ② ☰ 는 «완전 흰색은 부자연스럽다»는 지적대로 **테마가 정한 잉크색을 회색 쪽으로 12% 눌러** 쓴다.
       밝은 그림이면 진한 회색, 어두운 그림이면 밝은 회색으로 저절로 뒤집힌다.
-   ③ 아이콘·글씨 전부 «회색 계열»로 — 카드도 채도를 뺐으므로 색은 그림이 낸다. */
-#screen:has(.hv3-art) .hv3-ham,
-#screen:has(.hv3-art) .hd-bell,
-#screen:has(.hv3-art) .hd-box {
+   ③ 아이콘·글씨 전부 «회색 계열»로 — 카드도 채도를 뺐으므로 색은 그림이 낸다. */ #screen:has(.hv3-art) .hv3-ham {
   color: color-mix(in srgb, var(--art-ink) 88%, var(--surf)); }
-#screen:has(.hv3-art) .hd-bell,
-#screen:has(.hv3-art) .hd-box {
+#screen:has(.hv3-art) .hd-bell {
   background: rgba(255, 255, 255, .34);
   box-shadow: 0 2px 8px rgba(0, 0, 0, .10); }
 :root[data-theme="dark"] #screen:has(.hv3-art) .hd-bell,
@@ -6095,9 +6081,7 @@ html:root[data-theme="charcoal"], html:root[data-theme="lavender"] {
      ② 위에서 아래로 옅은 빛   → 종이가 아니라 «면»으로 읽힌다
    ⚠ 어두운 테마에서는 흰빛을 **훨씬 약하게** 준다. 밝은 테마와 같은 세기면 뿌옇게 뜬다.
    ⚠ 아이 세계(.gm*)는 이미 굵은 그림자로 면이 갈려 있어 **안 건드린다** — 겹치면 지저분해진다.
-   ══════════════════════════════════════════════════════════════════════ */
-.card, .mp-card, .ml-card, .st-item, .tk, .dw-year, .dp-row, .ms-row, .nt-item,
-.mp-row, .ml-row, .sec-card, .hd-ms, .msc, .hv3-card, .hv3-row, .daycard {
+   ══════════════════════════════════════════════════════════════════════ */ .card {
   background-image: linear-gradient(180deg, rgba(255, 255, 255, .38) 0%,
                                             rgba(255, 255, 255, .10) 38%,
                                             rgba(255, 255, 255, 0) 72%);
@@ -6105,15 +6089,7 @@ html:root[data-theme="charcoal"], html:root[data-theme="lavender"] {
               0 3px 0 color-mix(in srgb, var(--ink) 7%, transparent);
 }
 
-/* 어두운 테마 — 같은 세기로 주면 뿌옇게 뜬다. 빛을 4분의 1로 줄인다 */
-:root[data-theme="dark"] .card, :root[data-theme="navy"] .card,
-:root[data-theme="charcoal"] .card, :root[data-theme="lavender"] .card,
-:root[data-theme="dark"] .hv3-card, :root[data-theme="navy"] .hv3-card,
-:root[data-theme="charcoal"] .hv3-card, :root[data-theme="lavender"] .hv3-card,
-:root[data-theme="dark"] .msc, :root[data-theme="navy"] .msc,
-:root[data-theme="charcoal"] .msc, :root[data-theme="lavender"] .msc,
-:root[data-theme="dark"] .mp-row, :root[data-theme="navy"] .mp-row,
-:root[data-theme="charcoal"] .mp-row, :root[data-theme="lavender"] .mp-row {
+/* 어두운 테마 — 같은 세기로 주면 뿌옇게 뜬다. 빛을 4분의 1로 줄인다 */ :root[data-theme="dark"] .card {
   background-image: linear-gradient(180deg, rgba(255, 255, 255, .10) 0%,
                                             rgba(255, 255, 255, .03) 40%,
                                             rgba(255, 255, 255, 0) 72%);
@@ -6448,8 +6424,7 @@ html:root[data-theme="charcoal"], html:root[data-theme="lavender"] {
    ⚠ 달력 오늘 칸 2.09 는 **내가 만든 것**이다. 위에서 일요일 숫자를 `:root .gc-num.sun`
      (클래스 3개)으로 잡았는데, 원래 오늘 칸 규칙 `.gc-cell.today .gc-num`(클래스 2개)보다
      특정성이 높아 **오늘이면서 일요일인 칸**의 글씨를 빨강으로 되돌려 놨다.
-     어두운 원 위 빨강 = 2.09. 좁은 규칙을 넓은 규칙 위에 얹을 때는 «겹치는 칸»을 봐야 한다. */
-:root .gc-cell.today .gc-num, :root .gc-cell.today .gc-num.sun {
+     어두운 원 위 빨강 = 2.09. 좁은 규칙을 넓은 규칙 위에 얹을 때는 «겹치는 칸»을 봐야 한다. */ :root .gc-cell.today .gc-num {
   background: var(--ink); color: var(--bg); }
 
 /* 「오늘」 딱지 — 강조색 글씨를 카드 면에 얹어 4.18/3.87.
@@ -6467,8 +6442,7 @@ html:root[data-theme="charcoal"], html:root[data-theme="lavender"] {
    ⚠ 고정색도 답이 아니다 — 테마마다 강조색의 색상(hue)이 다르다.
      그 테마의 강조색을 **흰쪽으로 섞어** 밝기만 올린다. 색은 그대로 간다.
    ⚠ .pl 은 서랍 ＋ 때문에 내가 만든 클래스다. --accent-ink 를 물리는데
-     다크에서는 그것도 강조색이라 같이 걸렸다. */
-:root[data-theme="dark"] .faq-sechd, :root[data-theme="navy"] .faq-sechd, :root[data-theme="charcoal"] .faq-sechd, :root[data-theme="lavender"] .faq-sechd, :root[data-theme="dark"] .rp-hd, :root[data-theme="navy"] .rp-hd, :root[data-theme="charcoal"] .rp-hd, :root[data-theme="lavender"] .rp-hd, :root[data-theme="dark"] .dw-g, :root[data-theme="navy"] .dw-g, :root[data-theme="charcoal"] .dw-g, :root[data-theme="lavender"] .dw-g, :root[data-theme="dark"] .pl, :root[data-theme="navy"] .pl, :root[data-theme="charcoal"] .pl, :root[data-theme="lavender"] .pl, :root[data-theme="dark"] .dw-sem .pl, :root[data-theme="navy"] .dw-sem .pl, :root[data-theme="charcoal"] .dw-sem .pl, :root[data-theme="lavender"] .dw-sem .pl { color: color-mix(in srgb, var(--accent) 34%, #FFFFFF); }  /* 52% 는 4.11 까지밖에 안 올랐다(실측) */
+     다크에서는 그것도 강조색이라 같이 걸렸다. */ :root[data-theme="dark"] .faq-sechd, :root[data-theme="navy"] .faq-sechd, :root[data-theme="charcoal"] .faq-sechd, :root[data-theme="lavender"] .faq-sechd, :root[data-theme="dark"] .rp-hd, :root[data-theme="navy"] .rp-hd, :root[data-theme="charcoal"] .rp-hd, :root[data-theme="lavender"] .rp-hd, :root[data-theme="dark"] .dw-g, :root[data-theme="navy"] .dw-g, :root[data-theme="charcoal"] .dw-g, :root[data-theme="lavender"] .dw-g, :root[data-theme="dark"] .pl, :root[data-theme="navy"] .pl, :root[data-theme="charcoal"] .pl, :root[data-theme="lavender"] .pl { color: color-mix(in srgb, var(--accent) 34%, #FFFFFF); }  /* 52% 는 4.11 까지밖에 안 올랐다(실측) */
 
 
 /* ══════════════════════════════════════════════════════════════════════
