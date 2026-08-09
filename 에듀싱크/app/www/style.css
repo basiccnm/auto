@@ -7061,4 +7061,37 @@ body {
 :root .ml-dishes > span { align-items: flex-start; word-break: keep-all;
   overflow-wrap: normal; font-size: 14px; line-height: 1.4; padding-left: 15px; }
 :root .ml-kd { top: 8px; margin-top: 0; }
-:root .ml-dishes .ml-no { white-space: nowrap; }
+/* [주의] nowrap 을 줬더니 「1.2.5.6.10.12.13.15.16.18」 같은 긴 번호가 칸 밖으로 나가
+   화면에 **가로 넘침 33px** 이 생겼다(실측). 숫자는 어디서 끊어도 읽힌다 —
+   한글에 keep-all 을 준다고 숫자까지 같이 묶으면 이렇게 된다. */
+:root .ml-dishes .ml-no { white-space: normal; overflow-wrap: anywhere; }
+
+/* [주의] 전수 재검에서 새로 걸린 둘 — 오늘 내가 손댄 자리다.
+   .ml-day 는 원래 background: var(--card)(불투명)였고, 나는 box-shadow 만 덮어써서
+   유리 목록에 넣은 줄 알았다. .rp-empty 는 아예 목록에 없었다.
+   → 「고쳤다」 다음에는 **다시 재야** 이런 게 잡힌다. */
+:root .ml-day, :root .rp-empty {
+  background-color: rgba(255, 255, 255, .68);
+  -webkit-backdrop-filter: blur(10px) saturate(1.15);
+          backdrop-filter: blur(10px) saturate(1.15);
+  border: 1px solid rgba(255, 255, 255, .55); }
+:root[data-theme="dark"] .ml-day, :root[data-theme="navy"] .ml-day,
+:root[data-theme="charcoal"] .ml-day, :root[data-theme="lavender"] .ml-day,
+:root[data-theme="dark"] .rp-empty, :root[data-theme="navy"] .rp-empty,
+:root[data-theme="charcoal"] .rp-empty, :root[data-theme="lavender"] .rp-empty {
+  background-color: rgba(255, 255, 255, .09); border-color: rgba(255, 255, 255, .15); }
+
+:root .ml-dishes > span { min-width: 0; }
+
+/* 터치 44px 이 안 되던 둘 (전수 재검에서 확인).
+   ⚠ 겉을 키우면 줄 균형이 깨진다 — «누를 넓이»만 ::after 로 넓힌다.
+     이 앱이 상단 아이콘에서 쓰던 방법과 같다(검사기도 그건 통과시킨다). */
+:root .ml-range { position: relative; }
+:root .ml-range::after { content: ""; position: absolute; left: -9px; right: -9px;
+  top: 50%; transform: translateY(-50%); width: auto; min-width: 44px; height: 44px; }
+/* 도움말의 이메일 링크 — 누르면 메일 앱이 열리는 진짜 링크인데 높이가 15px 이었다.
+   ⚠ 선택자를 .faq-sec a / .help a 로 짐작했다가 안 먹었다. 기기에서 사슬을 찍어
+     실제 위치(.card > .sub > a)를 확인하고 다시 썼다. */
+:root .card .sub a { position: relative; display: inline-block; }
+:root .card .sub a::after { content: ""; position: absolute;
+  left: 0; right: 0; top: 50%; transform: translateY(-50%); min-width: 44px; height: 44px; }

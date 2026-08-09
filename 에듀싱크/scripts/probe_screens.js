@@ -120,7 +120,11 @@
        「공책에 낙서해놓은 거야?」가 됐다(대표님 지적 08-08).
        빈 자리는 **그리지 말거나, 무슨 자리인지 말해야** 한다. */
     const doodle = [];
-    for (const e of document.querySelectorAll("div, span, li, i, section")) {
+    /* ⚠ <i> 는 이 코드베이스에서 «아이콘·스위치 손잡이»다 — 글자가 없는 게 정상이라 뺀다.
+       editable = 눌러서 채우는 시간표 빈 칸. 역시 «자리»가 아니라 «기능»이다.
+       (2026-08-09 전수에서 남은 4건이 전부 이것이었다) */
+    for (const e of document.querySelectorAll("div, span, li, section")) {
+      if (/editable/i.test((e.className || "").toString())) continue;
       if (!vis(e)) continue;
       const r = rect(e);
       if (r.width < 24 || r.height < 16) continue;
@@ -135,7 +139,7 @@
       const cn = (e.className || "").toString();
       /* ⚠ ghost = 자료를 기다리는 동안 그리는 «뼈대»다. 글자가 없는 게 정상이고
        실제로는 반짝이며 «불러오는 중»을 말한다 — 빈 자리가 아니다(08-09 확인). */
-      if (/art|scrim|dim|bar|line|divider|grip|badge|dot|ring|spark|track|veil|shadow|ghost|skel|pv-/i.test(cn)) continue;   /* pv-* = 테마 미리보기 속 «가짜 카드». 글자가 없는 게 정상이다 */
+      if (/art|scrim|dim|bar|line|divider|grip|badge|dot|ring|spark|track|veil|shadow|ghost|skel|pv-|ph|ico|swt|slot|mp-i|edico/i.test(cn)) continue;   /* 아이콘 칸·토글 스위치·격자 빈 칸·미리보기 자리 — 글자가 없는 게 정상이다(08-09 전수에서 확인) */   /* pv-* = 테마 미리보기 속 «가짜 카드». 글자가 없는 게 정상이다 */
       if (r.height < 24 && r.width > 80) continue;         // 가로 선
       doodle.push((cn || e.tagName).split(/\s+/).slice(0, 2).join(".") + ` ${Math.round(r.width)}×${Math.round(r.height)}`);
     }
