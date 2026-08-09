@@ -135,7 +135,7 @@
       const cn = (e.className || "").toString();
       /* ⚠ ghost = 자료를 기다리는 동안 그리는 «뼈대»다. 글자가 없는 게 정상이고
        실제로는 반짝이며 «불러오는 중»을 말한다 — 빈 자리가 아니다(08-09 확인). */
-      if (/art|scrim|dim|bar|line|divider|grip|badge|dot|ring|spark|track|veil|shadow|ghost|skel/i.test(cn)) continue;
+      if (/art|scrim|dim|bar|line|divider|grip|badge|dot|ring|spark|track|veil|shadow|ghost|skel|pv-/i.test(cn)) continue;   /* pv-* = 테마 미리보기 속 «가짜 카드». 글자가 없는 게 정상이다 */
       if (r.height < 24 && r.width > 80) continue;         // 가로 선
       doodle.push((cn || e.tagName).split(/\s+/).slice(0, 2).join(".") + ` ${Math.round(r.width)}×${Math.round(r.height)}`);
     }
