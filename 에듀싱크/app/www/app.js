@@ -8301,8 +8301,14 @@ const App = {
     S.childDraft.school = { ...s, detail: s.detail || null };
     S.childDraft.grade = "3"; S.childDraft.class_name = "1";
     S.schoolQuery = ""; S.schoolHits = null;
+    S.classNames = null;
     this.render();
     toast(`${esc(s.name)} (${s.sido}) 선택`);
+    /* ⚠ 학교를 고른 직후에 **그 학교의 실제 반 이름**을 받아온다.
+       예전엔 «학년을 바꿀 때»만 받아와서, 학교만 고르고 학년을 안 건드리면
+       계속 「1반·2반」 숫자로 남았다 — 경기초 4학년은 「난초·매화·장미」다.
+       기다리지 않는다. 받아오면 스스로 다시 그린다. */
+    this.loadClassNames(s.slug, S.childDraft.grade);
   },
   // 예전엔 등록하기가 화면 이동만 했다 → 고른 학년·반이 사라졌다(2026-07-24 지적). 실제로 만든다.
   // 신규 자녀 추가 — 폼을 비우고 수정 모드 해제
