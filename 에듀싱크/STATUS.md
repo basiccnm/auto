@@ -1644,3 +1644,20 @@ CDP_TIMEOUT=300000 node scripts/emul_eval.mjs --file scripts/probe_screens.js
   ⚠ 처음에 `school()` 안에서 고치려 했는데 **안 먹었다** — 라우터가 화면을 고른 뒤에 school() 이 돈다.
     「어디서 결정되는지」를 먼저 봐야 한다. 실측: `#school` → `#schoolinfo` · tab=info 로 정상화.
 - **아이 세계에 유리 «재질»** : 색은 하나도 안 바꾸고 위쪽 빛 한 줄 + 얇은 테두리만 얹었다(디자인 3줄 ①).
+
+#### ✅ 유리 통일 — 기계로 찾아 20 → 3 (2026-08-09)
+
+눈으로 38장을 보는 대신 `scripts/probe_glass.js` 로 **불투명한 큰 면**을 전 화면에서 찾았다.
+유리는 반투명이다 — 알파가 1인 넓은 면이 남아 있으면 그게 «공책 느낌»의 자리다.
+
+`.ib .st-purse .st-item .dw-search .faq-sec .edrow .gc-day .th-act .cm-intro .cm-rules
+ .ca-note .char-card .camera-box .stickybar .wk .plan .dc-quota .condbox .docview` → 유리
+
+**남은 3개는 고칠 게 아니다** —
+`kd3-card`(삭제 예정 옛 자녀 화면) · `page`(문서 미리보기 — **흰 종이가 맞다**) · `nt-send`(버튼)
+
+⚠ `.camera-box` 를 유리로 바꾸니 흰 글씨가 **1.15** 로 죽었다(원래 어두운 상자였다).
+  **면을 밝히면 그 위 글씨도 같이 손봐야 한다** — 이 세션에서만 세 번째다.
+
+대비 전수 재측정: 245번 중 **3건**(전부 다크, 3.41~4.11).
+남은 3건은 클래스 없는 SPAN/B 라 부모에 색을 줘도 안 먹는다 — app.js 에서 클래스를 붙여야 한다.
