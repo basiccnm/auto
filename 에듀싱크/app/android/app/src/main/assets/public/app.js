@@ -554,6 +554,15 @@ async function api(path, { method = "GET", body, form, timeout, reauth, _retry }
       const r = await api("/auth/refresh", { method: "POST", body: { refresh_token: TOKENS.refresh }, _retry: true });
       if (r?.ok) { saveTokens(r.data); return api(path, { method, body, form, timeout, reauth, _retry: true }); }
       saveTokens(null);
+      /* 🔴 여기서 **조용히 로그아웃하면 «내 아이가 사라진» 것처럼 보인다.**
+         홈은 자녀가 없다고 판단해 「아이를 등록하면 시작돼요」를 띄운다 —
+         부모는 등록해 둔 아이가 통째로 없어진 줄 안다(2026-08-09 폰 실측).
+         가장 흔한 이유는 **다른 기기에서 로그인해 이 폰이 밀려난 것**이고,
+         서버는 그 문장을 정확히 준다. 그 말을 버리지 말고 그대로 보여 준다. */
+      S.loggedIn = false;
+      S.authEnded = (r && r.error && r.error.message)
+        || "로그인이 만료됐어요. 다시 로그인해 주세요.";
+      setTimeout(() => { toast(S.authEnded); App.render(); }, 0);
     }
     return j;
   } catch (e) {
@@ -831,6 +840,7 @@ const S = {
   quizFeed: null,         // 문제 하나를 답한 «직후» 뜨는 정답 — 다음 문제로 넘어가면 사라진다
   schoolMs: null,         // 학교 «미션» 오늘 상태 — 서버 school_missions.js 가 정본
   msets: null,            // 아침·방과후 «세트 완주» 상태 {morning:{done,all,taken},after:{…}}
+  authEnded: null,        // 로그인이 끊긴 «이유»(다른 기기 로그인 등) — 조용히 로그아웃하지 않으려고
   gamePreview: false,     // 부모가 «아이 화면»을 일부러 들여다보는 중
   pmTab: null,            // 부모 관리 안쪽 화면 (todo|bonus|today) — null 이면 카드 허브
   giveBusy: false,        // 추가 증정 중복 누름 방지
@@ -2032,7 +2042,7 @@ const Screens = {
     if (!c) return `${subHeader("미션")}
       <div class="ms-empty">
         <b>아이를 등록하면 시작해요</b>
-        <button class="btn-primary" onclick="location.hash='#register'">아이 등록하기</button>
+        <button class="btn-primary" onclick="App.childAddStart()">아이 등록하기</button>
       </div>`;
     if (list === null) return `${subHeader("미션")}<p class="sub">불러오는 중…</p>`;
 
@@ -2246,7 +2256,7 @@ const Screens = {
     if (!c) return `${subHeader("스타코인 상점")}
       <div class="ms-empty">
         <b>아이를 등록하면 열려요</b>
-        <button class="btn-primary" onclick="location.hash='#register'">아이 등록하기</button>
+        <button class="btn-primary" onclick="App.childAddStart()">아이 등록하기</button>
       </div>`;
     if (S.store === null) return `${subHeader("스타코인 상점")}<p class="sub">불러오는 중…</p>`;
 
@@ -2309,7 +2319,7 @@ const Screens = {
     if (!c) return `${subHeader("내 티켓")}
       <div class="ms-empty">
         <b>아이를 등록하면 열려요</b>
-        <button class="btn-primary" onclick="location.hash='#register'">아이 등록하기</button>
+        <button class="btn-primary" onclick="App.childAddStart()">아이 등록하기</button>
       </div>`;
     if (S.rewards === null) return `${subHeader("내 티켓")}<p class="sub">불러오는 중…</p>`;
     if (!S.rewards.length) return `${subHeader("내 티켓")}
@@ -2620,13 +2630,21 @@ const Screens = {
            이 책임진다 — 막을 지우면 밝은 그림에서 시계가 사라진다. -->
     <div class="hv3-art">${boardView()}</div>
 
+    <!-- 🔴 서버에 못 올라간 아이 — **홈에서 계속 보인다.** 토스트는 화면이 바뀌면 묻힌다.
+         이걸 안 보여 주면 부모는 저장된 줄 알고 쓰다가, 어느 날 아이가 통째로 사라진다. -->
+    ${!(c && c.saveFailed) ? "" : `<button class="hd-trial soon" onclick="App.childRetrySave()">
+      ${esc(c.nickname)}가 이 폰에만 있어요<em>${esc(String(c.saveFailed))} · 다시 시도<i aria-hidden="true" class="ti ti-refresh"></i></em></button>`}
+
     ${promoteCard(c)}
     <!-- 아이가 없으면(구경 중) **다음에 뭘 할지**를 홈에서 말해 준다(2026-08-09 실기).
          ⚠ 예전에 여기 「가입하기」를 뒀다가 걷어낸 적이 있다 — 들어오자마자 가입을
            들이미는 게 싫어서였다. 그건 지금도 맞다. 그래서 **가입이 아니라 «이유»**를 말한다.
          ⚠ 빈 카드 넉 장만 있는 홈은 «고장난 앱»처럼 보인다.
            ☰ 안에 「아이 등록하기」가 있지만, 메뉴를 열어야 보이는 것은 «없는 것»에 가깝다. -->
-    ${cur() ? "" : `<button class="hm-start" onclick="location.hash='#child-add'">
+    ${cur() && !S.authEnded ? "" : S.authEnded ? `<button class="hm-start" onclick="location.hash='#login'">
+      <b>다시 로그인해 주세요</b>
+      <em>${esc(String(S.authEnded))}<i aria-hidden="true" class="ti ti-chevron-right"></i></em></button>`
+      : `<button class="hm-start" onclick="App.childAddStart()">
       <b>아이를 등록하면 시작돼요</b>
       <em>급식 · 시간표 · 학사일정이 매일 저절로 들어와요<i aria-hidden="true" class="ti ti-chevron-right"></i></em>
     </button>`}
@@ -3552,8 +3570,10 @@ const Screens = {
                 /* ⚠ 저장된 반이 실제 목록에 없으면 **시간표가 안 나온다.**
                    조용히 두면 부모는 이유를 모른 채 빈 시간표만 본다 — 반드시 말해 준다. */
                 : `⚠ 지금 「${esc(String(S.childDraft.class_name))}」로 돼 있는데 이 학년엔 없는 반이에요. 다시 골라주세요`)
+            /* ⚠ 학교를 안 골랐으면 「N개 반이에요」는 **근거 없는 숫자**다 — 아무 말도 안 한다.
+               안내문이 길면 드롭다운 옆에서 네 줄로 흘러 화면을 망가뜨린다(폰 실측). 짧게. */
             : (S.classBusy ? "반 이름을 알아보는 중…"
-                : `${g}학년은 ${classes}개 반이에요 · 학교가 시간표를 올리면 실제 반 이름으로 바뀌어요`)}</p></div>
+                : (S.childDraft.school ? "학교가 시간표를 올리면 실제 반 이름이 떠요" : ""))}</p></div>
       </div>
       <label class="f">별명 * <span style="font-weight:400">(화면에는 이 이름만 보여요)</span></label>
       <input id="ce-nick" placeholder="예: 셋째" value="${esc(S.childDraft.nickname)}" oninput="S.childDraft.nickname=this.value">
@@ -4062,7 +4082,10 @@ const Screens = {
               `<button class="${(T[key] || opts[0][0]) === v ? "on" : ""}" onclick="App.timeOpt('${key}','${v}')">${n}</button>`).join("")}</span>
           </div>`;
         return seg("weekStart", [["sun", "일"], ["mon", "월"]], "요일 시작")
-             + seg("dateFmt", [["ko", "8월 3일"], ["dot", "8.3"]], "날짜 형식")
+             /* 보기글은 **오늘 날짜**로 쓴다. 「8월 3일」로 박아 두면 그날이 지난 뒤엔
+               부모가 «왜 8월 3일이지?» 하고 한 번 멈춘다(폰 실측 2026-08-09). */
+            + seg("dateFmt", [["ko", `${+TODAY.slice(4, 6)}월 ${+TODAY.slice(6, 8)}일`],
+                              ["dot", `${+TODAY.slice(4, 6)}.${+TODAY.slice(6, 8)}`]], "날짜 형식")
              + seg("timeFmt", [["24", "15:00"], ["12", "오후 3시"]], "시간 형식");
       })()}
     </div>
@@ -4095,6 +4118,15 @@ const Screens = {
     <div class="mp-list">
       ${row("", "이용약관", "", "location.hash='#terms'")}
       ${row("", "개인정보처리방침", "", "location.hash='#policy'")}
+      <!-- ⚠ 아직 가입하지 않은 사람에게 「로그아웃」·「회원 탈퇴」를 보여 주고 있었다(폰 실측).
+           나갈 문만 있고 **들어올 문이 없었다** — 설정 어디에도 가입 길이 없었다.
+           가입 전에는 그 둘을 감추고 「가입하기」와 「로그인」만 둔다.
+           ⚠ 이 자리는 **템플릿 문자열 안**이다. `/* */` 로 쓰면 주석이 아니라 **화면에 그대로 찍힌다**
+             — 실제로 그렇게 찍혔다(2026-08-10 폰 실측). 여기서는 HTML 주석만 쓴다. -->
+      ${!TOKENS.access ? `
+        ${row("", "가입하기", "", "location.hash='#register'", "accent")}
+        ${row("", "로그인", "", "location.hash='#login'")}
+      ` : `
       ${row("", "로그아웃", "", "App.logout()")}
       ${(() => {
         // 광고성 수신 채널별 켜고 끄기 — 철회 수단은 의무다(방침 9항). 서버(accounts.marketing)에 바로 반영.
@@ -4104,6 +4136,7 @@ const Screens = {
           <span class="mk-chips">${chip("email", "메일")}${chip("sms", "문자")}${chip("call", "전화")}</span></div>`;
       })()}
       ${row("", "회원 탈퇴", "", "App.withdrawAsk()", "danger")}
+      `}
     </div>
 
     <!-- 이름 수정 시트 폐지(§4) — 전용 화면 Screens.editname -->
@@ -4615,7 +4648,8 @@ const Screens = {
      → 메뉴 목록은 **고르는 카드 하나로 합치고**, 순위는 1등만 받는다. */
   childmealrate: () => {
     const meal = mealsOf().find((m) => m.date === TODAY && m.type === "중식");
-    if (!meal) { location.hash = "#game"; return ""; }
+    // 조용히 되돌리면 «눌렀는데 아무 일도 없는» 고장으로 읽힌다 — 이유를 말한다.
+    if (!meal) { toast("오늘은 급식이 없어요"); location.hash = "#game"; return ""; }
     const d = S.mealDraft;
     return `
     <a class="back" href="#game" aria-label="뒤로"><i aria-hidden="true" class="ti ti-chevron-left"></i></a>
@@ -4647,7 +4681,7 @@ const Screens = {
      성적표가 알려주지 않는 것이다. 과목은 주 단위로 반복돼서 한 달이면 표본이 충분하다. */
   childsubject: () => {
     const subs = todaySubjects();
-    if (!subs.length) { location.hash = "#game"; return ""; }
+    if (!subs.length) { toast("오늘은 수업이 없어요"); location.hash = "#game"; return ""; }
     return `
     <a class="back" href="#game" aria-label="뒤로"><i aria-hidden="true" class="ti ti-chevron-left"></i></a>
     <h1 class="kd2-h1">오늘 제일 재밌었던 건?</h1>
@@ -5383,7 +5417,18 @@ function schoolMissionsSummary() {
 function schoolMissionList() {
   const s = S.schoolMs;
   if (!s || !s.items?.length) return [];
-  return s.items.map((x) => ({ ...x, go: "#" + x.go }));
+  /* ⚠ 방학·휴일에는 **급식도 시간표도 없다.** 그런데 서버는 학교 미션 3개를 그대로 준다.
+     예전엔 그 카드를 눌러도 화면이 조용히 되돌아왔다(childmealrate 가 `location.hash="#game"`) —
+     아이 눈에는 「30초면 끝 ★1」이라고 해놓고 눌러도 아무 일이 없는 고장이었다(폰 실측 2026-08-09).
+     → 오늘 할 수 없는 것은 **그렇다고 말하고 못 누르게** 한다. 숨기지는 않는다 —
+       숨기면 「0/3」이 날마다 「0/1」로 들쭉날쭉해져 아이가 뭘 놓쳤는지 모른다. */
+  const noMeal = !mealsOf().some((m) => m.date === TODAY && m.type === "중식");
+  const noSub = !todaySubjects().length;
+  return s.items.map((x) => {
+    const none = x.key === "meal" ? noMeal : x.key === "subject" ? noSub : false;
+    return { ...x, none, go: none ? "" : "#" + x.go,
+      note: none ? (x.key === "meal" ? "오늘은 급식이 없어요" : "오늘은 수업이 없어요") : x.note };
+  });
 }
 
 /* 타일 하나 — 홈에서도 카드 안에서도 이 함수 하나를 쓴다 */
@@ -5426,7 +5471,7 @@ function gameCard(catKey) {
     stars = list.reduce((a, x) => a + x.stars, 0);
     tiles = list.map((x) => gameTile({ leaf: true, key: x.key, icon: x.icon, name: x.name, note: x.note,
       c: "cyan", done: x.done ? 1 : 0, all: 1, stars: x.stars, go: x.go,
-      foot: x.done ? "했어요" : "30초면 끝" })).join("");
+      foot: x.done ? "했어요" : x.none ? "오늘은 쉬어요" : "30초면 끝" })).join("");
   } else {
     const list = (S.missions || []).filter((x) => slots.indexOf(x.slot || "any") >= 0);
     all = list.length; done = list.filter((x) => x.status === "done").length;
@@ -5993,7 +6038,7 @@ function drawerView(c) {
       </button>
 
       <div class="hv3-drpass">${esc(pass?.t || "무료 사용 중")}</div>`
-      : `<button class="hv3-drwho" onclick="App.drawerClose();location.hash='#register'">
+      : `<button class="hv3-drwho" onclick="App.drawerClose();App.childAddStart()">
         <span class="nm"><b>아이 등록하기</b></span>
         <i aria-hidden="true" class="ti ti-chevron-right"></i>
       </button>`}
@@ -7409,6 +7454,11 @@ function passDaysLeft(c) {
      2주 체험이 남아 있는데도 첫 실행이 통째로 막힌 것이다.
    ⚠ 기한은 **서버가 주는 값**이다. 앱이 지어내지 않는다. 값이 없으면 닫힌 것으로 본다. */
 const passOpen = (c) => {
+  /* `pass === null` 은 «방금 등록해서 서버 응답을 기다리는 중»뿐이다(childAdd → childSaveServer).
+     그 아이는 서버가 방금 14일 체험을 붙여 준 아이다 → 잠그지 않는다.
+     잠가 두면 등록하자마자 «이용권이 필요해요» 잠금화면이 번쩍인다.
+     ⚠ 진짜 데이터는 어차피 서버가 막는다 — 앱이 이중으로 막을 자리가 아니다. */
+  if (c && c.pass === null) return true;
   if (c?.pass?.active) return true;
   const until = String(c?.pass?.free_open_until || "");
   return /^\d{8}$/.test(until) && TODAY <= until;
@@ -7416,6 +7466,8 @@ const passOpen = (c) => {
 /* 아이 하나의 이용권 상태를 한마디로. 세 화면(내정보·자녀전환·잠금)이 같은 말을 쓴다.
    ⚠ 「무료」라고 쓰지 않는다 — 2026-07-28부터 무료 티어가 없다. 체험이 끝나면 «필요»다. */
 function passLabel(c) {
+  // 서버 응답이 아직 안 왔으면 **모르는 것**이다 — 「끝났다」고 단정하지 않는다.
+  if (!c || c.pass == null) return { t: "확인 중", cls: "" };
   if (!passOpen(c)) return { t: "이용권 필요", cls: "need" };
   const d = passDaysLeft(c);
   if (d <= 14) return { t: d <= 0 ? "체험 오늘까지" : `체험 ${d}일`, cls: d <= 3 ? "soon" : "" };
@@ -7793,7 +7845,7 @@ const App = {
         S.loginBusy = false;
         if (r?.ok) {
           saveTokens(r.data);
-          S.loggedIn = true; S.serverAuth = true;
+          S.loggedIn = true; S.serverAuth = true; S.authEnded = null;
           await loadMe();
           location.hash = "#home"; this.render();
           return toast("로그인했어요");
@@ -8317,6 +8369,16 @@ const App = {
     S.childEditId = null;
     S.childDraft = { grade: "3", class_name: "1", nickname: "", name: "", agree: false, school: null };
     S.schoolQuery = ""; S.schoolHits = null;
+    /* 🔴 **미가입이면 자녀를 등록시키지 않는다**(대표님 확정 2026-08-09).
+       예전엔 그냥 폼을 열어 줬다 → `childSaveServer` 가 토큰이 없어 **조용히 return** 하고,
+       자녀는 이 폰 메모리에만 남았다. 부모는 등록됐다고 믿는데 앱을 껐다 켜면 사라진다.
+       실제로 그렇게 잃었다(폰 실측: 서버 D1 에 그 아이가 없었다).
+       ⚠ 폼을 다 채우게 한 뒤 되돌리면 입력이 아깝다 → **들어오는 자리에서** 가입으로 보낸다.
+         가입이 끝나면 register() 가 이 화면(#child-add)으로 도로 데려온다. */
+    if (!TOKENS.access) {
+      toast("아이를 등록하려면 먼저 가입해야 해요");
+      location.hash = "#register"; this.render(); return;
+    }
     location.hash = "#child-add"; this.render();
   },
   // 자녀 정보 수정 시작 — 기존 값을 폼에 채우고 수정 모드로
@@ -8343,6 +8405,12 @@ const App = {
   },
   childSave() {
     const d = S.childDraft;
+    /* 입구(childAddStart)에서 막지만, 주소를 직접 치거나 오래 열어 둔 화면으로도 여기 닿는다.
+       **서버에 못 올릴 자녀를 만들지 않는다** — 만들면 조용히 사라진다. */
+    if (S.childEditId == null && !TOKENS.access) {
+      toast("아이를 등록하려면 먼저 가입해야 해요");
+      location.hash = "#register"; this.render(); return;
+    }
     if (!d.nickname.trim()) return toast("별명을 넣어주세요");
     if (!d.agree) return toast("보호자 동의가 있어야 기록을 보관할 수 있어요");
     const sc = d.school || schoolInfo();
@@ -8373,17 +8441,27 @@ const App = {
       grade: String(d.grade), class_name: String(d.class_name), grade_code: +d.grade, birth_year: null,
       // 올라가기 전까진 화면에서 보이는 주소(blob)를 쓴다 — 아바타가 이모지로 깜빡이지 않게
       photoLocal: d.photoPreview || null, photo: null,
-      pass: { active: false, expires_at: null, free_open_until: "20260820" },
+      /* ⚠ 이용권을 **여기서 지어내지 않는다.** 예전엔 `expires_at:null` 을 박아 넣었는데,
+         그러면 남은 날이 −1일이 되고 화면엔 「체험 오늘까지」가 떴다 —
+         방금 등록한 부모가 서랍을 열면 체험이 이미 끝났다고 나왔다(2026-08-09 폰 실측).
+         기한은 **서버가 아는 값**이다(등록 시 14일). 응답이 오면 childSaveServer 가 채운다.
+         `free_open_until` 을 날짜로 박아 두던 것도 뺐다 — 그 날이 지나면 신규 등록이 통째로 잠긴다. */
+      pass: null,
       counts: { records: 0, activities: 0 },
     });
     S.currentChildId = id;                                   // 방금 만든 캐릭터로 바로 전환
     S.childDraft = { grade: "3", class_name: "1", nickname: "", name: "", agree: false };
+    /* 🔴 **서버에 올리는 일은 여기서 딱 한 번.** 아래 세 갈래(더 등록 / 테마 고르기 / 홈)로
+       흩어지는데, 예전엔 «더 등록» 갈래에서만 불렀다 → **첫 아이는 영영 서버에 안 갔다.**
+       설문에서 「한 명」이라고 답한 사람(대부분)은 자기 아이가 이 폰에만 있는 줄 몰랐고,
+       앱을 껐다 켜면 사라졌다(2026-08-09 폰 실측 · 서버 D1 에 그 아이가 없었다).
+       ⚠ 갈래가 늘어나도 여기 하나만 지나가게 둔다. 갈래마다 부르면 또 빠뜨린다. */
+    this.childSaveServer(id, sc, d, pendingPhoto);
     /* 설문에서 «두 명»이라고 답했으면 남은 아이도 이어서 등록하게 한다(§5 ②).
        물어 놓고 안 쓰면 그건 그냥 캐묻기다. 강요하지는 않는다 — 홈으로 보내고 한 줄만 알린다. */
     const want = +((S.onboard || {}).kids || 0);
     if (want > STUB.children.length) {
       const nm = esc(STUB.children.find((c) => c.id === id).nickname);
-      this.childSaveServer(id, sc, d, pendingPhoto);
       this.childAddStart();                    // 빈 폼으로 다시 — 뒤로 가면 홈이다
       return toast(`${nm} 등록 완료 — 남은 아이도 이어서 등록해요`);
     }
@@ -8397,8 +8475,7 @@ const App = {
     }
     location.hash = "#home"; this.render();
     toast(`${esc(STUB.children.find((c) => c.id === id).nickname)} 등록 완료 — ${d.grade}학년 ${d.class_name}반`);
-    // 🔴 서버에도 만든다. 안 하면 화면에만 생겼다가 **다음 로그인에 사라진다**(2026-07-26 실측).
-    this.childSaveServer(id, sc, d, pendingPhoto);
+    // 서버 등록은 위에서 이미 했다(갈래마다 부르면 또 빠뜨린다 — 실제로 테마 갈래가 빠져 있었다).
   },
 
   /* 자녀를 서버에 만든다. 성공하면 화면 자녀에 server_id를 달아준다 —
@@ -8424,18 +8501,44 @@ const App = {
     await loadMe();
   },
 
+  // 홈의 「다시 시도」 — 실패한 아이를 그 아이 값 그대로 다시 올린다.
+  childRetrySave() {
+    const c = cur(); if (!c || c.server_id) return;
+    toast("다시 올려볼게요");
+    this.childSaveServer(c.id, c.school, { grade: c.grade, class_name: c.class_name,
+      nickname: c.nickname, name: c.name || "" }, null);
+  },
+
   async childSaveServer(localId, sc, d, pendingPhoto) {
-    if (!TOKENS.access || !sc?.slug) return;
+    /* ⚠ 여기서 조용히 돌아서면 **아이가 이 폰에만 남는다** — 부모는 등록됐다고 믿고,
+       앱을 껐다 켜면 사라진다. 입구(childAddStart)에서 막고 있지만 여기서도 말은 한다. */
+    if (!TOKENS.access) { toast("가입해야 아이가 저장돼요 — 지금은 이 폰에만 있어요"); return; }
+    if (!sc?.slug) { toast("학교를 다시 골라 주세요 — 서버에 저장하지 못했어요"); return; }
     const r = await api("/children", { method: "POST", body: {
       school_slug: sc.slug,
       name: (d.name || d.nickname || "").trim(),      // 서버는 이름을 필수로 본다(기록 기능이 켜져 있을 때)
       nickname: d.nickname.trim(),
       grade: +d.grade, class_name: String(d.class_name), consent: true,
     } }).catch(() => null);
-    if (!r?.ok) { toast(r?.error?.message || "서버에 자녀를 못 만들었어요 (이 기기에만 저장됨)"); return; }
+    /* 실패하면 **반드시 부모 눈에 띄어야 한다.** 예전엔 토스트만 띄웠는데,
+       등록 직후 테마 고르기 화면으로 넘어가느라 그 토스트가 묻혔다(폰 실측).
+       그 아이는 저장된 줄 알았다가 다음 실행에 사라진다 → 자녀 카드에 표시를 남긴다. */
+    if (!r?.ok) {
+      const c0 = STUB.children.find((x) => x.id === localId);
+      if (c0) c0.saveFailed = r?.error?.message || "서버에 저장하지 못했어요";
+      toast(r?.error?.message || "서버에 자녀를 못 만들었어요 (이 기기에만 저장됨)");
+      this.render();
+      return;
+    }
     const c = STUB.children.find((x) => x.id === localId);
     const sid = r.data.id ?? r.data.child?.id ?? null;
-    if (c) c.server_id = sid;
+    if (c) {
+      c.server_id = sid;
+      delete c.saveFailed;
+      // 이용권·사진 경로는 **서버가 준 것**을 쓴다. 앱이 계산하지 않는다.
+      const src = r.data.child || r.data;
+      if (src.pass) c.pass = src.pass;
+    }
     this.render();
     // 등록 화면에서 미리 고른 사진을 이제 올린다 — 자녀가 있어야 붙일 자리가 생긴다
     if (pendingPhoto && sid) {
@@ -9102,11 +9205,19 @@ const App = {
      ⚠ 성공/실패 판정을 앱이 하지 않는다. 「오늘은 이미 바꿨어요」도 서버가 말한다. */
   async msReroll() {
     const c = cur();
-    if (!c) return;
-    const r = await api(`/children/${c.id}/missions/reroll`, { method: "POST" });
-    /* ⚠ 막히는 경우는 거의 «오늘 이미 바꿨다» 하나다. 서버 안내문이 안 실려 오면
-       「지금은 바꿀 수 없어요」 같은 맹탕이 뜬다 — 그건 아이에게 아무것도 안 알려준다. */
-    if (!r.ok) { toast(r.message || "오늘은 이미 한 번 바꿨어요. 내일 다시 할 수 있어요."); return; }
+    /* 🔴 **서버 id 를 보낸다.** 예전엔 `c.id`(이 폰 안에서만 쓰는 번호)를 보냈다 —
+       서버엔 그 번호의 아이가 없어서 리롤이 매번 막혔다(폰 실측 2026-08-09).
+       미션 목록·미션 고르기는 이미 `c.server_id` 를 쓰는데 여기만 어긋나 있었다. */
+    if (!c || !c.server_id) { toast("아이 정보를 아직 못 받았어요. 잠시 뒤 다시 해주세요"); return; }
+    const r = await api(`/children/${c.server_id}/missions/reroll`, { method: "POST" });
+    /* ⚠ 실패 이유를 **지어내지 않는다.** 예전엔 `r.message`(없는 필드)를 읽고
+       실패하면 무조건 「오늘은 이미 한 번 바꿨어요」라고 했다 —
+       실제로는 주소가 틀려 막힌 것이었는데 그 문구 때문에 원인이 가려졌다.
+       서버 안내문은 `r.error.message` 에 온다. */
+    if (!r.ok) {
+      toast((r.error && r.error.message) || "지금은 바꿀 수 없어요. 잠시 뒤 다시 해주세요");
+      return;
+    }
     toast("오늘 미션을 바꿨어요");
     await this.loadMissions(true);
     this.render();
@@ -9137,6 +9248,15 @@ const App = {
       if (!names.length) names = await pull("1");
       if (!names.length) names = await pull("2");
       S.classNames = names.length ? names.sort() : null;
+      /* ⚠ 받아온 목록에 **지금 값이 없으면 화면과 데이터가 어긋난다.**
+         드롭다운은 첫 항목(「난초」)을 보여주는데 저장될 값은 기본값 「1」로 남아,
+         그대로 등록하면 NEIS 에 CLASS_NM=1 로 물어 **시간표가 영영 0건**이 된다(폰 실측).
+         새로 등록하는 중이면 「1」은 부모가 고른 게 아니다 → 조용히 첫 반으로 맞춘다.
+         이미 등록된 아이를 고치는 중이면 부모가 **직접 고른 값**이니 함부로 안 바꾸고 경고만 띄운다. */
+      if (S.classNames && !S.classNames.some((n) => String(n) === String(S.childDraft.class_name))
+          && !S.childEditId) {
+        S.childDraft.class_name = S.classNames[0];
+      }
     } catch (e) { S.classNames = null; }
     S.classBusy = false; this.render();
   },
