@@ -554,6 +554,15 @@ async function api(path, { method = "GET", body, form, timeout, reauth, _retry }
       const r = await api("/auth/refresh", { method: "POST", body: { refresh_token: TOKENS.refresh }, _retry: true });
       if (r?.ok) { saveTokens(r.data); return api(path, { method, body, form, timeout, reauth, _retry: true }); }
       saveTokens(null);
+      /* 🔴 여기서 **조용히 로그아웃하면 «내 아이가 사라진» 것처럼 보인다.**
+         홈은 자녀가 없다고 판단해 「아이를 등록하면 시작돼요」를 띄운다 —
+         부모는 등록해 둔 아이가 통째로 없어진 줄 안다(2026-08-09 폰 실측).
+         가장 흔한 이유는 **다른 기기에서 로그인해 이 폰이 밀려난 것**이고,
+         서버는 그 문장을 정확히 준다. 그 말을 버리지 말고 그대로 보여 준다. */
+      S.loggedIn = false;
+      S.authEnded = (r && r.error && r.error.message)
+        || "로그인이 만료됐어요. 다시 로그인해 주세요.";
+      setTimeout(() => { toast(S.authEnded); App.render(); }, 0);
     }
     return j;
   } catch (e) {
@@ -831,6 +840,7 @@ const S = {
   quizFeed: null,         // 문제 하나를 답한 «직후» 뜨는 정답 — 다음 문제로 넘어가면 사라진다
   schoolMs: null,         // 학교 «미션» 오늘 상태 — 서버 school_missions.js 가 정본
   msets: null,            // 아침·방과후 «세트 완주» 상태 {morning:{done,all,taken},after:{…}}
+  authEnded: null,        // 로그인이 끊긴 «이유»(다른 기기 로그인 등) — 조용히 로그아웃하지 않으려고
   gamePreview: false,     // 부모가 «아이 화면»을 일부러 들여다보는 중
   pmTab: null,            // 부모 관리 안쪽 화면 (todo|bonus|today) — null 이면 카드 허브
   giveBusy: false,        // 추가 증정 중복 누름 방지
@@ -2631,7 +2641,10 @@ const Screens = {
            들이미는 게 싫어서였다. 그건 지금도 맞다. 그래서 **가입이 아니라 «이유»**를 말한다.
          ⚠ 빈 카드 넉 장만 있는 홈은 «고장난 앱»처럼 보인다.
            ☰ 안에 「아이 등록하기」가 있지만, 메뉴를 열어야 보이는 것은 «없는 것»에 가깝다. -->
-    ${cur() ? "" : `<button class="hm-start" onclick="App.childAddStart()">
+    ${cur() && !S.authEnded ? "" : S.authEnded ? `<button class="hm-start" onclick="location.hash='#login'">
+      <b>다시 로그인해 주세요</b>
+      <em>${esc(String(S.authEnded))}<i aria-hidden="true" class="ti ti-chevron-right"></i></em></button>`
+      : `<button class="hm-start" onclick="App.childAddStart()">
       <b>아이를 등록하면 시작돼요</b>
       <em>급식 · 시간표 · 학사일정이 매일 저절로 들어와요<i aria-hidden="true" class="ti ti-chevron-right"></i></em>
     </button>`}
@@ -4633,7 +4646,8 @@ const Screens = {
      → 메뉴 목록은 **고르는 카드 하나로 합치고**, 순위는 1등만 받는다. */
   childmealrate: () => {
     const meal = mealsOf().find((m) => m.date === TODAY && m.type === "중식");
-    if (!meal) { location.hash = "#game"; return ""; }
+    // 조용히 되돌리면 «눌렀는데 아무 일도 없는» 고장으로 읽힌다 — 이유를 말한다.
+    if (!meal) { toast("오늘은 급식이 없어요"); location.hash = "#game"; return ""; }
     const d = S.mealDraft;
     return `
     <a class="back" href="#game" aria-label="뒤로"><i aria-hidden="true" class="ti ti-chevron-left"></i></a>
@@ -4665,7 +4679,7 @@ const Screens = {
      성적표가 알려주지 않는 것이다. 과목은 주 단위로 반복돼서 한 달이면 표본이 충분하다. */
   childsubject: () => {
     const subs = todaySubjects();
-    if (!subs.length) { location.hash = "#game"; return ""; }
+    if (!subs.length) { toast("오늘은 수업이 없어요"); location.hash = "#game"; return ""; }
     return `
     <a class="back" href="#game" aria-label="뒤로"><i aria-hidden="true" class="ti ti-chevron-left"></i></a>
     <h1 class="kd2-h1">오늘 제일 재밌었던 건?</h1>
@@ -5401,7 +5415,18 @@ function schoolMissionsSummary() {
 function schoolMissionList() {
   const s = S.schoolMs;
   if (!s || !s.items?.length) return [];
-  return s.items.map((x) => ({ ...x, go: "#" + x.go }));
+  /* ⚠ 방학·휴일에는 **급식도 시간표도 없다.** 그런데 서버는 학교 미션 3개를 그대로 준다.
+     예전엔 그 카드를 눌러도 화면이 조용히 되돌아왔다(childmealrate 가 `location.hash="#game"`) —
+     아이 눈에는 「30초면 끝 ★1」이라고 해놓고 눌러도 아무 일이 없는 고장이었다(폰 실측 2026-08-09).
+     → 오늘 할 수 없는 것은 **그렇다고 말하고 못 누르게** 한다. 숨기지는 않는다 —
+       숨기면 「0/3」이 날마다 「0/1」로 들쭉날쭉해져 아이가 뭘 놓쳤는지 모른다. */
+  const noMeal = !mealsOf().some((m) => m.date === TODAY && m.type === "중식");
+  const noSub = !todaySubjects().length;
+  return s.items.map((x) => {
+    const none = x.key === "meal" ? noMeal : x.key === "subject" ? noSub : false;
+    return { ...x, none, go: none ? "" : "#" + x.go,
+      note: none ? (x.key === "meal" ? "오늘은 급식이 없어요" : "오늘은 수업이 없어요") : x.note };
+  });
 }
 
 /* 타일 하나 — 홈에서도 카드 안에서도 이 함수 하나를 쓴다 */
@@ -5444,7 +5469,7 @@ function gameCard(catKey) {
     stars = list.reduce((a, x) => a + x.stars, 0);
     tiles = list.map((x) => gameTile({ leaf: true, key: x.key, icon: x.icon, name: x.name, note: x.note,
       c: "cyan", done: x.done ? 1 : 0, all: 1, stars: x.stars, go: x.go,
-      foot: x.done ? "했어요" : "30초면 끝" })).join("");
+      foot: x.done ? "했어요" : x.none ? "오늘은 쉬어요" : "30초면 끝" })).join("");
   } else {
     const list = (S.missions || []).filter((x) => slots.indexOf(x.slot || "any") >= 0);
     all = list.length; done = list.filter((x) => x.status === "done").length;
@@ -7818,7 +7843,7 @@ const App = {
         S.loginBusy = false;
         if (r?.ok) {
           saveTokens(r.data);
-          S.loggedIn = true; S.serverAuth = true;
+          S.loggedIn = true; S.serverAuth = true; S.authEnded = null;
           await loadMe();
           location.hash = "#home"; this.render();
           return toast("로그인했어요");
