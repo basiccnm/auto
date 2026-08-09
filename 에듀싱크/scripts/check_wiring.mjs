@@ -120,6 +120,13 @@ console.log("\n④ 아이 폰이 그 경로를 지나갈 수 있나");
   if (!res.length) soft("CHILD_OK 목록을 못 읽었다 — index.js 모양이 바뀌었나", []);
 }
 
+/* 템플릿 문자열 «본문»에 들어간 블록주석은 주석이 아니라 **화면에 찍히는 글자**다.
+   2026-08-10 폰 실측에서 설정 화면에 주석 한 문단이 통째로 노출됐다 — 여기에 함께 태운다. */
+try {
+  const { execFileSync } = await import("node:child_process");
+  execFileSync(process.execPath, ["scripts/check_template_comments.mjs", "app/www/app.js"], { stdio: "inherit" });
+} catch { fail++; }
+
 console.log("\n════════════════════════════════════════════════════════");
 if (fail) { console.log(`  ❌ 실패 ${fail}가지 — 고치고 다시 돌릴 것`); process.exit(1); }
 console.log(`  ✅ 연결 이상 없음${warn ? ` (경고 ${warn})` : ""}`);
