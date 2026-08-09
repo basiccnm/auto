@@ -6933,3 +6933,85 @@ body {
 :root .wk-hd > div:nth-child(5) { color: #B45309; }
 :root .wk-hd > div:nth-child(6) { color: #C0453F; }
 :root .wk-hd > div.today { text-decoration: underline; text-underline-offset: 5px; text-decoration-thickness: 2px; }
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   🎨 나머지 화면에도 홈의 문법 — «자리에만 색» (2026-08-09)
+
+   대표님: 「다른 페이지들도 홈처럼 색상 조금씩 절제되게 사용해라」
+
+   홈이 잘 읽히는 이유는 색을 많이 써서가 아니라 **쓰는 자리를 정해서**다 —
+     · «어디를 보는지» 알려주는 것(날짜·요일·구획 이름)에만 색
+     · 내용(제목·본문)은 --ink 하나로 조용히
+   급식·방과후에 넣은 것과 같은 규칙을 서랍·달력·오늘·리포트·설정에 이어 붙인다.
+   ⚠ 색을 «더» 쓰는 게 아니다. 흩어져 있던 색을 **자리로 모으는** 것이다.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* 구획 이름 — 왼쪽 색 막대 하나. 설정·서랍·오늘이 같은 모양이 된다 */
+:root .mp-sec, :root .seclabel {
+  display: flex; align-items: center; gap: 7px; color: var(--muted); }
+:root .mp-sec::before, :root .seclabel::before {
+  content: ""; flex: none; width: 3px; height: 12px; border-radius: 2px;
+  background: color-mix(in srgb, var(--accent) 60%, transparent); }
+
+/* 달력 — «오늘»과 «일요일»만 색. 나머지 날짜는 조용히(지금은 다 같은 무게였다) */
+:root .gc-w { font-size: 12.5px; font-weight: 800; }
+:root .gc-cell.today .gc-num { box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent); }
+
+/* 서랍 — 학년이 «자리»다. 학년 숫자에만 색을 준다 */
+:root .dw-yearhd b, :root .dw-year .yr { color: var(--accent-ink); font-weight: 900; }
+:root .dw-semhd span { font-weight: 800; color: var(--ink); }
+
+/* 오늘 — 날짜 숫자를 급식과 같은 알약으로. 화면이 달라도 «날짜»는 같게 보여야 한다 */
+:root .dy-num, :root .day-num { color: var(--accent-ink); font-weight: 900; }
+
+/* 리포트 — 요약의 숫자만 강조색. 나머지는 조용히(이미 그렇게 해뒀다) */
+:root .rp-hd b::before { content: ""; display: inline-block; width: 3px; height: 13px;
+  border-radius: 2px; margin-right: 7px; vertical-align: -1px;
+  background: color-mix(in srgb, var(--accent) 60%, transparent); }
+
+/* 달력 «오늘»만 검은 원이라 급식·오늘 화면(강조색 알약)과 따로 놀았다.
+   같은 «오늘»은 어느 화면에서든 같은 색이어야 한다.
+   [주의] 강조색 위 글씨는 --on-accent 다. --bg 를 쓰면 밝은 테마에서 흰 글씨-밝은 면이 된다. */
+:root .gc-cell.today .gc-num, :root .gc-cell.today .gc-num.sun {
+  background: var(--accent); color: var(--on-accent, #fff); }
+
+/* [주의] 내가 넣은 요일 색이 대비를 깼다 — 목 4.33 · 금 4.35 (기준 4.5, 실측).
+   «색을 넣었다»로 끝내면 안 된다. 넣은 색도 재야 한다. 한 단계씩 진하게. */
+:root .wk-hd > div:nth-child(5) { color: #8F4208; }
+:root .wk-hd > div:nth-child(6) { color: #9E332E; }
+
+/* 급식 평가 ★ — 안 고른 별이 1.46:1 이라 «별이 있는지»조차 안 보였다.
+   안 고른 것도 «누를 수 있다»가 보여야 한다. 진하게 + 고른 것은 금색으로 확실히 갈린다. */
+:root .mr-star, :root .rate button { color: color-mix(in srgb, var(--ink) 42%, transparent); }
+:root .mr-star.on, :root .rate button.on { color: #C77800; }
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   [주의] 요일 색을 «고정 hex»로 넣었더니 **다크에서 1.41~1.84** 로 무너졌다.
+   이 세션에서만 네 번째다. 색을 넣을 때는 **양쪽 테마를 같이 준다.**
+   → 라이트는 진한 색, 다크는 같은 색상(hue)의 밝은 값.
+   ══════════════════════════════════════════════════════════════════════ */
+:root[data-theme="dark"] .wk-hd > div:nth-child(2), :root[data-theme="navy"] .wk-hd > div:nth-child(2),
+:root[data-theme="charcoal"] .wk-hd > div:nth-child(2), :root[data-theme="lavender"] .wk-hd > div:nth-child(2) { color: #8FB4FF; }
+:root[data-theme="dark"] .wk-hd > div:nth-child(3), :root[data-theme="navy"] .wk-hd > div:nth-child(3),
+:root[data-theme="charcoal"] .wk-hd > div:nth-child(3), :root[data-theme="lavender"] .wk-hd > div:nth-child(3) { color: #6ED8A4; }
+:root[data-theme="dark"] .wk-hd > div:nth-child(4), :root[data-theme="navy"] .wk-hd > div:nth-child(4),
+:root[data-theme="charcoal"] .wk-hd > div:nth-child(4), :root[data-theme="lavender"] .wk-hd > div:nth-child(4) { color: #C0A6FF; }
+:root[data-theme="dark"] .wk-hd > div:nth-child(5), :root[data-theme="navy"] .wk-hd > div:nth-child(5),
+:root[data-theme="charcoal"] .wk-hd > div:nth-child(5), :root[data-theme="lavender"] .wk-hd > div:nth-child(5) { color: #F0B366; }
+:root[data-theme="dark"] .wk-hd > div:nth-child(6), :root[data-theme="navy"] .wk-hd > div:nth-child(6),
+:root[data-theme="charcoal"] .wk-hd > div:nth-child(6), :root[data-theme="lavender"] .wk-hd > div:nth-child(6) { color: #FF9C90; }
+
+/* 급식 「점심」 알약 — 다크에서 3.21. 면을 진하게, 글씨는 밝게 */
+:root[data-theme="dark"] .ml-mhd b, :root[data-theme="navy"] .ml-mhd b,
+:root[data-theme="charcoal"] .ml-mhd b, :root[data-theme="lavender"] .ml-mhd b {
+  background: color-mix(in srgb, var(--accent) 26%, transparent);
+  color: color-mix(in srgb, var(--accent) 30%, #FFFFFF); }
+
+/* 급식 평가 ★ — 버튼에 **클래스가 없다**(`.mr-star` 는 없는 이름이었다. 짐작으로 썼다).
+   부모 `.kd2-stars` 로 잡는다. 안 고른 별이 1.46:1 이라 «별이 있는지»도 안 보였다. */
+:root .kd2-stars button { color: color-mix(in srgb, var(--ink) 62%, transparent); }  /* 40% 는 2.30 이었다(실측) */
+:root .kd2-stars button.on { color: #C77800; }
+:root[data-theme="dark"] .kd2-stars button.on, :root[data-theme="navy"] .kd2-stars button.on,
+:root[data-theme="charcoal"] .kd2-stars button.on, :root[data-theme="lavender"] .kd2-stars button.on { color: #FFC531; }
