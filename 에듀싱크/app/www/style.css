@@ -6837,3 +6837,67 @@ body {
      칸에 다 못 담는 이름은 눌러서 보면 된다. 쪼개서 보여 주느니 줄이는 게 낫다. */
 :root .blk b { overflow-wrap: normal; word-break: keep-all; overflow: hidden;
   display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-height: 1.25; }
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   📅 방과후 격자 정돈 (2026-08-09 지적 5가지)
+     ① 수요일 두 블록이 같은 색  → color 없을 때 «이름»으로 색을 정한다(app.js)
+     ② 1시간이 60px 라 너무 촘촘 → GRID.px 30 → 44 (한 시간 88px)
+     ③ 블록 밑 «글자 같은 것»    → 크기 조절 **손잡이**다. 손잡이답게 보이게 한다
+     ④ 요일·시각 글씨가 작다     → 키운다
+     ⑤ 요일별로 색이 안 갈린다   → 요일마다 아주 옅게 다른 색
+   ⚠ 절제한다 — 홈처럼 «면은 조용히, 표시만 색으로».
+   ══════════════════════════════════════════════════════════════════════ */
+:root .wk-hd > div { font-size: 14.5px; font-weight: 800; color: var(--ink); padding-bottom: 10px; }
+:root .wk-hd > div.today { color: var(--accent-ink); }
+:root .wk-axis span { font-size: 12.5px; font-weight: 700; color: var(--muted); top: -8px; }
+
+/* 요일별 아주 옅은 색 — «갈리기만» 하면 된다. 진하면 블록이 안 보인다 */
+:root .wk-col.d0 { background: color-mix(in srgb, #3B72C8 4%, transparent); }
+:root .wk-col.d1 { background: color-mix(in srgb, #2F9E6E 4%, transparent); }
+:root .wk-col.d2 { background: color-mix(in srgb, #7B5CD6 4%, transparent); }
+:root .wk-col.d3 { background: color-mix(in srgb, #D98A1F 4%, transparent); }
+:root .wk-col.d4 { background: color-mix(in srgb, #C0453F 4%, transparent); }
+:root .wk-col.today { background: color-mix(in srgb, var(--accent) 9%, transparent); }
+
+/* 블록 — 이름이 두 줄까지 들어가고, 시각을 밑에 작게 */
+:root .blk { padding: 6px 7px; border-radius: 9px; }
+:root .blk b { font-size: 12.5px; }
+/* 손잡이 — 글자로 오해받지 않게 «잡는 것»처럼 (가운데 짧은 막대) */
+:root .blk .grip { left: 50%; right: auto; transform: translateX(-50%); width: 26px; height: 4px;
+  border-radius: 3px; background: color-mix(in srgb, var(--ink) 28%, transparent); bottom: 3px; }
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   🍚 급식 화면 정돈 2차 (2026-08-09) — 「알아보기 어렵고 디자인이 구려」
+
+   1차에서 «한 줄에 하나씩»까지는 했는데, 여전히 종이에 글자만 나열된 꼴이었다.
+   홈이 읽히는 이유는 «왼쪽 색 막대 + 아이콘 칸 + 굵은 제목»으로 **덩어리가 갈리기** 때문이다.
+   급식에도 같은 문법을 준다 — 다만 **절제**한다. 반찬마다 색을 주면 시장통이 된다.
+     · 날짜 카드 = 왼쪽 색 막대 하나 (오늘은 강조색, 나머지는 조용히)
+     · 끼니 = 「점심」을 알약으로 묶고 칼로리를 오른쪽 끝에
+     · 반찬 = 줄만 갈라 놓는다. 색을 안 쓴다
+   ══════════════════════════════════════════════════════════════════════ */
+:root .ml-day { padding: 14px 16px 12px; border-radius: 18px;
+  box-shadow: inset 4px 0 0 color-mix(in srgb, var(--ink) 14%, transparent),
+              inset 0 1px 0 rgba(255, 255, 255, .55), 0 2px 8px rgba(0, 0, 0, .05); }
+:root .ml-day.today { box-shadow: inset 4px 0 0 var(--accent),
+              inset 0 1px 0 rgba(255, 255, 255, .55), 0 2px 8px rgba(0, 0, 0, .05); }
+:root .ml-dhd { padding-bottom: 10px; border-bottom: 1px solid color-mix(in srgb, var(--ink) 8%, transparent); }
+
+/* 끼니 머리 — 「점심」은 알약, 칼로리는 오른쪽 끝. 둘이 붙어 있으면 한 덩어리로 읽힌다 */
+:root .ml-mhd { display: flex; align-items: center; justify-content: space-between;
+  margin-top: 12px; padding-bottom: 4px; }
+:root .ml-mhd b { font-size: 12.5px; font-weight: 900; padding: 3px 10px; border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--accent-ink); }
+:root .ml-mhd span { font-size: 12.5px; font-weight: 800; color: var(--muted);
+  font-variant-numeric: tabular-nums; }
+
+/* 반찬 — 색을 안 쓴다. 줄만 갈라 놓는다(반찬마다 색을 주면 시장통이 된다) */
+:root .ml-dishes > span { padding: 10px 2px; font-weight: 700; }
+:root .ml-dishes > span:first-child { font-weight: 900; }   /* 첫 줄 = 대개 밥 */
+
+/* 블록 이름이 「방과후 코」로 잘렸다 — 칸이 좁다. 글자를 조금 줄이고 두 줄을 허용한다.
+   ⚠ 더 줄이면 안 읽힌다. 그래도 넘치면 «…»로 끝낸다 — 눌러서 보면 되니까. */
+:root .blk b { font-size: 11.5px; letter-spacing: -.3px; -webkit-line-clamp: 2; }
+:root .blk { padding: 5px 5px 10px; }

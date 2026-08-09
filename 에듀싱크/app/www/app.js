@@ -3869,11 +3869,11 @@ const Screens = {
       <div class="wk-body">
         <div class="wk-axis">${hours.map((h) => `<div style="height:${GRID.px * 2}px"><span>${h}시</span></div>`).join("")}</div>
         ${DAY_KO.map((d, i) => `
-          <div class="wk-col ${i % 2 ? "alt" : ""} ${i === todayCol ? "today" : ""}"
+          <div class="wk-col d${i} ${i % 2 ? "alt" : ""} ${i === todayCol ? "today" : ""}"
                role="button" aria-label="${d}요일 — 눌러서 일정 넣기" onclick="App.planTap(event, ${i + 1})">
             ${hours.map(() => `<div class="wk-slot" style="height:${GRID.px * 2}px"></div>`).join("")}
             ${byDay[i].map((a) => `
-              <div class="blk" onclick="if(!App.holdGuard())App.planEdit(${a.id})" onpointerdown="App.holdPlan(${a.id})" style="top:${gridTop(a.start_time)}px;height:${Math.max(GRID.px, gridTop(a.end_time) - gridTop(a.start_time))}px;--tag:${planColor(a.color).v}"
+              <div class="blk" onclick="if(!App.holdGuard())App.planEdit(${a.id})" onpointerdown="App.holdPlan(${a.id})" style="top:${gridTop(a.start_time)}px;height:${Math.max(GRID.px, gridTop(a.end_time) - gridTop(a.start_time))}px;--tag:${planColor(a.color, a.name).v}"
                    onclick="event.stopPropagation();App.askDelete('일정 「${esc(a.name)}」 수정·삭제')">
                 <b>${esc(a.name)}</b>
                 <i class="grip" onpointerdown="App.gripDown(event, ${a.id}, ${i + 1})"></i>
@@ -4878,13 +4878,22 @@ function childChip() {
 }
 // ── 방과후 주간 타임그리드 ──────────────────────────────────
 // h0~h1 = 방과후 시간대. px = 30분당 높이(이 값만 키우면 그리드가 길어진다).
-const GRID = { h0: 13, h1: 21, px: 30 };
+/* ⚠ px 는 «30분»의 높이다. 30px 이면 한 시간이 60px — 블록에 이름 한 줄도 겨우 들어가
+   「방과후 코딩」이 세 줄로 쪼개졌다(08-09 지적). 44 로 올려 한 시간 88px 로 본다. */
+const GRID = { h0: 13, h1: 21, px: 44 };
 /* 일정 색 — 학원별로 구분하려고 사용자가 직접 고른다(2026-07-24 지시).
    ⚠ 값을 여기 적지 않는다(2026-07-28, 시안 10g). 파스텔 6종을 하드코딩해 뒀더니
       테마를 갈아도 이 색만 안 따라와서 어두운 테마에서 혼자 밝게 떴다.
       이제 **--tag1~5** 라는 변수 5개를 style.css 가 테마마다 정의하고, 여기선 이름만 부른다. */
 const PLAN_COLORS = [1, 2, 3, 4, 5].map((n) => ({ v: `var(--tag${n})` }));
-const planColor = (i) => PLAN_COLORS[(i ?? 0) % PLAN_COLORS.length];
+/* ⚠ color 가 없으면 전부 0번 색이 됐다 — 서버로 넣은 활동은 color 를 안 준다.
+   그래서 수요일에 「방과후 코딩」과 「피아노 학원」이 같은 색으로 보였다(08-09 지적).
+   → 색이 없으면 **이름으로 정한다.** 같은 학원은 언제나 같은 색이고, 다른 학원은 갈린다. */
+const nameHue = (s0) => { let h = 0; for (const ch of String(s0 || "")) h = (h * 31 + ch.charCodeAt(0)) % 997; return h; };
+/* ⚠ color 가 **0** 으로 들어온다(null 이 아니다) — 그래서 ?? 로는 못 걸러 전부 1번 색이었다.
+   0 은 «안 골랐다»는 뜻이다. 사용자가 직접 고른 값은 1 이상이다.
+   → 0·null·undefined 면 이름으로 정한다. 같은 학원은 언제나 같은 색이다. */
+const planColor = (i, name) => PLAN_COLORS[(i > 0 ? i : nameHue(name)) % PLAN_COLORS.length];
 const toMin = (t) => +t.slice(0, 2) * 60 + +t.slice(3);
 const toHHMM = (m) => String(Math.floor(m / 60)).padStart(2, "0") + ":" + String(m % 60).padStart(2, "0");
 const gridTop = (t) => ((toMin(t) - GRID.h0 * 60) / 30) * GRID.px;
@@ -6950,7 +6959,7 @@ function timetableTab() {
         const days = String(a.days_of_week || "").split(",").filter(Boolean)
           .sort().map((n) => DAY_KO[+n - 1]).filter(Boolean).join(" ");
         return `
-        <button class="ttp-item" onclick="App.planEdit(${a.id})" style="--tag:${planColor(a.color).v}">
+        <button class="ttp-item" onclick="App.planEdit(${a.id})" style="--tag:${planColor(a.color, a.name).v}">
           <i></i>
           <span class="ttp-name"><b>${esc(a.name)}</b><em>${days}${days && a.start_time ? " · " : ""}${esc(a.start_time || "")}${a.end_time ? ` – ${esc(a.end_time)}` : ""}</em></span>
           <span class="ttp-go"><i aria-hidden="true" class="ti ti-chevron-right"></i></span>
