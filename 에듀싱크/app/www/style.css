@@ -7157,3 +7157,41 @@ body {
 /* 본문이 버튼에 안 깔리게 — 버튼이 올라간 만큼 같이 올린다 */
 :root body:has(#tabbar.hidden) #screen:has(.hv3-star),
 :root #screen:has(.hv3-star) { padding-bottom: max(calc(env(safe-area-inset-bottom) + 112px), 154px); }
+
+/* ── 알약 «안»에 든 입력칸은 맨몸이어야 한다 (2026-08-10 대표님 지적) ─────────
+   고객센터 검색칸이 바깥 알약과 높이가 안 맞았다.
+   원인: `.dw-search input` 이 `background:none; border:none` 이라고 선언해도,
+   **뒤에 나오는 전역 규칙**이 같은 특정도(0,0,1)로 이겨서 다시 칠한다 —
+     · `input, select { padding:13px; border:1px; margin-top:8px; background:var(--field) }` (837행)
+     · `input, select, textarea { 유리 배경·테두리·안쪽 하이라이트 }` (유리 블록)
+   그래서 알약 안에 **또 하나의 흰 상자**가 생기고, margin-top 8px 만큼 아래로 밀렸다.
+   ⚠ 이 셋은 「컨테이너가 테두리를 그리고 input 은 글자만 담는」 구조다 — 전부 벗긴다.
+   ⚠ 새로 이런 알약을 만들면 여기 선택자를 같이 늘릴 것. 안 그러면 또 이중으로 그려진다. */
+:root .dw-search input,
+:root .nt-send input,
+:root .sheet-two input {
+  background: none; background-color: transparent;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  border: none; box-shadow: none;
+  margin: 0; padding: 0;
+}
+:root .dw-search input:focus,
+:root .nt-send input:focus,
+:root .sheet-two input:focus {
+  background: none; background-color: transparent; box-shadow: none; outline: none;
+}
+/* 알약이 높이를 정하고, 입력칸은 그 안을 꽉 채운다 */
+:root .dw-search input { height: 100%; }
+
+/* ── ☰(서랍)이 탭에 안 먹던 것 (2026-08-10 폰 실측) ───────────────────────
+   앱을 켠 직후 홈에서 ☰ 를 눌러도 서랍이 안 열렸다(다른 화면에서 돌아오면 열렸다).
+   ⚠ 일러스트(.hv3-art)를 `margin-top: calc(... * -1 - 6px)` 로 **위로 당겨** 올리는데,
+     그러면 그림이 헤더 줄(.hd-top) 위로 겹쳐 올라온다. 그림은 마크업상 헤더보다 뒤라
+     쌓임 순서에서 이기고, **☰ 를 덮어 터치를 가져간다.**
+   ⚠ 하단 3버튼에서 겪은 것과 같은 부류다 — env(safe-area-inset-*) 가 이 폰에서 0 으로 와서
+     겹침 폭이 예상보다 커진다.
+   → 헤더 줄과 ☰ 를 **그림보다 확실히 위**로 올린다. 모양은 그대로다. */
+:root #screen:has(.hv3-art) .hd-top { position: relative; z-index: 3; }
+:root .hv3-ham { position: relative; z-index: 4; }
+/* 눌리는 넓이도 확보 — 24px 글자 하나는 손가락에 작다(터치 44px 규칙) */
+:root .hv3-ham { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; }
