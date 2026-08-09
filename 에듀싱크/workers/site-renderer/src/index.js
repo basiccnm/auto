@@ -2575,7 +2575,9 @@ export default {
         //   경로 모양을 손으로 적을 때는 **라우터의 정규식과 나란히 놓고** 확인할 것.
         //   ⚠ 블록 주석(/* … */) 안에 경로를 쓰지 말 것 — `**/buy` 의 `*/` 가 주석을 거기서 닫는다.
         /^\/api\/v1\/children\/\d+\/store\/[\w-]+\/buy\/?$/,
-        /^\/api\/v1\/children\/\d+\/rewards\/?$/,
+        // 🎲 리롤 — 아이가 누른다. 없으면 아이 폰에서만 「권한이 없어요」가 뜬다
+  /^\/api\/v1\/children\/\d+\/missions\/reroll\/?$/,
+  /^\/api\/v1\/children\/\d+\/rewards\/?$/,
         /* 2단계 검증 — 1차(아이가 냄)는 아이 것이다. 보너스(2차)는 부모 것이라 gate 가 막는다 */
         /^\/api\/v1\/children\/\d+\/verify\/?$/,
       ];

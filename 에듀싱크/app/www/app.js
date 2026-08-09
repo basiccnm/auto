@@ -2040,6 +2040,13 @@ const Screens = {
     <p class="sub">오늘 <b>${esc(c.nickname)}</b>에게 준 것 · 모은 도장 <b class="ms-star">★ ${S.missionStars}</b></p>
     ${childLinkWarn()}
 
+    <!-- 🎲 리롤 — 하루 한 번. «하루 한 번»은 서버의 PRIMARY KEY(child_id, ymd) 가 강제한다.
+         화면은 세지 않는다 — 앱이 세면 폰 두 대에서 각자 세다가 두 번 바뀐다.
+         ⚠ 아직 시작 안 한 것만 바뀐다. 해낸 것(확인 기다림·완료)은 그대로 둔다 —
+           해낸 것을 리롤로 날리면 그건 보상이 아니라 벌이다. -->
+    ${list.some((x) => x.status === "open") ? `<button class="ms-reroll" onclick="App.msReroll()">
+      🎲 <span><b>오늘 미션 바꾸기</b><em>하루 한 번 · 아직 시작 안 한 것만</em></span></button>` : ""}
+
     ${list.map((x, i) => {
       const st = ST[x.status] || ST.open;
       /* 카드 = 번호·이름·상태 셋만. 자세한 건 눌러서(시안 2026-08-03) */
@@ -9139,6 +9146,19 @@ const App = {
   /* ⚠ 앱이 켜지는 순간엔 아직 자녀를 못 받아왔다. 그때 «미션 없음»으로 못 박으면
      다음에 다시 안 부른다 — 홈 카드가 영영 「오늘 미션 없음」으로 남는다(2026-08-01 실측).
      **못 묻는 상태와 물어봤는데 없는 상태는 다르다.** 못 묻겠으면 null 로 두고 그냥 돌아간다. */
+  /* 🎲 오늘 미션 바꾸기 — 하루 한 번.
+     ⚠ 성공/실패 판정을 앱이 하지 않는다. 「오늘은 이미 바꿨어요」도 서버가 말한다. */
+  async msReroll() {
+    const c = cur();
+    if (!c) return;
+    const r = await api(`/children/${c.id}/missions/reroll`, { method: "POST" });
+    /* ⚠ 막히는 경우는 거의 «오늘 이미 바꿨다» 하나다. 서버 안내문이 안 실려 오면
+       「지금은 바꿀 수 없어요」 같은 맹탕이 뜬다 — 그건 아이에게 아무것도 안 알려준다. */
+    if (!r.ok) { toast(r.message || "오늘은 이미 한 번 바꿨어요. 내일 다시 할 수 있어요."); return; }
+    toast("오늘 미션을 바꿨어요");
+    await this.loadMissions(true);
+    this.render();
+  },
   async loadMissions(force) {
     const c = cur();
     if (!TOKENS.access || !c?.server_id) return;        // 아직 못 묻는다 → 다음 그리기에서 다시
