@@ -5106,6 +5106,11 @@ function boardView() {
   const next = (STUB.myEvents || [])
     .filter((e) => e.date === TODAY && e.start && toMin(e.start) >= nowMin)
     .sort((a, b) => String(a.start).localeCompare(String(b.start)))[0];
+  /* ⚠ 상태 줄을 **판 밖**으로 뺐다가 되돌렸다(2026-08-10).
+     밖에 글씨만 세웠더니 「글씨로만 있어서 못 알아보겠다」 —
+     전광판은 **판 안에 있어야** 전광판으로 읽힌다.
+     ⚠ 대신 판이 내용 폭에 맞춰 가로로 늘어나 화면 밖으로 넘쳤고, 그 넘침이
+       하단 3버튼 자리까지 밀었다 → 판 폭을 100% 로 묶고 긴 글은 줄인다(style.css). */
   return `
   <div class="bd" id="board" aria-live="polite">
     <!-- 시계 — «날짜 · 요일» 위, «시각» 아래. 한 줄에 몰면 날짜가 시각에 묻힌다(2026-08-04) -->
@@ -5115,10 +5120,24 @@ function boardView() {
            초를 안 보여 주면 화면이 멈춘 것처럼 보인다. -->
       <span class="tm">${hh}<i class="${d.getSeconds() % 2 ? "off" : ""}">:</i>${mm}<u>${ss}</u></span>
     </div>
-    ${n ? `<div class="bd-now ${n.k}"><i></i><b>${n.t}</b>${n.s ? `<em>${n.s}</em>` : ""}</div>` : ""}
-    ${next ? `<div class="bd-next"><i aria-hidden="true" class="ti ti-pin"></i>${esc(next.start)} ${esc(next.title)}</div>` : ""}
+    <!-- 전광판 — **시계 판 안쪽 하단**(대표님 2026-08-10: 「시계 안에 하단에 있는게 차라리 좋다」).
+         판 밖에 글씨만 세웠더니 «못 알아보겠다» — 판 안에 있어야 전광판으로 읽힌다.
+         ⚠ 그래도 밑의 카드들과는 달라야 한다 → 카드 모양을 쓰지 않고 **판 안의 띠**로 둔다. -->
+    ${!n ? "" : (() => {
+      /* 🚦 **우 → 좌로 흐른다**(대표님 2026-08-10). 그래서 «전광판»이다.
+         흐르니까 글이 길어도 잘리지 않는다 — 「시간표가 아직 없...」으로 잘리던 문제가 같이 풀린다.
+         ⚠ 같은 문장을 **두 번** 이어 붙인다. 한 번만 두면 글이 다 지나간 뒤 빈 줄이 생긴다.
+         ⚠ 임박한 내 일정도 같은 줄에 이어 붙인다 — 줄이 둘이면 판이 또 커져 그림을 덮는다. */
+      const tail = next ? ` · 📌 ${esc(next.start)} ${esc(next.title)}` : "";
+      const one = `${n.t}${n.s ? ` · ${n.s}` : ""}${tail}`;
+      /* ⚠ 앞의 점을 뺐다(대표님 2026-08-10) — 점이 있으면 글이 그 뒤에서만 흐른다.
+         전광판은 **판 왼쪽 끝까지** 흘러야 전광판으로 보인다. */
+      return `<div class="bd-now ${n.k}"><div class="bd-mq"><span>${one}<b>${one}</b></span></div></div>`;
+    })()}
   </div>`;
 }
+
+
 /* ⚠ 예전엔 **분이 바뀔 때만** 갈아끼웠다 — 초를 보여 주기로 했으니 1초마다 돈다.
    화면 전체를 다시 그리지 않고 전광판 마크업만 바꿔 끼우므로 입력·스크롤은 안 튄다.
    분이 바뀔 때만 전광판을 갈아끼운다.
@@ -5136,7 +5155,17 @@ function startBoard() {
     const box = document.createElement("div");
     box.innerHTML = boardView();
     const fresh = box.firstElementChild;
-    if (fresh && fresh.innerHTML !== el.innerHTML) el.innerHTML = fresh.innerHTML;
+    if (!fresh) return;
+    /* ⚠ 판을 통째로 갈아끼우면 **흐르던 전광판이 매초 처음으로 튄다.**
+       시계는 매초 바뀌어야 하고, 전광판 줄은 «내용이 실제로 바뀔 때»만 손댄다. */
+    const t0 = el.querySelector(".bd-time"), t1 = fresh.querySelector(".bd-time");
+    if (t0 && t1 && t0.innerHTML !== t1.innerHTML) t0.innerHTML = t1.innerHTML;
+    const n0 = el.querySelector(".bd-now"), n1 = fresh.querySelector(".bd-now");
+    if (n1 && !n0) el.appendChild(n1);
+    else if (n0 && !n1) n0.remove();
+    else if (n0 && n1 && n0.innerHTML !== n1.innerHTML) {
+      n0.className = n1.className; n0.innerHTML = n1.innerHTML;
+    }
   }, 1000);   // 1초마다 — 초를 보여 주기로 했으니(2026-08-09). 전광판 마크업만 바꿔 끼워 가볍다
 }
 
@@ -6121,7 +6150,13 @@ function coachView() {
 function nowDoing() {
   const d = new Date();
   const wd = d.getDay();
-  if (wd === 0 || wd === 6) return null;
+  /* 🔴 **전광판은 늘 한 줄 있어야 한다**(대표님 2026-08-10: 「있는지 없는지 모르니깐」).
+     예전엔 토·일이면 여기서 곧장 null 을 돌려 **줄이 통째로 사라졌다.**
+     그러면 부모는 «오늘 아무 일도 없구나»가 아니라 «이 앱 고장 났나»로 읽는다.
+     ⚠ 원래 규칙(2026-07-28)은 「없는 일을 있다고 하지 마라」였다. 그건 지금도 맞다 —
+       다만 **없다고 말하는 것은 지어내는 것이 아니다.** 입을 닫는 대신 없다고 말한다.
+     ⚠ 주말에도 **학원은 간다** → 수업만 끄고 학원은 그대로 본다(방학과 같은 취급). */
+  const weekend = wd === 0 || wd === 6;
   const tt = ttOf();
   const grid = tt.grid || [];
   /* ⚠ **방학·휴업일이면 수업이 없다.** 시간표는 지난 학기 것이 그대로 남아 있어서,
@@ -6130,7 +6165,8 @@ function nowDoing() {
      방학에도 학원은 간다. 그래서 **수업만 끄고 학원은 그대로 본다.** */
   const onBreak = !!vacationRanges().find(([a0, b0]) => TODAY >= a0 && TODAY < b0)
     || schedulesOf().some((e) => e.date === TODAY && (e.closure_type || "").includes("휴업"));
-  const hasClass = !onBreak && grid.some((row) => row.some((v) => v));
+  // 주말엔 수업 칸을 아예 보지 않는다 — col = wd-1 이 −1 이 되어 엉뚱한 교시를 말한다
+  const hasClass = !weekend && !onBreak && grid.some((row) => row.some((v) => v));
   const now = d.getHours() * 60 + d.getMinutes();
   const L = lunchOf();
   const left = (m) => (m >= 60 ? `${Math.floor(m / 60)}시간 ${m % 60 ? `${m % 60}분` : ""}`.trim() : `${m}분`);
@@ -6173,12 +6209,21 @@ function nowDoing() {
 
   const next = acts.find((a) => a.start_time && toMin(a.start_time) > now);
   if (next) {
-    // 방학엔 «하교»가 틀린 말이다 — 학교를 안 갔다. 학원 이름만 말한다.
-    return onBreak
+    // 방학·주말엔 «하교»가 틀린 말이다 — 학교를 안 갔다. 학원 이름만 말한다.
+    return (onBreak || weekend)
       ? { t: esc(next.name), s: `${esc(next.start_time)} · ${left(toMin(next.start_time) - now)} 뒤`, k: "out" }
       : { t: "하교", s: `${left(toMin(next.start_time) - now)} 뒤 ${esc(next.name)}`, k: "out" };
   }
-  if (!acts.length) return onBreak ? { t: "방학", s: "오늘 학원 없음", k: "done" } : (hasClass ? { t: "오늘 일정 끝", s: "", k: "done" } : null);
+  if (!acts.length) {
+    /* 여기부터는 «오늘 더 할 게 없다». **그래도 말은 한다.**
+       순서가 뜻을 정한다 — 방학이면 방학이 먼저고(주말이어도 방학이다), 그 다음이 주말이다. */
+    if (onBreak) return { t: "방학", s: "오늘 학원 없음", k: "done" };
+    if (weekend) return { t: wd === 6 ? "토요일" : "일요일", s: "오늘 학원 없음", k: "done" };
+    if (hasClass) return { t: "오늘 일정 끝", s: "", k: "done" };
+    /* 학기 중 평일인데 시간표가 없다 — 학교가 아직 안 올렸거나 반이 안 맞는 경우다.
+       조용히 비우면 부모는 이유를 모른 채 «고장»으로 읽는다. */
+    return { t: "시간표가 아직 없어요", s: "학교가 올리면 들어와요", k: "none" };
+  }
   return { t: "오늘 일정 끝", s: `${esc(acts[acts.length - 1].name)}까지 마쳤어요`, k: "done" };
 }
 
