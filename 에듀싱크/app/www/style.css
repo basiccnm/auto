@@ -7138,3 +7138,22 @@ body {
    ══════════════════════════════════════════════════════════════════════ */
 :root body:has(#tabbar.hidden) #screen {
   padding-bottom: calc(env(safe-area-inset-bottom) + 40px); }
+
+/* ── 하단 3버튼이 시스템 네비게이션 바에 먹히던 것 (2026-08-09 폰 실측) ──────────
+   갤럭시 Z 폴드6에서 **달력·★ 가 아무리 눌러도 반응이 없었다.** 37px 위를 누르면 열렸다
+   → 버튼은 멀쩡한데 **아래 절반이 네비바 위에 놓여 터치를 뺏기고 있었다.**
+
+   원인 둘이 겹쳤다.
+   ① `env(safe-area-inset-bottom)` 이 이 폰에서 **0 으로 온다** — 웹뷰가 네비바를 안 알려준다.
+      그래서 `+ 22px` 만 남아 버튼이 네비바 안으로 들어갔다.
+      → 안전영역을 «못 받는 폰»을 기준으로 **최소 바닥 여백**을 따로 준다.
+   ② 세 버튼의 `bottom` 이 같은데 **크기가 다르다**(＋ 72px · 달력/★ 56px).
+      bottom 이 같으면 아래 끝이 같아, 작은 두 개는 중심이 8px 더 아래다.
+      그래서 ＋ 만 살아남고 좌우 둘만 죽었다 — 셋의 **중심**을 맞춘다. */
+:root .hv3-cal, :root .hv3-star, :root .hv3-fab {
+  bottom: max(calc(env(safe-area-inset-bottom) + 22px), 64px);
+}
+:root .hv3-cal, :root .hv3-star { bottom: max(calc(env(safe-area-inset-bottom) + 30px), 72px); }
+/* 본문이 버튼에 안 깔리게 — 버튼이 올라간 만큼 같이 올린다 */
+:root body:has(#tabbar.hidden) #screen:has(.hv3-star),
+:root #screen:has(.hv3-star) { padding-bottom: max(calc(env(safe-area-inset-bottom) + 112px), 154px); }
