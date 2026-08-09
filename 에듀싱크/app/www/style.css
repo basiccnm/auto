@@ -6538,3 +6538,41 @@ html:root[data-theme="charcoal"], html:root[data-theme="lavender"] {
    ⚠ .pl 은 서랍 ＋ 때문에 내가 만든 클래스다. --accent-ink 를 물리는데
      다크에서는 그것도 강조색이라 같이 걸렸다. */
 :root[data-theme="dark"] .faq-sechd, :root[data-theme="navy"] .faq-sechd, :root[data-theme="charcoal"] .faq-sechd, :root[data-theme="lavender"] .faq-sechd, :root[data-theme="dark"] .rp-hd, :root[data-theme="navy"] .rp-hd, :root[data-theme="charcoal"] .rp-hd, :root[data-theme="lavender"] .rp-hd, :root[data-theme="dark"] .dw-g, :root[data-theme="navy"] .dw-g, :root[data-theme="charcoal"] .dw-g, :root[data-theme="lavender"] .dw-g, :root[data-theme="dark"] .pl, :root[data-theme="navy"] .pl, :root[data-theme="charcoal"] .pl, :root[data-theme="lavender"] .pl, :root[data-theme="dark"] .dw-sem .pl, :root[data-theme="navy"] .dw-sem .pl, :root[data-theme="charcoal"] .dw-sem .pl, :root[data-theme="lavender"] .dw-sem .pl { color: color-mix(in srgb, var(--accent) 52%, #FFFFFF); }
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   🧊 유리 전환 나머지 절반 (2026-08-09)
+
+   전 49화면을 찍어 눈으로 보니 **홈·카드류만 유리**였고
+   폼·입력칸·설정 목록은 옛 불투명 살구색 그대로였다.
+   화면을 넘길 때마다 문법이 바뀌는 것이 「대충 만든 느낌」의 진짜 원인이었다.
+
+   ⚠ 입력칸은 전부 `--field` 하나를 쓴다 — 거기가 지렛대다.
+   ⚠ 어두운 테마는 흰빛을 4분의 1로. 같은 세기면 뿌옇게 뜬다(카드에서 겪은 것과 같다).
+   ══════════════════════════════════════════════════════════════════════ */
+input, select, textarea, .mp-list, .cs-body, .lg-field {
+  background-color: rgba(255, 255, 255, .44);
+  -webkit-backdrop-filter: blur(10px) saturate(1.15);
+          backdrop-filter: blur(10px) saturate(1.15);
+  border: 1px solid rgba(255, 255, 255, .55);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .55);
+}
+input:focus, select:focus, textarea:focus {
+  background-color: rgba(255, 255, 255, .66);
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  outline: none;
+}
+:root[data-theme="dark"] input, :root[data-theme="navy"] input,
+:root[data-theme="charcoal"] input, :root[data-theme="lavender"] input,
+:root[data-theme="dark"] select, :root[data-theme="navy"] select,
+:root[data-theme="charcoal"] select, :root[data-theme="lavender"] select,
+:root[data-theme="dark"] textarea, :root[data-theme="navy"] textarea,
+:root[data-theme="charcoal"] textarea, :root[data-theme="lavender"] textarea,
+:root[data-theme="dark"] .mp-list, :root[data-theme="navy"] .mp-list,
+:root[data-theme="charcoal"] .mp-list, :root[data-theme="lavender"] .mp-list,
+:root[data-theme="dark"] .cs-body, :root[data-theme="navy"] .cs-body,
+:root[data-theme="charcoal"] .cs-body, :root[data-theme="lavender"] .cs-body {
+  background-color: rgba(255, 255, 255, .09);
+  border-color: rgba(255, 255, 255, .15);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .12);
+}
