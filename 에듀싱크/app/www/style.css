@@ -7035,3 +7035,30 @@ body {
 :root .ml-kd.k-des    { background: #7B5CD6; }
 :root .ml-kdn { position: absolute; right: 2px; top: 50%; transform: translateY(-50%);
   text-decoration: none; font-size: 11px; font-weight: 800; color: var(--muted); }
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   🍚 급식 2칸 배치 (2026-08-09) — 「4줄 2칸이 더 좋지 않을까?」
+
+   7~8가지가 한 줄씩이면 카드가 길어진다. 2칸이면 절반 높이에 다 들어온다.
+   ⚠ 폭이 절반이라 오른쪽 이름표(밥·국·반찬)는 **뺀다** — 점 색이 이미 종류를 말한다.
+     둘 다 넣으면 「스테비아 방울토마토」 같은 긴 이름이 잘린다.
+   ⚠ 줄 구분선은 «칸 사이»에도 필요하다. 가로선만 두면 두 칸이 한 덩어리로 읽힌다.
+   ══════════════════════════════════════════════════════════════════════ */
+:root .ml-dishes { grid-template-columns: 1fr 1fr; column-gap: 10px; }
+:root .ml-dishes > span { padding-right: 4px; border-bottom: 1px solid color-mix(in srgb, var(--ink) 7%, transparent); }
+/* 마지막 «줄»의 두 칸만 선을 없앤다 — 홀수 개면 마지막 하나만 */
+:root .ml-dishes > span:nth-last-child(-n+2):nth-child(odd) ~ span,
+:root .ml-dishes > span:last-child { border-bottom: none; }
+:root .ml-kdn { display: none; }            /* 이름표는 뺀다 — 점 색이 말한다 */
+:root .ml-dishes .ml-no { font-size: 10.5px; }
+
+/* [주의] 2칸으로 좁히니 또 어절 중간에서 끊겼다 — 「쭈꾸미볶 / 음」「스테비아 방울토 / 마토」.
+   이 세션에서만 네 번째다. **좁은 칸에 한글을 넣을 때는 끊는 규칙을 같이 준다.**
+   → keep-all 로 어절째 넘기고, 글자를 조금 줄여 한 줄에 더 담는다.
+   [주의] 점을 top:50% 로 뒀더니 두 줄짜리에서 가운데로 밀렸다 —
+     점은 «첫 줄»에 붙어야 이름과 짝으로 읽힌다. */
+:root .ml-dishes > span { align-items: flex-start; word-break: keep-all;
+  overflow-wrap: normal; font-size: 14px; line-height: 1.4; padding-left: 15px; }
+:root .ml-kd { top: 8px; margin-top: 0; }
+:root .ml-dishes .ml-no { white-space: nowrap; }
