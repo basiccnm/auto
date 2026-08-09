@@ -9178,11 +9178,19 @@ const App = {
      ⚠ 성공/실패 판정을 앱이 하지 않는다. 「오늘은 이미 바꿨어요」도 서버가 말한다. */
   async msReroll() {
     const c = cur();
-    if (!c) return;
-    const r = await api(`/children/${c.id}/missions/reroll`, { method: "POST" });
-    /* ⚠ 막히는 경우는 거의 «오늘 이미 바꿨다» 하나다. 서버 안내문이 안 실려 오면
-       「지금은 바꿀 수 없어요」 같은 맹탕이 뜬다 — 그건 아이에게 아무것도 안 알려준다. */
-    if (!r.ok) { toast(r.message || "오늘은 이미 한 번 바꿨어요. 내일 다시 할 수 있어요."); return; }
+    /* 🔴 **서버 id 를 보낸다.** 예전엔 `c.id`(이 폰 안에서만 쓰는 번호)를 보냈다 —
+       서버엔 그 번호의 아이가 없어서 리롤이 매번 막혔다(폰 실측 2026-08-09).
+       미션 목록·미션 고르기는 이미 `c.server_id` 를 쓰는데 여기만 어긋나 있었다. */
+    if (!c || !c.server_id) { toast("아이 정보를 아직 못 받았어요. 잠시 뒤 다시 해주세요"); return; }
+    const r = await api(`/children/${c.server_id}/missions/reroll`, { method: "POST" });
+    /* ⚠ 실패 이유를 **지어내지 않는다.** 예전엔 `r.message`(없는 필드)를 읽고
+       실패하면 무조건 「오늘은 이미 한 번 바꿨어요」라고 했다 —
+       실제로는 주소가 틀려 막힌 것이었는데 그 문구 때문에 원인이 가려졌다.
+       서버 안내문은 `r.error.message` 에 온다. */
+    if (!r.ok) {
+      toast((r.error && r.error.message) || "지금은 바꿀 수 없어요. 잠시 뒤 다시 해주세요");
+      return;
+    }
     toast("오늘 미션을 바꿨어요");
     await this.loadMissions(true);
     this.render();
