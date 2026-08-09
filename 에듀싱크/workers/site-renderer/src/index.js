@@ -1810,6 +1810,32 @@ function checkBasicAuth(request, env) {
   return password === env.ADMIN_PASSWORD || user === env.ADMIN_PASSWORD;
 }
 
+/* 관리자 이름 — Basic Auth 사용자명. 감사 로그의 «누가»다.
+   ⚠ 지금은 고정 비밀번호 한 벌이라 사람을 못 가른다. 그래도 «빈칸»보다는 낫고,
+     나중에 관리자 계정을 나누면 이 함수만 고치면 된다. */
+function adminActor(request) {
+  const auth = request.headers.get("Authorization") || "";
+  if (!auth.startsWith("Basic ")) return "unknown";
+  try {
+    const d = atob(auth.slice(6));
+    const i = d.indexOf(":");
+    return (i === -1 ? d : d.slice(0, i)) || "admin";
+  } catch { return "unknown"; }
+}
+
+/* 🔴 감사 로그 — 「누가·언제·무엇을·대상·사유」(대표님 요구 §4).
+   ⚠ **기록에 실패해도 하던 일을 막지 않는다.** 로그 때문에 CS 가 멈추면 안 된다.
+     대신 콘솔에 남겨서 놓친 걸 나중에 찾을 수 있게 한다. */
+async function audit(db, request, action, { kind = null, id = null, detail = null, reason = null } = {}) {
+  try {
+    await db.prepare(
+      "INSERT INTO admin_audit (at, actor, action, target_kind, target_id, detail, reason, ip) VALUES (?,?,?,?,?,?,?,?)"
+    ).bind(new Date().toISOString(), adminActor(request), action,
+      kind, id == null ? null : String(id), detail, reason,
+      request.headers.get("CF-Connecting-IP") || null).run();
+  } catch (e) { console.error("[audit]", action, e && e.message); }
+}
+
 function unauthorized() {
   return new Response("Unauthorized", {
     status: 401,
@@ -2052,14 +2078,24 @@ async function handleAdminAdjustExpiry(request, db) {
   const form = await request.formData();
   const token = (form.get("owner_token") || "").toString();
   const days = parseInt((form.get("days") || "").toString(), 10);
-  if (!token || !Number.isFinite(days)) return redirect("/admin/members");
+  const reason = (form.get("reason") || "").toString().trim();
+  if (!token || !Number.isFinite(days)) return redirect("/admin/members?err=bad");
+  /* 🔴 **사유 없이는 못 바꾼다**(대표님 요구 §2·§4).
+     이용권을 손으로 주고 회수하는 이상, 사유가 없으면 나중에
+     «왜 이 계정만 1년이지?» 를 아무도 답할 수 없다. */
+  if (reason.length < 2) return redirect("/admin/members?err=reason");
+
   const kids = (await db.prepare("SELECT id, trial_expires_at FROM children WHERE owner_token = ? AND is_test = 0").bind(token).all()).results;
   for (const k of kids) {
     const base = k.trial_expires_at ? new Date(k.trial_expires_at).getTime() : Date.now();
     const nd = new Date(base + days * 86400000).toISOString();
     await db.prepare("UPDATE children SET trial_expires_at = ? WHERE id = ?").bind(nd, k.id).run();
   }
-  return redirect("/admin/members");
+  await audit(db, request, "pass_adjust", {
+    kind: "account", id: token,
+    detail: `${days > 0 ? "+" : ""}${days}일 · 자녀 ${kids.length}명`, reason,
+  });
+  return redirect("/admin/members?ok=adjust");
 }
 
 // 결제 관리 — 결제 내역 전체 조회(검색: 이름/owner_token 일부) + 환불/수정/삭제.
@@ -2868,12 +2904,20 @@ export default {
         return handleAdminDevSeed(request, db, env);
       if (path === "/admin/members/add-test-child" && request.method === "POST")
         return handleAdminAddTestChild(request, db);
-      if (path === "/admin/members/token-delete" && request.method === "POST")
+      if (path === "/admin/members/token-delete" && request.method === "POST") {
+        // 되돌릴 수 없는 삭제 — 무엇을 지웠는지 남긴다
+        const f = await request.clone().formData().catch(() => null);
+        await audit(db, request, "member_delete", { kind: "account",
+          id: f ? String(f.get("owner_token") || "") : null, detail: "부모의 자녀 전체 삭제" });
         return handleAdminMemberTokenDelete(request, db, env);
+      }
       const childEditMatch = path.match(/^\/admin\/members\/(\d+)\/edit$/);
       if (childEditMatch && request.method === "POST") return handleAdminMemberEditChild(request, db, childEditMatch[1]);
       const childDeleteMatch = path.match(/^\/admin\/members\/(\d+)\/delete$/);
-      if (childDeleteMatch && request.method === "POST") return handleAdminDeleteChild(db, childDeleteMatch[1], env);
+      if (childDeleteMatch && request.method === "POST") {
+        await audit(db, request, "child_delete", { kind: "child", id: childDeleteMatch[1], detail: "자녀 삭제" });
+        return handleAdminDeleteChild(db, childDeleteMatch[1], env);
+      }
       if (path === "/admin/members/adjust" && request.method === "POST") return handleAdminAdjustExpiry(request, db);
 
       if (path === "/admin/community") return handleAdminCommunity(db);
@@ -2928,14 +2972,20 @@ export default {
       }
 
       if (path === "/admin/orders") return handleAdminOrders(db, url);
+      /* ⚠ 돈이 오가는 자리 — **누가 확인했는지 남긴다.** 남기지 않으면
+         나중에 «이 주문은 왜 켜졌지?» 를 아무도 답할 수 없다. */
       const ordConfirmMatch = path.match(/^\/admin\/orders\/(\d+)\/confirm$/);
       if (ordConfirmMatch && request.method === "POST") {
-        await confirmOrderByAdmin(db, ordConfirmMatch[1]);
+        const r = await confirmOrderByAdmin(db, ordConfirmMatch[1]);
+        await audit(db, request, "order_confirm", { kind: "order", id: ordConfirmMatch[1],
+          detail: r && r.ok ? `이용권 ${r.expires} 까지` : `실패(${r && r.reason})` });
         return redirect("/admin/orders");
       }
       const ordCancelMatch = path.match(/^\/admin\/orders\/(\d+)\/cancel$/);
       if (ordCancelMatch && request.method === "POST") {
-        await cancelOrderByAdmin(db, ordCancelMatch[1]);
+        const r = await cancelOrderByAdmin(db, ordCancelMatch[1]);
+        await audit(db, request, "order_cancel", { kind: "order", id: ordCancelMatch[1],
+          detail: r && r.ok ? "취소" : `실패(${r && r.reason})` });
         return redirect("/admin/orders");
       }
 

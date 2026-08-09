@@ -214,8 +214,24 @@ function adminSharedScript() {
     window.closeModal=function(){document.getElementById('ov').classList.remove('on');};
     var _cf=null;
     window.uiConfirmCb=function(title,body,fn,okLabel,danger){document.getElementById('cft').textContent=title;document.getElementById('cfb').textContent=body||'';var b=document.getElementById('cfok');b.textContent=okLabel||'확인';b.className='btn '+(danger?'dng':'pri');_cf=fn;document.getElementById('cf').classList.add('on');};
-    window.cfCancel=function(){document.getElementById('cf').classList.remove('on');_cf=null;};
-    document.getElementById&&document.addEventListener('click',function(e){if(e.target&&e.target.id==='cfok'){var f=_cf;cfCancel();if(f)f();}});
+    window.cfCancel=function(){document.getElementById('cf').classList.remove('on');_cf=null;var r=document.getElementById('cfreason');if(r)r.remove();};
+    /* 사유를 받는 확인창 (2026-08-10 대표님 요구) —
+       이용권을 손으로 주고 회수하는 일은 «왜 그랬는지»가 없으면 나중에 아무도 답할 수 없다.
+       ⚠ 두 글자 미만이면 진행시키지 않는다. 서버도 같은 기준으로 막는다. */
+    window.uiReasonCb=function(title,body,fn,okLabel,danger){
+      uiConfirmCb(title,body,null,okLabel,danger);
+      var box=document.getElementById('cfb');
+      var i=document.createElement('input');i.id='cfreason';i.className='btn';
+      i.style.cssText='cursor:text;width:100%;margin-top:12px';
+      i.placeholder='사유 (필수) — 예: 고객센터 보상, 오류 보정';
+      box.parentNode.insertBefore(i,box.nextSibling);setTimeout(function(){i.focus();},50);
+      _cf=function(){fn((document.getElementById('cfreason')||{}).value||'');};
+    };
+    document.getElementById&&document.addEventListener('click',function(e){if(e.target&&e.target.id==='cfok'){
+      /* ⚠ 창을 먼저 닫으면 사유 칸이 사라져 값을 못 읽는다 — 읽고 나서 닫는다. */
+      var f=_cf;if(!f)return;var r=document.getElementById('cfreason');
+      if(r&&r.value.trim().length<2){showToast('사유를 적어주세요');r.focus();return;}
+      var v=r?r.value.trim():null;cfCancel();f(v);}});
     document.addEventListener('keydown',function(e){if(e.key==='Escape'){closeModal();cfCancel();}});
     var _tt=null;
     window.showToast=function(m){var t=document.getElementById('toast');t.textContent=m;t.classList.add('on');if(_tt)clearTimeout(_tt);_tt=setTimeout(function(){t.classList.remove('on');},1800);};
@@ -421,7 +437,11 @@ export function adminMembersPage(groups, subscriber = false, maxChildren = 3, ba
           +'<button class="btn dng" style="width:100%" onclick="delMember('+i+')">회원(부모) 전체 삭제</button></div>'
           +'</div>');
       };
-      window.adjM=function(i,days){postForm('/admin/members/adjust',{owner_token:MEMBERS[i].ownerToken,days:days});};
+      window.adjM=function(i,days){var m=MEMBERS[i];
+        uiReasonCb('이용기간 '+(days>0?'+':'')+days+'일',
+          m.rep+' 의 자녀 전원 만료일을 '+(days>0?'늘립니다':'줄입니다')+'. 기록에 남습니다.',
+          function(reason){postForm('/admin/members/adjust',{owner_token:m.ownerToken,days:days,reason:reason});},
+          days>0?'늘리기':'줄이기', days<0);};
       window.delChild=function(i,ci){var c=MEMBERS[i].kids[ci];uiConfirmCb('자녀 삭제','"'+c.nickname+'" 자녀를 삭제합니다. 되돌릴 수 없습니다.',function(){postForm('/admin/members/'+c.id+'/delete');},'삭제',true);};
       window.delMember=function(i){var m=MEMBERS[i];uiConfirmCb('회원 전체 삭제','"'+m.rep+'"(부모)의 모든 자녀를 삭제합니다. 계정·결제 기록은 보존됩니다.',function(){postForm('/admin/members/token-delete',{owner_token:m.ownerToken});},'삭제',true);};
       window.editChild=function(i,ci){var c=MEMBERS[i].kids[ci];
