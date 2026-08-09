@@ -5415,8 +5415,14 @@ function parentMissionAdmin(c, coin) {
   }
 
   /* ── 허브 — 2×2 카드. 아이 홈과 **같은 문법**이라 배울 게 없다 ── */
+  /* 타일이 갈 수 있는 곳은 셋이다 — 안쪽 탭(pmTab) · 주소(#) · **직접 실행(!)**.
+     ⚠ 「미션 고르기」는 화면만 띄우면 안 되고 **카탈로그를 받아와야** 한다
+       (안 그러면 「불러오는 중…」에서 멈춘다). 그래서 실행 형태가 필요하다. */
   const tile = (key, icon, name, note, cnt, cls) => `
-    <button class="pm-tile${cls ? " " + cls : ""}" onclick="${key.startsWith("#") ? `location.hash='${key}'` : `App.pmTab('${key}')`}">
+    <button class="pm-tile${cls ? " " + cls : ""}" onclick="${
+      key.startsWith("!") ? key.slice(1)
+      : key.startsWith("#") ? `location.hash='${key}'`
+      : `App.pmTab('${key}')`}">
       ${cnt ? `<span class="pm-badge">${cnt}</span>` : ""}
       <span class="pm-ti">${icon}</span>
       <b>${esc(name)}</b>
@@ -5441,7 +5447,14 @@ function parentMissionAdmin(c, coin) {
       ${tile("bonus", "⭐", "추가 증정", leftBonus ? `${leftBonus}개에 줄 수 있어요` : "해낸 미션에 ＋1", leftBonus)}
       ${tile("today", "📋", "오늘 한 것", "아침·학교·방과후", 0)}
       ${tile("#store", "🏪", "진열대 꾸미기", "바꿀 것을 정해요", 0)}
-      ${tile("#mission", "🎯", "미션 고르기", "무엇을 시킬지", 0)}
+      <!-- 🔴 「미션 고르기」가 **#mission(오늘 준 것)** 으로 가고 있었다(대표님 지적 2026-08-10:
+             「미션 고르기도 이상하게 되어 있는데」).
+           고르는 화면은 **#missionpick** 이다 — 카탈로그에서 담는 곳.
+           #mission 은 «오늘 이 아이에게 뭘 줬나»를 보는 곳이라, 이름과 도착지가 어긋나 있었다.
+           ⚠ 이름이 「고르기」면 고르는 화면으로 가야 한다. 그게 안 맞으면 부모는
+             «눌렀는데 다른 게 나온다»로 읽고, 그때부터 이 앱을 못 믿는다. -->
+      ${tile("!App.missionPickOpen()", "🎯", "미션 고르기", "무엇을 시킬지", 0)}
+      ${tile("#mission", "📅", "오늘 준 미션", "지금 뭘 주고 있나", 0)}
       ${tile("preview", "👀", "아이 화면", "아이가 보는 그대로", 0)}
     </div>
   </div>`;
