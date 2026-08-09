@@ -7055,3 +7055,28 @@ body {
 :root .hd-bell, :root .hd-box { overflow: hidden; }
 :root .hd-bell i, :root .hd-box i,
 :root .hd-bell .ti, :root .hd-box .ti { font-size: 20px; line-height: 1; }
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   🎯 원 안의 아이콘이 아래로 쏠리던 것 (2026-08-09, 폴드6 확대 실측)
+
+   원은 `place-items: center` 로 가운데를 잡는데, **아이콘 글꼴은 글자다** —
+   글자에는 위아래로 여백(어센더·디센더)이 붙어 있어서 «글자 상자»의 가운데와
+   «그림의 가운데»가 다르다. 그래서 종이 아래로 삐져나왔다.
+   → `line-height: 1` + `display: block` 으로 글자 여백을 없애고, 원 안에서 다시 가운데를 잡는다.
+   ⚠ 이 앱에서 이미 한 번 겪은 함정이다(「원형 버튼이 38×44 타원」 — style.css 주석).
+     **아이콘은 그림이 아니라 글자다.**
+   ══════════════════════════════════════════════════════════════════════ */
+:root .hd-bell, :root .hd-box {
+  display: flex; align-items: center; justify-content: center; line-height: 0; }
+:root .hd-bell i, :root .hd-box i,
+:root .hd-bell .ti, :root .hd-box .ti {
+  display: block; line-height: 1; font-size: 20px; }
+
+/* ☰ 메뉴 — 그림 위에 맨몸으로 얹혀 어두운 그림에서 묻혔다(대표님 지적).
+   ⚠ 종·서랍과 «같은 문법»으로 맞춘다 — 셋이 따로 놀면 그게 더 눈에 띈다.
+     다만 원을 그리지 않고 «글자에 그림자»만 줘서 화면이 무거워지지 않게. */
+:root #screen:has(.hv3-art) .hv3-ham {
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, .55), 0 0 10px rgba(0, 0, 0, .35);
+}
