@@ -6537,7 +6537,7 @@ html:root[data-theme="charcoal"], html:root[data-theme="lavender"] {
      그 테마의 강조색을 **흰쪽으로 섞어** 밝기만 올린다. 색은 그대로 간다.
    ⚠ .pl 은 서랍 ＋ 때문에 내가 만든 클래스다. --accent-ink 를 물리는데
      다크에서는 그것도 강조색이라 같이 걸렸다. */
-:root[data-theme="dark"] .faq-sechd, :root[data-theme="navy"] .faq-sechd, :root[data-theme="charcoal"] .faq-sechd, :root[data-theme="lavender"] .faq-sechd, :root[data-theme="dark"] .rp-hd, :root[data-theme="navy"] .rp-hd, :root[data-theme="charcoal"] .rp-hd, :root[data-theme="lavender"] .rp-hd, :root[data-theme="dark"] .dw-g, :root[data-theme="navy"] .dw-g, :root[data-theme="charcoal"] .dw-g, :root[data-theme="lavender"] .dw-g, :root[data-theme="dark"] .pl, :root[data-theme="navy"] .pl, :root[data-theme="charcoal"] .pl, :root[data-theme="lavender"] .pl, :root[data-theme="dark"] .dw-sem .pl, :root[data-theme="navy"] .dw-sem .pl, :root[data-theme="charcoal"] .dw-sem .pl, :root[data-theme="lavender"] .dw-sem .pl { color: color-mix(in srgb, var(--accent) 52%, #FFFFFF); }
+:root[data-theme="dark"] .faq-sechd, :root[data-theme="navy"] .faq-sechd, :root[data-theme="charcoal"] .faq-sechd, :root[data-theme="lavender"] .faq-sechd, :root[data-theme="dark"] .rp-hd, :root[data-theme="navy"] .rp-hd, :root[data-theme="charcoal"] .rp-hd, :root[data-theme="lavender"] .rp-hd, :root[data-theme="dark"] .dw-g, :root[data-theme="navy"] .dw-g, :root[data-theme="charcoal"] .dw-g, :root[data-theme="lavender"] .dw-g, :root[data-theme="dark"] .pl, :root[data-theme="navy"] .pl, :root[data-theme="charcoal"] .pl, :root[data-theme="lavender"] .pl, :root[data-theme="dark"] .dw-sem .pl, :root[data-theme="navy"] .dw-sem .pl, :root[data-theme="charcoal"] .dw-sem .pl, :root[data-theme="lavender"] .dw-sem .pl { color: color-mix(in srgb, var(--accent) 34%, #FFFFFF); }  /* 52% 는 4.11 까지밖에 안 올랐다(실측) */
 
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -6644,3 +6644,20 @@ input:focus, select:focus, textarea:focus {
    면을 밝히면 그 위 글씨도 같이 손봐야 한다. 오늘만 세 번째다.
    --ink 는 테마 밝기를 따라가므로 라이트·다크 양쪽에서 성립한다. */
 :root .camera-box b, :root .camera-box span, :root .camera-box em { color: var(--ink); }
+
+/* [주의] 부모(.faq-sechd 등)에만 색을 주면 **자기 색을 가진 자식**은 안 바뀐다(실측).
+   다크에서 강조색 글씨가 남은 세 자리는 자식까지 같이 물린다. */
+:root[data-theme="dark"] .faq-sechd *, :root[data-theme="navy"] .faq-sechd *,
+:root[data-theme="charcoal"] .faq-sechd *, :root[data-theme="lavender"] .faq-sechd *,
+:root[data-theme="dark"] .rp-hd *, :root[data-theme="navy"] .rp-hd *,
+:root[data-theme="charcoal"] .rp-hd *, :root[data-theme="lavender"] .rp-hd *,
+:root[data-theme="dark"] .dw-g *, :root[data-theme="navy"] .dw-g *,
+:root[data-theme="charcoal"] .dw-g *, :root[data-theme="lavender"] .dw-g * {
+  color: color-mix(in srgb, var(--accent) 34%, #FFFFFF);
+}
+
+/* 다크에서 강조색을 글씨로 쓴 마지막 자리 — 부모가 아니라 **그 글씨 자체**를 잡는다.
+   .rp-list b (지호·체육) 는 .rp-hd 밖이라 앞의 규칙이 안 닿았다(실측으로 확인). */
+:root[data-theme="dark"] .rp-list b, :root[data-theme="navy"] .rp-list b, :root[data-theme="charcoal"] .rp-list b, :root[data-theme="lavender"] .rp-list b, :root[data-theme="dark"] .rp-list li b, :root[data-theme="navy"] .rp-list li b, :root[data-theme="charcoal"] .rp-list li b, :root[data-theme="lavender"] .rp-list li b, :root[data-theme="dark"] .dw-fab button span, :root[data-theme="navy"] .dw-fab button span, :root[data-theme="charcoal"] .dw-fab button span, :root[data-theme="lavender"] .dw-fab button span, :root[data-theme="dark"] .mk-add, :root[data-theme="navy"] .mk-add, :root[data-theme="charcoal"] .mk-add, :root[data-theme="lavender"] .mk-add, :root[data-theme="dark"] .dw-year .pl, :root[data-theme="navy"] .dw-year .pl, :root[data-theme="charcoal"] .dw-year .pl, :root[data-theme="lavender"] .dw-year .pl, :root[data-theme="dark"] .dw-sem .pl, :root[data-theme="navy"] .dw-sem .pl, :root[data-theme="charcoal"] .dw-sem .pl, :root[data-theme="lavender"] .dw-sem .pl {
+  color: color-mix(in srgb, var(--accent) 34%, #FFFFFF);
+}

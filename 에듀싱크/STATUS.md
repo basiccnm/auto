@@ -1661,3 +1661,15 @@ CDP_TIMEOUT=300000 node scripts/emul_eval.mjs --file scripts/probe_screens.js
 
 대비 전수 재측정: 245번 중 **3건**(전부 다크, 3.41~4.11).
 남은 3건은 클래스 없는 SPAN/B 라 부모에 색을 줘도 안 먹는다 — app.js 에서 클래스를 붙여야 한다.
+
+### ✅ 대비 전수 통과 — 245번 중 0건 (2026-08-09 최종)
+
+49화면 × 5조합(라이트 3 · 다크 2). `node scripts/emul_eval.mjs --file scripts/probe_contrast_all.js`
+
+마지막 세 자리는 **부모에 색을 줘도 안 먹었다** — 자식이 자기 색을 갖고 있었다.
+`.rp-list b`(지호·체육)는 `.rp-hd` **밖**이라 앞 규칙이 안 닿았다. 기기에서 부모 사슬을
+찍어 보고서야 알았다(`B ← LI ← .rp-list`).
+→ 부모에 주고 끝내지 말 것. **그 글씨 자체**를 잡고 computed 로 확인할 것.
+
+다크 강조색 글씨는 `color-mix(var(--accent) 34%, #FFF)` 로 통일했다(52% 는 4.11 까지밖에 안 올랐다).
+색상(hue)은 테마마다 다르므로 **고정색이 아니라 그 테마 강조색을 흰쪽으로 섞는다.**
