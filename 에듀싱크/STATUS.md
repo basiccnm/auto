@@ -1609,3 +1609,16 @@ CDP_TIMEOUT=300000 node scripts/emul_eval.mjs --file scripts/probe_screens.js
 4. **규칙을 썼다 ≠ 규칙이 이겼다.** 특정성에 밀려 조용히 안 먹는다. 기기에서 computed 로 확인할 것.
 5. **좁은 규칙을 넓은 규칙 위에 얹을 때는 «겹치는 칸»을 보라.**
    일요일 규칙이 «오늘이면서 일요일인 칸»을 덮어 2.09 를 만들었다.
+
+### 🔑 릴리즈 서명 키 위치 (2026-08-09)
+
+**`C:\Users\hardb\Desktop\eduthink-release-key\`** (대표님 지시로 바탕화면 보관)
+같은 것이 `C:\Users\hardb\eduthink-release-key\` 에도 남아 있다 — 지워도 된다.
+
+⚠ **폴더 이름에 한글을 쓰지 말 것.** 「에듀싱크-서명키」로 만들었더니 Gradle 이 경로를
+  깨뜨려 「Keystore file not found」로 빌드가 죽었다(실측). 영문 이름을 유지한다.
+⚠ **`keytool -printcert -jarfile` 로 APK 를 검증하지 말 것.** 그건 v1(JAR) 전용이라
+  「서명된 jar 파일이 아닙니다」가 뜬다 — **서명이 없다는 뜻이 아니다.**
+  요즘 Gradle 은 v2/v3 로 서명하고 그건 APK Signing Block 에 들어간다.
+  → 검증은 APK 안에서 `APK Sig Block 42` 와 v2/v3 태그를 찾는다(실측으로 확인함). AAB 는 keytool 로 된다.
+⚠ 디스크가 죽으면 두 벌 다 사라진다 — **드라이브·USB 에 한 벌 더** 넣어야 진짜 백업이다.
