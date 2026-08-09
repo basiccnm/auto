@@ -5054,6 +5054,7 @@ function boardView() {
   const d = new Date();
   const hh = String(d.getHours()).padStart(2, "0");
   const mm = String(d.getMinutes()).padStart(2, "0");
+  const ss = String(d.getSeconds()).padStart(2, "0");
   const n = nowDoing();                       // 없으면 null — 그 줄을 안 그린다
   // 임박한 부모 일정 = 오늘 것 중 «지금 이후» 가장 가까운 하나. 지난 것은 임박이 아니다
   const nowMin = d.getHours() * 60 + d.getMinutes();
@@ -5065,13 +5066,17 @@ function boardView() {
     <!-- 시계 — «날짜 · 요일» 위, «시각» 아래. 한 줄에 몰면 날짜가 시각에 묻힌다(2026-08-04) -->
     <div class="bd-time">
       <span class="dt">${fmtD(+TODAY.slice(4, 6), +TODAY.slice(6))} ${["일", "월", "화", "수", "목", "금", "토"][d.getDay()]}요일</span>
-      <span class="tm">${hh}<i>:</i>${mm}</span>
+      <!-- ⚠ 초까지 보여 준다(2026-08-09 지시). 콜론은 1초마다 깜빡여 «살아 있다»를 말한다.
+           초를 안 보여 주면 화면이 멈춘 것처럼 보인다. -->
+      <span class="tm">${hh}<i class="${d.getSeconds() % 2 ? "off" : ""}">:</i>${mm}<u>${ss}</u></span>
     </div>
     ${n ? `<div class="bd-now ${n.k}"><i></i><b>${n.t}</b>${n.s ? `<em>${n.s}</em>` : ""}</div>` : ""}
     ${next ? `<div class="bd-next"><i aria-hidden="true" class="ti ti-pin"></i>${esc(next.start)} ${esc(next.title)}</div>` : ""}
   </div>`;
 }
-/* 분이 바뀔 때만 전광판을 갈아끼운다.
+/* ⚠ 예전엔 **분이 바뀔 때만** 갈아끼웠다 — 초를 보여 주기로 했으니 1초마다 돈다.
+   화면 전체를 다시 그리지 않고 전광판 마크업만 바꿔 끼우므로 입력·스크롤은 안 튄다.
+   분이 바뀔 때만 전광판을 갈아끼운다.
    ⚠ 화면 전체를 다시 그리면 안 된다 — 입력 중이던 칸이 날아가고(한글 조합 깨짐),
      스크롤도 튄다. 전광판 마크업만 바꿔 끼운다. */
 let QUIZ_TIMER = null;   // 퀴즈 문제당 카운트다운(전체 렌더와 분리)
@@ -5087,7 +5092,7 @@ function startBoard() {
     box.innerHTML = boardView();
     const fresh = box.firstElementChild;
     if (fresh && fresh.innerHTML !== el.innerHTML) el.innerHTML = fresh.innerHTML;
-  }, 15000);   // 15초마다 확인 — 분이 바뀌는 순간을 1분 늦게 따라가지 않으려고
+  }, 1000);   // 1초마다 — 초를 보여 주기로 했으니(2026-08-09). 전광판 마크업만 바꿔 끼워 가볍다
 }
 
 /* ═══ 아이 흔적 (2026-08-03 지시서 0803-1 §3) ═══════════════════

@@ -7032,3 +7032,26 @@ body {
    ══════════════════════════════════════════════════════════════════════ */
 :root #screen:has(.hv3-art) .hd-top { padding-top: env(safe-area-inset-top); }
 :root #screen:has(.hv3-art) .hv3-art { margin-top: calc(env(safe-area-inset-top) * -1 - 6px); }
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   📱 폴드6 실기에서 나온 세 가지 (2026-08-09)
+     ① ☰·서랍·종이 상태 표시줄에 **바짝 붙었다** — 가려지진 않는데 숨이 막힌다
+     ② 시계에 **초가 없고 깜빡이지도 않아** 멈춘 것처럼 보였다
+     ③ 원형 버튼 안의 아이콘이 **원보다 커서** 밖으로 비어져 나왔다
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ① 상태 표시줄과 아이콘 사이에 숨 쉴 자리 */
+:root #screen:has(.hv3-art) .hd-top { padding-top: calc(env(safe-area-inset-top) + 12px); }
+:root #screen:has(.hv3-art) .hv3-art { margin-top: calc((env(safe-area-inset-top) + 12px) * -1 - 6px); }
+
+/* ② 초 — 시·분보다 작게. 콜론은 1초마다 깜빡인다(«살아 있다»는 신호) */
+:root .bd-time .tm u { text-decoration: none; font-size: .52em; font-weight: 800;
+  margin-left: 3px; opacity: .72; font-variant-numeric: tabular-nums; }
+:root .bd-time .tm i { transition: opacity .18s; }
+:root .bd-time .tm i.off { opacity: .18; }
+
+/* ③ 원형 버튼 안의 아이콘이 원보다 컸다 — 원 안에 들어오게 줄이고 넘치면 자른다 */
+:root .hd-bell, :root .hd-box { overflow: hidden; }
+:root .hd-bell i, :root .hd-box i,
+:root .hd-bell .ti, :root .hd-box .ti { font-size: 20px; line-height: 1; }
