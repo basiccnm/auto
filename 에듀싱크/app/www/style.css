@@ -6510,3 +6510,31 @@ html:root[data-theme="charcoal"], html:root[data-theme="lavender"] {
 /* 부모 미션판 뱃지 2.65 — 밝은 분홍 위 흰 글씨. 분홍은 유지하고 톤만 내린다
    (아이 세계 .gm-tkn 과 **같은 원인·같은 값**이다) */
 :root .pm-badge { background: #D01B63; }
+
+
+/* ── 달력 «오늘» 칸 · 「오늘」 딱지 (2026-08-09) ──────────────────────
+
+   ⚠ 달력 오늘 칸 2.09 는 **내가 만든 것**이다. 위에서 일요일 숫자를 `:root .gc-num.sun`
+     (클래스 3개)으로 잡았는데, 원래 오늘 칸 규칙 `.gc-cell.today .gc-num`(클래스 2개)보다
+     특정성이 높아 **오늘이면서 일요일인 칸**의 글씨를 빨강으로 되돌려 놨다.
+     어두운 원 위 빨강 = 2.09. 좁은 규칙을 넓은 규칙 위에 얹을 때는 «겹치는 칸»을 봐야 한다. */
+:root .gc-cell.today .gc-num, :root .gc-cell.today .gc-num.sun {
+  background: var(--ink); color: var(--bg); }
+
+/* 「오늘」 딱지 — 강조색 글씨를 카드 면에 얹어 4.18/3.87.
+   딱지는 «면»이 어울린다. 어두운 알약 + 흰 글씨면 테마 18종 어디서도 같은 값이다. */
+:root .tdy { background: rgba(24, 20, 40, .82); color: #FFFFFF;
+  padding: 2px 9px; border-radius: 999px; font-weight: 800; }
+
+
+/* ── 다크에서 «강조색을 글씨로» 쓴 자리 (2026-08-09) ────────────────
+
+   유리 카드가 한 단계 밝아지면서 다크 강조색(#8BA2F9 류)이 3.99 로 내려왔다.
+   ⚠ 여기는 **알약이 답이 아니다.** 뒤가 유리 카드 하나로 균일하고,
+     「급식·시간표·일정」 같은 본문이라 알약을 씌우면 뱃지처럼 읽힌다.
+     알약은 «뒤 색이 여러 가지일 때»의 답이다(kb-here · pv-star · tdy).
+   ⚠ 고정색도 답이 아니다 — 테마마다 강조색의 색상(hue)이 다르다.
+     그 테마의 강조색을 **흰쪽으로 섞어** 밝기만 올린다. 색은 그대로 간다.
+   ⚠ .pl 은 서랍 ＋ 때문에 내가 만든 클래스다. --accent-ink 를 물리는데
+     다크에서는 그것도 강조색이라 같이 걸렸다. */
+:root[data-theme="dark"] .faq-sechd, :root[data-theme="navy"] .faq-sechd, :root[data-theme="charcoal"] .faq-sechd, :root[data-theme="lavender"] .faq-sechd, :root[data-theme="dark"] .rp-hd, :root[data-theme="navy"] .rp-hd, :root[data-theme="charcoal"] .rp-hd, :root[data-theme="lavender"] .rp-hd, :root[data-theme="dark"] .dw-g, :root[data-theme="navy"] .dw-g, :root[data-theme="charcoal"] .dw-g, :root[data-theme="lavender"] .dw-g, :root[data-theme="dark"] .pl, :root[data-theme="navy"] .pl, :root[data-theme="charcoal"] .pl, :root[data-theme="lavender"] .pl, :root[data-theme="dark"] .dw-sem .pl, :root[data-theme="navy"] .dw-sem .pl, :root[data-theme="charcoal"] .dw-sem .pl, :root[data-theme="lavender"] .dw-sem .pl { color: color-mix(in srgb, var(--accent) 52%, #FFFFFF); }
