@@ -6736,3 +6736,28 @@ input:focus, select:focus, textarea:focus {
    «쪼개짐»을 볼 때는 그 요소가 아니라 **부모의 배치**를 먼저 본다. */
 :root .rp-sec { display: block; }
 :root .rp-sec .rp-note { margin-top: 10px; }
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   🎚 라이트에서 면 대비가 모자란다 — 18종 전부 1.13:1 (2026-08-09 실측)
+
+   ⚠ **글자 대비 235번 0건인데도** 이게 걸렸다. 글자만 재고 «면»을 안 쟀기 때문이다.
+     글자가 다 읽혀도 카드가 배경에 묻히면 화면은 밋밋하고 «공책 느낌»이 된다.
+     → `scripts/probe_surface.js` 신설.
+   ⚠ 라이트만 걸리는 이유 — 배경이 이미 밝아서 «흰빛 44%»가 거의 티가 안 난다.
+     다크는 어두운 배경 위라 9% 만으로도 갈린다.
+   ⚠ 색을 바꾸지 않는다. **유리를 한 단계 진하게** 할 뿐이라 테마 18종이 그대로 간다.
+   ══════════════════════════════════════════════════════════════════════ */
+:root:not([data-theme="dark"]):not([data-theme="navy"]):not([data-theme="charcoal"]):not([data-theme="lavender"]) {
+  --glass-face-l: rgba(255, 255, 255, .68);
+}
+:root:not([data-theme="dark"]):not([data-theme="navy"]):not([data-theme="charcoal"]):not([data-theme="lavender"]) :is(
+  .card, .mp-card, .ml-card, .st-item, .tk, .dw-year, .dp-row, .ms-row, .nt-item,
+  .mp-row, .ml-row, .sec-card, .hd-ms, .msc, .hv3-card, .hv3-row, .daycard, .dy-sec,
+  .rp-sec, .rp-sum, .mp-list, .cs-body, .cm-card, .legal section,
+  .ib, .st-purse, .dw-search, .faq-sec, .edrow, .gc-day, .th-act, .cm-intro, .cm-rules,
+  .ca-note, .char-card, .camera-box, .stickybar, .wk, .plan, .dc-quota, .condbox, .docview,
+  input, select, textarea
+) {
+  background-color: var(--glass-face-l);
+}
