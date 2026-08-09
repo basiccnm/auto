@@ -2032,7 +2032,7 @@ const Screens = {
     if (!c) return `${subHeader("미션")}
       <div class="ms-empty">
         <b>아이를 등록하면 시작해요</b>
-        <button class="btn-primary" onclick="location.hash='#register'">아이 등록하기</button>
+        <button class="btn-primary" onclick="App.childAddStart()">아이 등록하기</button>
       </div>`;
     if (list === null) return `${subHeader("미션")}<p class="sub">불러오는 중…</p>`;
 
@@ -2246,7 +2246,7 @@ const Screens = {
     if (!c) return `${subHeader("스타코인 상점")}
       <div class="ms-empty">
         <b>아이를 등록하면 열려요</b>
-        <button class="btn-primary" onclick="location.hash='#register'">아이 등록하기</button>
+        <button class="btn-primary" onclick="App.childAddStart()">아이 등록하기</button>
       </div>`;
     if (S.store === null) return `${subHeader("스타코인 상점")}<p class="sub">불러오는 중…</p>`;
 
@@ -2309,7 +2309,7 @@ const Screens = {
     if (!c) return `${subHeader("내 티켓")}
       <div class="ms-empty">
         <b>아이를 등록하면 열려요</b>
-        <button class="btn-primary" onclick="location.hash='#register'">아이 등록하기</button>
+        <button class="btn-primary" onclick="App.childAddStart()">아이 등록하기</button>
       </div>`;
     if (S.rewards === null) return `${subHeader("내 티켓")}<p class="sub">불러오는 중…</p>`;
     if (!S.rewards.length) return `${subHeader("내 티켓")}
@@ -2626,7 +2626,7 @@ const Screens = {
            들이미는 게 싫어서였다. 그건 지금도 맞다. 그래서 **가입이 아니라 «이유»**를 말한다.
          ⚠ 빈 카드 넉 장만 있는 홈은 «고장난 앱»처럼 보인다.
            ☰ 안에 「아이 등록하기」가 있지만, 메뉴를 열어야 보이는 것은 «없는 것»에 가깝다. -->
-    ${cur() ? "" : `<button class="hm-start" onclick="location.hash='#child-add'">
+    ${cur() ? "" : `<button class="hm-start" onclick="App.childAddStart()">
       <b>아이를 등록하면 시작돼요</b>
       <em>급식 · 시간표 · 학사일정이 매일 저절로 들어와요<i aria-hidden="true" class="ti ti-chevron-right"></i></em>
     </button>`}
@@ -4064,7 +4064,10 @@ const Screens = {
               `<button class="${(T[key] || opts[0][0]) === v ? "on" : ""}" onclick="App.timeOpt('${key}','${v}')">${n}</button>`).join("")}</span>
           </div>`;
         return seg("weekStart", [["sun", "일"], ["mon", "월"]], "요일 시작")
-             + seg("dateFmt", [["ko", "8월 3일"], ["dot", "8.3"]], "날짜 형식")
+             /* 보기글은 **오늘 날짜**로 쓴다. 「8월 3일」로 박아 두면 그날이 지난 뒤엔
+               부모가 «왜 8월 3일이지?» 하고 한 번 멈춘다(폰 실측 2026-08-09). */
+            + seg("dateFmt", [["ko", `${+TODAY.slice(4, 6)}월 ${+TODAY.slice(6, 8)}일`],
+                              ["dot", `${+TODAY.slice(4, 6)}.${+TODAY.slice(6, 8)}`]], "날짜 형식")
              + seg("timeFmt", [["24", "15:00"], ["12", "오후 3시"]], "시간 형식");
       })()}
     </div>
@@ -4097,6 +4100,13 @@ const Screens = {
     <div class="mp-list">
       ${row("", "이용약관", "", "location.hash='#terms'")}
       ${row("", "개인정보처리방침", "", "location.hash='#policy'")}
+      /* ⚠ 아직 가입하지 않은 사람에게 「로그아웃」·「회원 탈퇴」를 보여 주고 있었다(폰 실측).
+         나갈 문만 있고 **들어올 문이 없었다** — 설정 어디에도 가입 길이 없었다.
+         가입 전에는 그 둘을 감추고 「가입하기」와 「로그인」만 둔다. */
+      ${!TOKENS.access ? `
+        ${row("", "가입하기", "", "location.hash='#register'", "accent")}
+        ${row("", "로그인", "", "location.hash='#login'")}
+      ` : `
       ${row("", "로그아웃", "", "App.logout()")}
       ${(() => {
         // 광고성 수신 채널별 켜고 끄기 — 철회 수단은 의무다(방침 9항). 서버(accounts.marketing)에 바로 반영.
@@ -4106,6 +4116,7 @@ const Screens = {
           <span class="mk-chips">${chip("email", "메일")}${chip("sms", "문자")}${chip("call", "전화")}</span></div>`;
       })()}
       ${row("", "회원 탈퇴", "", "App.withdrawAsk()", "danger")}
+      `}
     </div>
 
     <!-- 이름 수정 시트 폐지(§4) — 전용 화면 Screens.editname -->
@@ -5995,7 +6006,7 @@ function drawerView(c) {
       </button>
 
       <div class="hv3-drpass">${esc(pass?.t || "무료 사용 중")}</div>`
-      : `<button class="hv3-drwho" onclick="App.drawerClose();location.hash='#register'">
+      : `<button class="hv3-drwho" onclick="App.drawerClose();App.childAddStart()">
         <span class="nm"><b>아이 등록하기</b></span>
         <i aria-hidden="true" class="ti ti-chevron-right"></i>
       </button>`}
@@ -7411,6 +7422,11 @@ function passDaysLeft(c) {
      2주 체험이 남아 있는데도 첫 실행이 통째로 막힌 것이다.
    ⚠ 기한은 **서버가 주는 값**이다. 앱이 지어내지 않는다. 값이 없으면 닫힌 것으로 본다. */
 const passOpen = (c) => {
+  /* `pass === null` 은 «방금 등록해서 서버 응답을 기다리는 중»뿐이다(childAdd → childSaveServer).
+     그 아이는 서버가 방금 14일 체험을 붙여 준 아이다 → 잠그지 않는다.
+     잠가 두면 등록하자마자 «이용권이 필요해요» 잠금화면이 번쩍인다.
+     ⚠ 진짜 데이터는 어차피 서버가 막는다 — 앱이 이중으로 막을 자리가 아니다. */
+  if (c && c.pass === null) return true;
   if (c?.pass?.active) return true;
   const until = String(c?.pass?.free_open_until || "");
   return /^\d{8}$/.test(until) && TODAY <= until;
@@ -7418,6 +7434,8 @@ const passOpen = (c) => {
 /* 아이 하나의 이용권 상태를 한마디로. 세 화면(내정보·자녀전환·잠금)이 같은 말을 쓴다.
    ⚠ 「무료」라고 쓰지 않는다 — 2026-07-28부터 무료 티어가 없다. 체험이 끝나면 «필요»다. */
 function passLabel(c) {
+  // 서버 응답이 아직 안 왔으면 **모르는 것**이다 — 「끝났다」고 단정하지 않는다.
+  if (!c || c.pass == null) return { t: "확인 중", cls: "" };
   if (!passOpen(c)) return { t: "이용권 필요", cls: "need" };
   const d = passDaysLeft(c);
   if (d <= 14) return { t: d <= 0 ? "체험 오늘까지" : `체험 ${d}일`, cls: d <= 3 ? "soon" : "" };
@@ -8319,6 +8337,16 @@ const App = {
     S.childEditId = null;
     S.childDraft = { grade: "3", class_name: "1", nickname: "", name: "", agree: false, school: null };
     S.schoolQuery = ""; S.schoolHits = null;
+    /* 🔴 **미가입이면 자녀를 등록시키지 않는다**(대표님 확정 2026-08-09).
+       예전엔 그냥 폼을 열어 줬다 → `childSaveServer` 가 토큰이 없어 **조용히 return** 하고,
+       자녀는 이 폰 메모리에만 남았다. 부모는 등록됐다고 믿는데 앱을 껐다 켜면 사라진다.
+       실제로 그렇게 잃었다(폰 실측: 서버 D1 에 그 아이가 없었다).
+       ⚠ 폼을 다 채우게 한 뒤 되돌리면 입력이 아깝다 → **들어오는 자리에서** 가입으로 보낸다.
+         가입이 끝나면 register() 가 이 화면(#child-add)으로 도로 데려온다. */
+    if (!TOKENS.access) {
+      toast("아이를 등록하려면 먼저 가입해야 해요");
+      location.hash = "#register"; this.render(); return;
+    }
     location.hash = "#child-add"; this.render();
   },
   // 자녀 정보 수정 시작 — 기존 값을 폼에 채우고 수정 모드로
@@ -8345,6 +8373,12 @@ const App = {
   },
   childSave() {
     const d = S.childDraft;
+    /* 입구(childAddStart)에서 막지만, 주소를 직접 치거나 오래 열어 둔 화면으로도 여기 닿는다.
+       **서버에 못 올릴 자녀를 만들지 않는다** — 만들면 조용히 사라진다. */
+    if (S.childEditId == null && !TOKENS.access) {
+      toast("아이를 등록하려면 먼저 가입해야 해요");
+      location.hash = "#register"; this.render(); return;
+    }
     if (!d.nickname.trim()) return toast("별명을 넣어주세요");
     if (!d.agree) return toast("보호자 동의가 있어야 기록을 보관할 수 있어요");
     const sc = d.school || schoolInfo();
@@ -8375,7 +8409,12 @@ const App = {
       grade: String(d.grade), class_name: String(d.class_name), grade_code: +d.grade, birth_year: null,
       // 올라가기 전까진 화면에서 보이는 주소(blob)를 쓴다 — 아바타가 이모지로 깜빡이지 않게
       photoLocal: d.photoPreview || null, photo: null,
-      pass: { active: false, expires_at: null, free_open_until: "20260820" },
+      /* ⚠ 이용권을 **여기서 지어내지 않는다.** 예전엔 `expires_at:null` 을 박아 넣었는데,
+         그러면 남은 날이 −1일이 되고 화면엔 「체험 오늘까지」가 떴다 —
+         방금 등록한 부모가 서랍을 열면 체험이 이미 끝났다고 나왔다(2026-08-09 폰 실측).
+         기한은 **서버가 아는 값**이다(등록 시 14일). 응답이 오면 childSaveServer 가 채운다.
+         `free_open_until` 을 날짜로 박아 두던 것도 뺐다 — 그 날이 지나면 신규 등록이 통째로 잠긴다. */
+      pass: null,
       counts: { records: 0, activities: 0 },
     });
     S.currentChildId = id;                                   // 방금 만든 캐릭터로 바로 전환
@@ -8437,7 +8476,12 @@ const App = {
     if (!r?.ok) { toast(r?.error?.message || "서버에 자녀를 못 만들었어요 (이 기기에만 저장됨)"); return; }
     const c = STUB.children.find((x) => x.id === localId);
     const sid = r.data.id ?? r.data.child?.id ?? null;
-    if (c) c.server_id = sid;
+    if (c) {
+      c.server_id = sid;
+      // 이용권·사진 경로는 **서버가 준 것**을 쓴다. 앱이 계산하지 않는다.
+      const src = r.data.child || r.data;
+      if (src.pass) c.pass = src.pass;
+    }
     this.render();
     // 등록 화면에서 미리 고른 사진을 이제 올린다 — 자녀가 있어야 붙일 자리가 생긴다
     if (pendingPhoto && sid) {
