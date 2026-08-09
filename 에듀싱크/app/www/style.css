@@ -6761,3 +6761,47 @@ input:focus, select:focus, textarea:focus {
 ) {
   background-color: var(--glass-face-l);
 }
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   🪟 유리가 «유리로 보이게» — 배경에 테마 그림을 아주 옅게 (2026-08-09)
+
+   대표님 지적: 「홈 말고 다른 화면은 유리 느낌이 하나도 없는데?」 — 맞다.
+   유리 속성(blur·반투명·테두리)은 다 넣었는데 **뒤에 비칠 것이 없었다.**
+   홈이 유리로 보인 건 뒤에 일러스트가 있었기 때문이고, 다른 화면은 배경이
+   단색이라 blur 가 아무것도 흐리지 않는다 → 그냥 «밝은 카드 한 장»이 된다.
+
+   → 화면 전체 뒤에 그 테마의 그림을 **아주 옅게** 깐다. 읽는 데 방해되면 안 되므로
+     흐리게 + 옅게 + 고정(스크롤해도 안 움직인다)으로 «분위기»만 남긴다.
+   ⚠ 홈의 일러스트 띠(.hv3-art)와는 다른 층이다 — 그건 선명한 «그림»,
+     이건 뒤에서 유리에 비치는 «재료»다.
+   ⚠ z-index 를 음수로 두고 pointer-events 를 끊는다. 누를 것을 가리면 안 된다.
+   ══════════════════════════════════════════════════════════════════════ */
+/* (앞서 넣은 body::before 층은 background-image 가 none 으로 계산돼 안 먹었다 — 걷어냈다) */
+
+
+
+/* 배경 그림을 **body 에 직접** 깐다 — 위(veil)에 테마 배경색을 덮어 옅게 만든다.
+   ⚠ `#screen` 이 같은 색을 **불투명하게** 칠하고 있어 뒤에 뭘 깔아도 가려졌다.
+     투명으로 내려야 body 의 그림이 비친다. 이게 유리가 «유리로 보이는» 조건이다.
+   ⚠ background-attachment: fixed — 스크롤해도 그림이 안 따라 움직인다(«창밖» 느낌). */
+body {
+  background-image:
+    /* ⚠ 78% 로 뒀더니 그림이 아예 안 보였다 — 배경색과 그림이 같은 계열이라
+       22% 로는 티가 안 난다. 「깔았는데 안 보인다」는 «안 깔린 것»과 같다. */
+    linear-gradient(color-mix(in srgb, var(--bg) 52%, transparent),
+                    color-mix(in srgb, var(--bg) 52%, transparent)),
+    var(--art-img);
+  background-size: cover, cover;
+  background-position: center top, center top;
+  background-attachment: fixed, fixed;
+  background-repeat: no-repeat, no-repeat;
+}
+#screen { background: transparent; }
+:root[data-theme="dark"] body, :root[data-theme="navy"] body,
+:root[data-theme="charcoal"] body, :root[data-theme="lavender"] body {
+  background-image:
+    linear-gradient(color-mix(in srgb, var(--bg) 62%, transparent),
+                    color-mix(in srgb, var(--bg) 62%, transparent)),
+    var(--art-img);
+}
