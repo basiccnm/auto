@@ -3537,7 +3537,11 @@ const Screens = {
                   `<option value="${n}" ${+S.childDraft.class_name === n ? "selected" : ""}>${n}반</option>`).join("")}
           </select>
           <p class="sub">${(S.classNames || []).length
-            ? `${g}학년 실제 반 이름이에요`
+            ? (S.classNames.some((n) => String(n) === String(S.childDraft.class_name))
+                ? `${g}학년 실제 반 이름이에요`
+                /* ⚠ 저장된 반이 실제 목록에 없으면 **시간표가 안 나온다.**
+                   조용히 두면 부모는 이유를 모른 채 빈 시간표만 본다 — 반드시 말해 준다. */
+                : `⚠ 지금 「${esc(String(S.childDraft.class_name))}」로 돼 있는데 이 학년엔 없는 반이에요. 다시 골라주세요`)
             : (S.classBusy ? "반 이름을 알아보는 중…" : `${g}학년은 ${classes}개 반이에요`)}</p></div>
       </div>
       <label class="f">별명 * <span style="font-weight:400">(화면에는 이 이름만 보여요)</span></label>
@@ -6344,6 +6348,13 @@ const hitAllergens = (meal) => [...new Set(meal.dishes.flatMap((d) => d.allergen
 function mealTab() {
   const q = S.mealQuery.trim();
   // 일반 학교는 중식만. 기숙사형이면 조식·석식까지 들어온다(웹과 같은 규칙 — 있는 끼니만 탭에 띄운다).
+  /* ⚠ 예전엔 「기숙사형 학교」 스위치(S.dorm)를 **부모가 직접 켜야** 조식·석식이 보였다.
+     그런데 그 스위치가 있는 줄 모르면 서울과학고처럼 세 끼를 다 주는 학교에서도
+     점심만 보게 된다(2026-08-09 실측: 데이터는 47건인데 화면엔 점심뿐이었다).
+     → **급식에 조식·석식이 있으면 알아서 켠다.** 스위치는 끄고 싶을 때만 쓴다.
+     ⚠ 사용자가 직접 끈 경우(S.dormTouched)는 그 뜻을 존중한다. */
+  const hasOther = mealsOf().some((m) => m.type === "조식" || m.type === "석식");
+  if (hasOther && !S.dorm && !S.dormTouched) S.dorm = true;
   const types = [...new Set(mealsOf().map((m) => m.type))]
     .filter((t) => S.dorm || t === "중식")
     .sort((a, b) => MEAL_ORDER[a] - MEAL_ORDER[b]);
@@ -6443,8 +6454,11 @@ function mealTab() {
                  그걸 이름과 같은 크기로 두면 「호박잎된장국 (5.6.12)」이 한 덩어리로 읽혀
                  반찬 이름이 눈에 안 들어온다(대표님 지적 08-09).
                  → 번호를 떼어 작고 흐리게. 이름만 굵게 남긴다. */
-              const mm = String(d.name).match(/^(.*?)\s*\(([\d.\s]+)\)\s*$/);
-              const nm = mm ? mm[1] : d.name;
+              /* ⚠ NEIS 는 이름 앞뒤에 «*» 를 붙여 준다(자체 표기라 부모에겐 뜻이 없다).
+                 서울과학고 급식에서 「*배추김치」처럼 그대로 노출됐다 — 걷어낸다. */
+              const clean = String(d.name).replace(/^[*\s]+|[*\s]+$/g, "");
+              const mm = clean.match(/^(.*?)\s*\(([\d.\s]+)\)\s*$/);
+              const nm = mm ? mm[1] : clean;
               const no = mm ? mm[2].trim() : "";
               const kd = mealKind(nm);
               const body = `<i class="ml-kd k-${kd.k}" aria-hidden="true"></i>`
@@ -8295,7 +8309,15 @@ const App = {
       server_id: c.server_id || null, photo: c.photo || null,
     };
     S.schoolQuery = ""; S.schoolHits = null;
+    S.classNames = null;
     location.hash = "#child-add"; this.render();
+    /* ⚠ 반 이름 고치기를 «새 등록»에만 넣었더니 **이미 가입한 아이는 그대로 숫자**였다.
+       실서버 자녀 11명 전원이 숫자 반이라, 반을 말로 쓰는 학교(「난초·매화·장미」)
+       아이는 고친 뒤에도 시간표가 0건이었다(2026-08-09 실측).
+       → 고치기 화면에서도 실제 반 이름을 받아온다. 기존 값은 그대로 두고 «고를 길»만 준다. */
+    if (S.childDraft.school?.slug && S.childDraft.grade) {
+      this.loadClassNames(S.childDraft.school.slug, S.childDraft.grade);
+    }
   },
   childSave() {
     const d = S.childDraft;
@@ -8702,7 +8724,7 @@ const App = {
     this.render();
   },
   mealType(t) { S.mealType = t; this.render(); },
-  toggleDorm() { S.dorm = !S.dorm; if (!S.dorm) S.mealType = "중식"; this.render(); },
+  toggleDorm() { S.dorm = !S.dorm; S.dormTouched = true;   /* 직접 만졌으면 자동으로 안 바꾼다 */ if (!S.dorm) S.mealType = "중식"; this.render(); },
   // key = "YYYYMMDD|끼니" — 기숙사형은 같은 날 아침·점심·저녁 알람을 따로 걸 수 있어야 한다.
   toggleMealAlarm(key) {
     const [date, type] = key.split("|");

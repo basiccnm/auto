@@ -375,7 +375,10 @@ function parseDishesJs(raw) {
 const TT_ENDPOINT = { "초등학교": "elsTimetable", "중학교": "misTimetable", "고등학교": "hisTimetable" };
 
 // index.js와 같은 값으로 맞춰 둔다. (이 파일은 index.js와 의도적으로 독립 — 위 14행 주석 참고)
-const MEAL_FETCH_DAYS = 30;
+/* ⚠ 30 → 60 (2026-08-09 지시). 「오늘부터 30일」만 받으니 **지난달 급식을 못 본다** —
+   리포트의 «지난달 비교»도 못 하고, 학기 초에 지난 학기를 돌아볼 수도 없다.
+   NEIS 는 과거 급식도 준다(실측 확인). 한 번에 두 달을 받아 둔다. */
+const MEAL_FETCH_DAYS = 60;
 const MEAL_RESYNC_DAYS = 7;   // 남은 일수가 아니라 수집 시각으로 판정(방학엔 급식이 없어 항상 부족으로 보인다)
 
 async function warmMeals(db, school, today, key) {

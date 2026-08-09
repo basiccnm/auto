@@ -7095,3 +7095,11 @@ body {
 :root .card .sub a { position: relative; display: inline-block; }
 :root .card .sub a::after { content: ""; position: absolute;
   left: 0; right: 0; top: 50%; transform: translateY(-50%); min-width: 44px; height: 44px; }
+
+/* [주의] 알레르기 번호에 overflow-wrap: anywhere 를 줬더니 «1 / 2 / 5 / 6» 처럼
+   **한 글자씩 세로로 쏟아졌다**(기숙사 학교의 긴 번호에서 드러났다).
+   가로 넘침을 막으려다 세로로 무너뜨린 것이다 — 번호는 한 덩어리로 두고,
+   칸을 넘치면 «…»로 줄인다. 알레르기 번호는 «있다»가 중요하지 다 안 읽어도 된다. */
+:root .ml-dishes .ml-no { overflow-wrap: normal; word-break: keep-all;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 46px;
+  display: inline-block; vertical-align: -1px; }

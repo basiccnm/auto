@@ -322,7 +322,7 @@ async function batchChunked(db, stmts, size = 50) {
 // 급식 보유 창 — 롤링(2026-07-24 지시: 달 단위로 끊지 말고 계속 앞으로 밀어라).
 // 판정 기준은 "언제 받았나"(TTL)다. "며칠치 남았나"로 판정하면 안 된다 —
 // 방학엔 NEIS에 급식 자체가 없어서 항상 부족으로 나오고, 열 때마다 NEIS를 때리게 된다.
-const MEAL_FETCH_DAYS = 30;
+const MEAL_FETCH_DAYS = 60;   /* 30 → 60 (2026-08-09) — 지난달 급식을 볼 수 있게 */
 const MEAL_RESYNC_DAYS = 7;   // 학교당 최대 주 1회만 다시 받는다(급식표는 수시로 바뀜)
 
 async function ensureMeals(db, school, today) {
