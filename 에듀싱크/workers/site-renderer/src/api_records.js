@@ -90,9 +90,13 @@ const MAX_CHILDREN = 3;
 const FREE_MAX_CHILDREN = 1;
 const FREE_MAX_RECORDS = 20;
 const PAID_MAX_RECORDS = 1000;
-// 2026-07-28 사장님 확정: **2주 체험 후 전면 유료.** 무료 티어는 없다.
+// 2026-07-28 사장님 확정: 체험 후 전면 유료. 무료 티어는 없다.
+// 2026-08-10 대표님 확정: 체험은 **1주일**(TRIAL_DAYS = 7). 약관 제5조도 7일로 맞췄다.
 // (7일은 «알림장 한 번 받아보기»도 안 되는 길이였다 — 한 주 다 돌려봐야 값을 안다)
-const TRIAL_DAYS = 14;
+/* 체험 기간 — **1주일**(대표님 확정 2026-08-10: 「1주일 무료체험」).
+   ⚠ 문서(지시서 §1.3)는 1주, 코드는 2주로 오래 어긋나 있었다. 이제 문서가 맞다.
+   ⚠ 이미 체험 중인 아이는 안 건드린다 — 새로 등록하는 아이부터 7일이다. */
+const TRIAL_DAYS = 7;
 function maxChildrenFor(isPaid, freeOpen = false) {
   return freeOpen || isPaid ? MAX_CHILDREN : FREE_MAX_CHILDREN;
 }

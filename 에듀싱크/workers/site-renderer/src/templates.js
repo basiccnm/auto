@@ -1872,12 +1872,13 @@ export function registerChildPage(school, gradeClassMap = {}, isPaid = false, fr
   // ⚠️ 예전 문구는 "이름은 받지 않아요"였다 — 이름 입력칸을 바로 아래 두면서 그 문구를 남겨두면
   //    화면 자체가 거짓말이 된다(회신4 Q1으로 이름 수집이 확정됨). 2026-07-19 정정.
   const lead = `${school ? `<b>${schoolNameHtml(school.name)}</b> · ` : ""}자녀 정보를 입력하면 <b>결제 없이 바로</b> 시간표·학사일정·전체 급식이 열리고 광고가 사라져요.`;
-  // ⚠ 체험 기간은 코드가 정본이다(TRIAL_DAYS = 14, index.js·api_records.js). 약관 제5조도 14일.
+  // ⚠ 체험 기간은 코드가 정본이다(TRIAL_DAYS = 7, api_records.js). 약관 제5조도 7일.
+  //    2026-08-10 대표님 확정으로 14일 → **7일**. 앱·웹·약관·FAQ 를 한 번에 맞췄다.
   //    여기만 「1주일」이라 화면과 실제가 어긋나 있었다 — 2026-08-01 맞춤.
-  const cta = freeOpen ? "무료로 시작하기" : "14일 무료로 시작하기";
+  const cta = freeOpen ? "무료로 시작하기" : "7일 무료로 시작하기";
   const footNote = freeOpen
-    ? `· <b>${school ? schoolNameHtml(school.name) : "우리 아이 학교"} 개학(${fmtDate(openUntil)})</b> 전까지 모든 기능이 무료예요. 그 뒤에는 14일 무료 체험이 이어집니다.`
-    : `· 14일 후 자동으로 다시 잠기며, <b>자동 결제되지 않아요</b>. 계속 쓰려면 그때 직접 결제하시면 됩니다.`;
+    ? `· <b>${school ? schoolNameHtml(school.name) : "우리 아이 학교"} 개학(${fmtDate(openUntil)})</b> 전까지 모든 기능이 무료예요. 그 뒤에는 7일 무료 체험이 이어집니다.`
+    : `· 7일 후 자동으로 다시 잠기며, <b>자동 결제되지 않아요</b>. 계속 쓰려면 그때 직접 결제하시면 됩니다.`;
 
   const body = `
   <div style="min-height:100vh;background:${C.bg};padding:20px 18px;max-width:100%;margin:0 auto">
@@ -2228,7 +2229,7 @@ export function aboutPage() {
     </div>
     <div style="max-width:100%;margin:0 auto;padding:22px 18px">
       <h2 style="margin:0;font-size:clamp(17px, 14.5px + 0.7vw, 20px);font-weight:800;color:${C.ink}">무료로 먼저 써보세요</h2>
-      <p style="margin:6px 0 12px;font-size:13px;color:${C.muted2};line-height:1.6">자녀 등록하면 <b>14일 무료 체험</b>. 자동 결제 없어요.</p>
+      <p style="margin:6px 0 12px;font-size:13px;color:${C.muted2};line-height:1.6">자녀 등록하면 <b>7일 무료 체험</b>. 자동 결제 없어요.</p>
       <div style="background:#fff;border:1px solid ${C.border};border-radius:16px;overflow:hidden">
         <table style="width:100%;border-collapse:collapse">
           <tr style="background:#F7F9FB"><th style="padding:9px 8px;text-align:left;font-size:11px;color:${C.muted}">항목</th><th style="padding:9px 8px;font-size:11px;color:${C.muted}">무료</th><th style="padding:9px 8px;font-size:11px;color:${C.greenDark};background:${C.greenBg}">유료</th></tr>
@@ -2282,7 +2283,7 @@ const FAQ_WEB = [
     ["연결을 끊고 싶어요.", "내 정보 → 자녀폰 → 끊기를 누르면 그 즉시 자녀 폰에서 접속이 끊깁니다."],
   ]],
   ["이용권·결제", [
-    ["무료로 얼마나 써볼 수 있나요?", "자녀를 등록하면 14일 동안 모든 기능을 무료로 쓸 수 있습니다. 자동으로 결제되지 않아요."],
+    ["무료로 얼마나 써볼 수 있나요?", "자녀를 등록하면 7일 동안 모든 기능을 무료로 쓸 수 있습니다. 자동으로 결제되지 않아요."],
     ["결제는 자녀별인가요?", "네. 이용권은 자녀 1명 기준이라 자녀가 늘면 이용권도 따로 필요합니다."],
     ["환불하고 싶어요.", "앱 결제는 Google Play를 통해 이뤄집니다. Play 스토어 → 결제 및 정기 결제 → 주문 내역에서 환불을 신청할 수 있고, 진행이 어려우면 문의해 주세요."],
     ["이용권이 남았는데 연장하면 어떻게 되나요?", "남은 기간 뒤에 이어 붙습니다. 남은 날짜가 사라지지 않아요."],
@@ -2353,7 +2354,7 @@ export function termsPage() {
     ["제2조 (서비스 내용)", "서비스는 ① NEIS·학교알리미 등 공공데이터 기반의 급식·시간표·학사일정 안내 ② 자녀 기록(상장·통지표 등) 보관 ③ 교외체험학습 신청서·결석신고서 등 서식 작성 도움 ④ 준비물·일정 관리와 알림 ⑤ 자녀 기기 연결 기능을 제공합니다."],
     ["제3조 (정보의 성격)", "급식·시간표·학사일정은 공공데이터 공시 시점 기준이며 학교 사정으로 실제와 다를 수 있습니다. 서식은 일반적인 양식을 기준으로 하며 학교마다 다를 수 있으므로 제출 전 학교 안내를 확인해야 합니다. 서비스가 제공하는 정보는 참고용입니다."],
     ["제4조 (계정)", "가입은 보호자 본인이 해야 하며, 계정·비밀번호 관리 책임은 이용자에게 있습니다. 만 14세 미만 아동은 직접 가입할 수 없고, 자녀 기기 연결은 보호자가 발급한 코드로만 가능합니다."],
-    ["제5조 (이용권과 결제)", "서비스는 무료 체험 기간(자녀 등록 후 14일) 후 유료 이용권으로 이용합니다. 결제는 Google Play 인앱 결제로 처리되며, 가격·기간은 결제 화면에 표시된 내용을 따릅니다. 이용권은 자녀 1명 기준이며 자녀 추가 시 별도 이용권이 필요합니다."],
+    ["제5조 (이용권과 결제)", "서비스는 무료 체험 기간(자녀 등록 후 7일) 후 유료 이용권으로 이용합니다. 결제는 Google Play 인앱 결제로 처리되며, 가격·기간은 결제 화면에 표시된 내용을 따릅니다. 이용권은 자녀 1명 기준이며 자녀 추가 시 별도 이용권이 필요합니다."],
     ["제6조 (환불)", "환불은 Google Play 환불 정책과 전자상거래 등에서의 소비자보호에 관한 법률에 따릅니다."],
     ["제7조 (이용자 콘텐츠)", "이용자가 올린 기록(사진·메모 등)의 권리는 이용자에게 있으며, 회사는 보관·표시 목적 범위에서만 처리합니다. 회사는 이용자 콘텐츠를 광고 등 다른 목적에 쓰지 않습니다."],
     ["제8조 (금지행위)", "타인의 계정 도용, 서비스의 비정상적 이용(자동화 수집, 서버 공격 등), 법령 위반 목적의 이용을 금지합니다."],

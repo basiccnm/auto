@@ -7382,3 +7382,28 @@ body {
 }
 :root #board .bd-now { margin-top: 7px; padding-top: 7px; min-height: 0; }
 :root #board .bd-mq { line-height: 1.45; }
+
+/* 로그인 화면 «닫기» — 홈에서 들어왔다가 못 나오던 것 (2026-08-10 폰 실측).
+   ⚠ 안전영역을 못 주는 폰이 있어 max() 로 바닥값을 깐다(하단 3버튼에서 겪은 것과 같다). */
+:root .lg-close {
+  position: absolute; left: 10px; z-index: 5;
+  top: max(calc(env(safe-area-inset-top) + 8px), 40px);
+  width: 44px; height: 44px; min-height: 44px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; line-height: 0;
+  background: var(--card-a); border: none; color: var(--ink); font-size: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .10);
+}
+:root .lg-close i { display: block; line-height: 1; }
+:root .lg-wrap { position: relative; }
+
+/* 시작 카드에 설명이 없을 때 — 제목 한 줄 + 화살표만. 두 줄짜리 여백을 그대로 두면 허전하다. */
+:root .hm-start.one { display: flex; align-items: center; gap: 10px; padding: 18px; }
+:root .hm-start.one > b { flex: 1; min-width: 0; }
+:root .hm-start.one > i { flex: none; opacity: .6; }
+
+/* 이용권 목록 맨 위의 «1주일 무료체험» — 고르는 것이 아니라 지금 상태를 말하는 줄이다.
+   ⚠ 다른 줄과 같은 모양이면 «누를 수 있다»고 읽힌다 → 점선 테두리로 갈라 둔다. */
+:root .plan.trial { border-style: dashed; opacity: .92; cursor: default; }
+:root .plan.trial.on { border-color: var(--accent); }
+:root .plan.trial > b { font-size: 14px; color: var(--muted); }
+:root .plan.trial.on > b { color: var(--accent); }
