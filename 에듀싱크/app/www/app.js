@@ -4125,14 +4125,29 @@ const Screens = {
           <em>${x[cntKey]}${unit}</em></li>`).join("");
     };
 
+    /* ⚠ 한 달을 봤는데 «알려주는 게 없다»는 지적(08-09). 세부 목록만 있고 요약이 없었다.
+       맨 위에 «며칠 남겼나»를 먼저 놓는다 — 부모가 제일 먼저 궁금한 것이다.
+       ⚠ 없는 숫자를 만들지 않는다. 여기 쓰는 값은 전부 서버가 준 것뿐이다. */
+    const sum = [
+      ["🍚", "급식", r.meal?.days || 0],
+      ["🧒", "친구", r.play?.days || 0],
+      ["📘", "과목", r.subject?.days || 0],
+    ];
     return `
     <a class="back" href="#mission" aria-label="뒤로"><i aria-hidden="true" class="ti ti-chevron-left"></i></a>
     <h1 class="pg-h">${esc(c?.nickname || "아이")} 리포트</h1>
     ${nav}
 
+    <div class="rp-sum">
+      <b class="rp-sum-h">${+mm.slice(4)}월에 <em>${total}일</em> 남겼어요</b>
+      <div class="rp-sum-g">
+        ${sum.map(([ic, ko, n]) => `<div><span>${ic}</span><b>${n}<i>일</i></b><em>${ko}</em></div>`).join("")}
+      </div>
+    </div>
+
     ${r.meal?.days ? `
     <div class="rp-sec">
-      <div class="rp-hd"><b>급식</b><span>${r.meal.days}일 평가 ${r.meal.avg_stars ? `· 평균 ★${r.meal.avg_stars}` : ""}</span></div>
+      <div class="rp-hd"><b>급식</b><span>${r.meal.days}일 기록${r.meal.avg_stars ? ` · 평균 ★${r.meal.avg_stars}` : ""}</span></div>
       ${r.meal.cats?.length ? `<p class="rp-lead">어떤 <b>종류</b>를 좋아하나</p>
         <ul class="rp-list">${rows(r.meal.cats, "cat", "best", "번 1등")}</ul>` : ""}
       ${r.meal.dishes?.length ? `<p class="rp-lead">두 번 이상 나온 <b>메뉴</b></p>
