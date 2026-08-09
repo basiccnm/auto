@@ -2620,6 +2620,11 @@ const Screens = {
            이 책임진다 — 막을 지우면 밝은 그림에서 시계가 사라진다. -->
     <div class="hv3-art">${boardView()}</div>
 
+    <!-- 🔴 서버에 못 올라간 아이 — **홈에서 계속 보인다.** 토스트는 화면이 바뀌면 묻힌다.
+         이걸 안 보여 주면 부모는 저장된 줄 알고 쓰다가, 어느 날 아이가 통째로 사라진다. -->
+    ${!(c && c.saveFailed) ? "" : `<button class="hd-trial soon" onclick="App.childRetrySave()">
+      ${esc(c.nickname)}가 이 폰에만 있어요<em>${esc(String(c.saveFailed))} · 다시 시도<i aria-hidden="true" class="ti ti-refresh"></i></em></button>`}
+
     ${promoteCard(c)}
     <!-- 아이가 없으면(구경 중) **다음에 뭘 할지**를 홈에서 말해 준다(2026-08-09 실기).
          ⚠ 예전에 여기 「가입하기」를 뒀다가 걷어낸 적이 있다 — 들어오자마자 가입을
@@ -8419,12 +8424,17 @@ const App = {
     });
     S.currentChildId = id;                                   // 방금 만든 캐릭터로 바로 전환
     S.childDraft = { grade: "3", class_name: "1", nickname: "", name: "", agree: false };
+    /* 🔴 **서버에 올리는 일은 여기서 딱 한 번.** 아래 세 갈래(더 등록 / 테마 고르기 / 홈)로
+       흩어지는데, 예전엔 «더 등록» 갈래에서만 불렀다 → **첫 아이는 영영 서버에 안 갔다.**
+       설문에서 「한 명」이라고 답한 사람(대부분)은 자기 아이가 이 폰에만 있는 줄 몰랐고,
+       앱을 껐다 켜면 사라졌다(2026-08-09 폰 실측 · 서버 D1 에 그 아이가 없었다).
+       ⚠ 갈래가 늘어나도 여기 하나만 지나가게 둔다. 갈래마다 부르면 또 빠뜨린다. */
+    this.childSaveServer(id, sc, d, pendingPhoto);
     /* 설문에서 «두 명»이라고 답했으면 남은 아이도 이어서 등록하게 한다(§5 ②).
        물어 놓고 안 쓰면 그건 그냥 캐묻기다. 강요하지는 않는다 — 홈으로 보내고 한 줄만 알린다. */
     const want = +((S.onboard || {}).kids || 0);
     if (want > STUB.children.length) {
       const nm = esc(STUB.children.find((c) => c.id === id).nickname);
-      this.childSaveServer(id, sc, d, pendingPhoto);
       this.childAddStart();                    // 빈 폼으로 다시 — 뒤로 가면 홈이다
       return toast(`${nm} 등록 완료 — 남은 아이도 이어서 등록해요`);
     }
@@ -8438,8 +8448,7 @@ const App = {
     }
     location.hash = "#home"; this.render();
     toast(`${esc(STUB.children.find((c) => c.id === id).nickname)} 등록 완료 — ${d.grade}학년 ${d.class_name}반`);
-    // 🔴 서버에도 만든다. 안 하면 화면에만 생겼다가 **다음 로그인에 사라진다**(2026-07-26 실측).
-    this.childSaveServer(id, sc, d, pendingPhoto);
+    // 서버 등록은 위에서 이미 했다(갈래마다 부르면 또 빠뜨린다 — 실제로 테마 갈래가 빠져 있었다).
   },
 
   /* 자녀를 서버에 만든다. 성공하면 화면 자녀에 server_id를 달아준다 —
@@ -8465,19 +8474,40 @@ const App = {
     await loadMe();
   },
 
+  // 홈의 「다시 시도」 — 실패한 아이를 그 아이 값 그대로 다시 올린다.
+  childRetrySave() {
+    const c = cur(); if (!c || c.server_id) return;
+    toast("다시 올려볼게요");
+    this.childSaveServer(c.id, c.school, { grade: c.grade, class_name: c.class_name,
+      nickname: c.nickname, name: c.name || "" }, null);
+  },
+
   async childSaveServer(localId, sc, d, pendingPhoto) {
-    if (!TOKENS.access || !sc?.slug) return;
+    /* ⚠ 여기서 조용히 돌아서면 **아이가 이 폰에만 남는다** — 부모는 등록됐다고 믿고,
+       앱을 껐다 켜면 사라진다. 입구(childAddStart)에서 막고 있지만 여기서도 말은 한다. */
+    if (!TOKENS.access) { toast("가입해야 아이가 저장돼요 — 지금은 이 폰에만 있어요"); return; }
+    if (!sc?.slug) { toast("학교를 다시 골라 주세요 — 서버에 저장하지 못했어요"); return; }
     const r = await api("/children", { method: "POST", body: {
       school_slug: sc.slug,
       name: (d.name || d.nickname || "").trim(),      // 서버는 이름을 필수로 본다(기록 기능이 켜져 있을 때)
       nickname: d.nickname.trim(),
       grade: +d.grade, class_name: String(d.class_name), consent: true,
     } }).catch(() => null);
-    if (!r?.ok) { toast(r?.error?.message || "서버에 자녀를 못 만들었어요 (이 기기에만 저장됨)"); return; }
+    /* 실패하면 **반드시 부모 눈에 띄어야 한다.** 예전엔 토스트만 띄웠는데,
+       등록 직후 테마 고르기 화면으로 넘어가느라 그 토스트가 묻혔다(폰 실측).
+       그 아이는 저장된 줄 알았다가 다음 실행에 사라진다 → 자녀 카드에 표시를 남긴다. */
+    if (!r?.ok) {
+      const c0 = STUB.children.find((x) => x.id === localId);
+      if (c0) c0.saveFailed = r?.error?.message || "서버에 저장하지 못했어요";
+      toast(r?.error?.message || "서버에 자녀를 못 만들었어요 (이 기기에만 저장됨)");
+      this.render();
+      return;
+    }
     const c = STUB.children.find((x) => x.id === localId);
     const sid = r.data.id ?? r.data.child?.id ?? null;
     if (c) {
       c.server_id = sid;
+      delete c.saveFailed;
       // 이용권·사진 경로는 **서버가 준 것**을 쓴다. 앱이 계산하지 않는다.
       const src = r.data.child || r.data;
       if (src.pass) c.pass = src.pass;
