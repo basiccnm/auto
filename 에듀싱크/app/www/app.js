@@ -342,11 +342,50 @@ const MENU_OFF_DEFAULT = [];
 /* 점심시간 — 학교·학년마다 다르다(저학년은 4교시 뒤, 고학년은 5교시 뒤).
    NEIS가 안 주는 값이라 **사용자가 고친다.** 안 고쳤으면 학교 기본값을 쓴다.
    시간표·하루 일정 세 곳이 다 이 함수를 본다 — 값을 각자 읽으면 한 곳만 고치는 사고가 난다. */
-const lunchOf = () => ({
-  after: S.lunchAfter ?? 4,
-  start: S.lunchTime?.start || STUB.lunch.start,
-  end: S.lunchTime?.end || STUB.lunch.end,
-});
+/* ── 학교급별 일과표 (2026-08-10 대표님 지적: 「초중고가 시간이 틀려」) ──────────
+   🔴 **NEIS 는 교시 «시각»을 주지 않는다** — 교시 번호와 과목만 준다.
+      그래서 앱이 채워야 하는데, 여태 **초등 한 표**를 중·고에도 그대로 썼다.
+      그러면 전광판이 고등학생에게 「1교시 09:40 종료」라고 말한다 — 실제로는 09:30이다.
+   ⚠ 이것도 «대표값»이지 그 학교의 값은 아니다. 학교마다 5~10분씩 다르다.
+     그래도 학교급을 안 보는 것보다는 훨씬 가깝다. 부모가 고칠 길은 다음에 붙인다.
+   ⚠ 수를 세지 말고 **규칙으로 만든다** — 시작 시각 · 수업 길이 · 쉬는 시간 · 점심 위치.
+     표를 손으로 적으면 한 칸 틀려도 아무도 모른다. */
+const SCHOOL_DAY = {
+  "초등학교": { first: "09:00", len: 40, brk: 10, n: 6, lunchAfter: 4, lunchLen: 50 },
+  "중학교":   { first: "08:50", len: 45, brk: 10, n: 7, lunchAfter: 4, lunchLen: 50 },
+  "고등학교": { first: "08:40", len: 50, brk: 10, n: 7, lunchAfter: 4, lunchLen: 50 },
+};
+const schoolDay = () => {
+  const kind = String(cur()?.school?.kind || schoolInfo()?.kind || "초등학교");
+  return SCHOOL_DAY[kind]
+    || (kind.startsWith("고") ? SCHOOL_DAY["고등학교"]
+      : kind.startsWith("중") ? SCHOOL_DAY["중학교"] : SCHOOL_DAY["초등학교"]);
+};
+// ⚠ 이름을 `hhmm` 으로 두면 아래(6741행)의 «ISO → 시:분» 과 부딪힌다 — 분 단위 전용이라 이름을 나눈다
+const minToHM = (m) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+/* 그 아이 학교급의 교시표. 점심은 `lunchAfter` 교시 뒤에 끼고, 그다음 교시는 점심 끝나고 바로 시작한다. */
+function periodsOf() {
+  const d = schoolDay();
+  const out = [];
+  let t = toMin(d.first);
+  for (let i = 1; i <= d.n; i++) {
+    out.push({ n: i, start: minToHM(t), end: minToHM(t + d.len) });
+    t += d.len;
+    t += (i === d.lunchAfter) ? d.lunchLen : d.brk;
+  }
+  return out;
+}
+const lunchOf = () => {
+  const d = schoolDay();
+  const ps = periodsOf();
+  const auto = ps[d.lunchAfter - 1];
+  return {
+    after: S.lunchAfter ?? d.lunchAfter,
+    // 부모가 고쳐 둔 값이 있으면 그게 먼저다 — 학교급 기본값은 «모를 때»만 쓴다
+    start: S.lunchTime?.start || (auto ? auto.end : STUB.lunch.start),
+    end: S.lunchTime?.end || (auto ? minToHM(toMin(auto.end) + d.lunchLen) : STUB.lunch.end),
+  };
+};
 
 const supDayLabel = (d) => {
   const head = d === TODAY ? "오늘 · " : d === ymdPlus(TODAY, 1) ? "내일 · " : "";
@@ -4617,7 +4656,7 @@ const Screens = {
     const seg = (key, nm) => `<button class="${S.kidTTDay === key ? "on" : ""}"
       onclick="S.kidTTDay='${key}';App.render()">${nm}</button>`;
     const row = (i, name) => {
-      const pd = STUB.periods[i];
+      const pd = periodsOf()[i];
       const now = !tomorrow && pd && nowMin >= toMin(pd.start) && nowMin < toMin(pd.end);
       return `<div class="kd2-p ${now ? "now" : ""}"><i>${i + 1}</i><b>${esc(shortSubject(name))}</b>
         <span>${now ? "지금" : esc(pd?.start || "")}</span></div>`;
@@ -6190,7 +6229,7 @@ function nowDoing() {
 
   if (hasClass) {
     for (let r = 0; r < grid.length; r++) {
-      const p = STUB.periods[r];
+      const p = periodsOf()[r];
       if (!p || !p.start || !p.end) continue;
       const a0 = toMin(p.start), b0 = toMin(p.end);
       if (now >= a0 && now < b0) {
@@ -6198,7 +6237,7 @@ function nowDoing() {
         return { t: v ? `${r + 1}교시 ${esc(v)}` : `${r + 1}교시`, s: `${esc(p.end)}까지 ${left(b0 - now)}`,
           p: `(${r + 1}교시 ${v ? `${esc(v)} ` : ""}수업중 ${esc(p.end)} 종료)`, k: "class" };
       }
-      const np = STUB.periods[r + 1];
+      const np = periodsOf()[r + 1];
       if (np && np.start && now >= b0 && now < toMin(np.start)) {
         if (now >= toMin(L.start) && now < toMin(L.end)) {
           return { t: "점심시간", s: `${esc(L.end)}까지 ${left(toMin(L.end) - now)}`,
@@ -6213,7 +6252,7 @@ function nowDoing() {
       return { t: "점심시간", s: `${esc(L.end)}까지 ${left(toMin(L.end) - now)}`,
         p: `(점심시간)`, k: "lunch" };
     }
-    const first = STUB.periods[0];
+    const first = periodsOf()[0];
     if (first && first.start && now < toMin(first.start)) {
       const v = subj(0);
       return { t: "등교 전", s: `${esc(first.start)} 1교시${v ? ` ${esc(v)}` : ""}`,
@@ -6788,7 +6827,7 @@ function dayTimeline(date, opts = {}) {
   if (fit) {
     const times = [];
     if (school) {
-      if (withClasses) STUB.periods.forEach((p) => { if (ttOf().grid[p.n - 1]?.[dayIdx]) times.push(toMin(p.start), toMin(p.end)); });
+      if (withClasses) periodsOf().forEach((p) => { if (ttOf().grid[p.n - 1]?.[dayIdx]) times.push(toMin(p.start), toMin(p.end)); });
       if (withMeal && mealsOf().some((m) => m.date === date && m.type === "중식")) times.push(toMin(lunchOf().start), toMin(lunchOf().end));
       STUB.activities.filter((a) => a.days_of_week.split(",").includes(String(dayIdx + 1)))
         .forEach((a) => times.push(toMin(a.start_time), toMin(a.end_time)));
@@ -6808,7 +6847,7 @@ function dayTimeline(date, opts = {}) {
   // 이 하루에 실제로 무언가 있는 시각들(빈 구간을 찾기 위해)
   const spans = [];
   if (school) {
-    if (withClasses) STUB.periods.forEach((p) => { if (ttOf().grid[p.n - 1]?.[dayIdx]) spans.push([toMin(p.start), toMin(p.end)]); });
+    if (withClasses) periodsOf().forEach((p) => { if (ttOf().grid[p.n - 1]?.[dayIdx]) spans.push([toMin(p.start), toMin(p.end)]); });
     if (withMeal && meal) spans.push([toMin(lunchOf().start), toMin(lunchOf().end)]);
     acts.forEach((a) => spans.push([toMin(a.start_time), toMin(a.end_time)]));
   }
@@ -6864,7 +6903,7 @@ function dayTimeline(date, opts = {}) {
         ${rows.map((r) => r.gap
           ? `<div class="daygap" style="height:${GAP_H}px">⋯ ${r.gap[0]}시~${r.gap[r.gap.length - 1] + 1}시 비어 있어요</div>`
           : `<div class="wk-slot" style="height:${DAY.px * 2}px"></div>`).join("")}
-        ${school && withClasses ? STUB.periods.map((p) => {
+        ${school && withClasses ? periodsOf().map((p) => {
           const subject = ttOf().grid[p.n - 1]?.[dayIdx];
           return subject ? box(p.start, p.end, "cls", subject, `${p.n}교시`) : "";
         }).join("") : ""}
@@ -7039,9 +7078,9 @@ function timetableTab() {
      엄마가 3시에 앱을 열면 궁금한 건 5교시가 아니라 «오늘 학원 몇 시»다.
      ⚠ 손으로 접거나 편 적이 있으면(S.ttFold) 그 뜻이 이긴다. 자동은 «안 건드렸을 때»만이다. */
   const nowMin = (() => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); })();
-  const last = STUB.periods[Math.max(0, (tt.grid || []).length - 1)] || STUB.periods[STUB.periods.length - 1];
+  const last = periodsOf()[Math.max(0, (tt.grid || []).length - 1)] || periodsOf()[periodsOf().length - 1];
   const outMin = last?.end ? toMin(last.end) : toMin(lunchOf().end) + 120;
-  const afterHours = nowMin >= outMin || nowMin < toMin(STUB.periods[0]?.start || "09:00");
+  const afterHours = nowMin >= outMin || nowMin < toMin(periodsOf()[0]?.start || "09:00");
   const schoolOpen = S.ttFold?.school ?? !afterHours;
   const afterOpen = S.ttFold?.after ?? afterHours;
   const at = (r, c) => S.ttOverrides[`${r}-${c}`] ?? tt.grid[r][c];
@@ -7068,7 +7107,7 @@ function timetableTab() {
       const head = `<div class="hd"></div>` + DAY_KO.map((d, i) =>
         `<div class="hd ${i === todayCol ? "today" : ""}">${d}</div>`).join("");
       const rows = tt.grid.map((row, r) => {
-        const t = STUB.periods[r] || {};
+        const t = periodsOf()[r] || {};
         /* 교시 칸 — 「1교시 / 09:00」 두 줄. 끝 시각까지 넣으면 석 줄이 되어 숫자가 과목보다
            시끄러웠다(2026-07-28 실기기). 끝 시각은 칸을 눌렀을 때 시트가 알려준다. */
         const cells = `<div class="hd tt-period"><b>${r + 1}교시</b>${t.start ? `<span>${t.start}</span>` : ""}</div>` +
