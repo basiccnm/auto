@@ -7089,3 +7089,23 @@ body {
   display: grid; place-items: center; border-radius: 9px; background: #D01B63; color: #fff;
   font-size: 11px; font-weight: 900; line-height: 1;
   box-shadow: 0 0 0 2px rgba(255, 255, 255, .85); }
+
+
+/* ══════════════════════════════════════════════════════════════════════
+   📐 설문 화면 배치 — 세로가 긴 폰에서 «떠 있어» 보이던 것 (2026-08-09, 폴드6)
+
+   `.ob-qbox { justify-content: center }` 라 내용이 **화면 한가운데 떠** 있었다.
+   1080×1920 에서는 자연스러운데, 폴드6(968×2376)에서는 위아래가 다 벌어져
+   **어디에도 안 붙은** 느낌이 난다 — 위 300px · 아래 500px 이 빈칸이었다.
+
+   → ① 내용을 **위쪽에 붙인다**(화면 높이의 8%쯤에서 시작). 긴 화면일수록 위가 읽기 편하다.
+     ② 「←」를 진행 막대 바로 밑에 붙인다 — 혼자 떨어져 있으면 무슨 버튼인지 모른다.
+     ③ 「계속」을 바닥에서 띄운다 — 화면 끝에 붙으면 엄지가 걸린다.
+   ⚠ 짧은 폰(1920 이하)에서는 지금과 거의 같게 보여야 한다 — `min()` 으로 상한을 둔다.
+   ══════════════════════════════════════════════════════════════════════ */
+:root .ob-wrap { padding-top: calc(env(safe-area-inset-top) + 16px); }
+:root .ob-bar { margin-bottom: 14px; }
+:root .ob-qbox { justify-content: flex-start; padding-top: min(8vh, 90px); }
+:root .ob-bot { padding-bottom: calc(env(safe-area-inset-bottom) + 26px); }
+/* 「←」가 홀로 멀리 있었다 — 진행 막대 바로 아래로 */
+:root .ob-wrap .sub-back, :root .ob-wrap .ob-back { margin: -4px 0 6px -8px; }

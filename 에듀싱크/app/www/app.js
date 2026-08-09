@@ -1947,8 +1947,11 @@ const Screens = {
           </button>`).join("")}
       </div>
       <div class="ob-bot">
+        <!-- 「건너뛰기」를 뺐다(대표님 지시 2026-08-09).
+             이 화면은 **앱을 누구에게 맞출지 정하는 자리**다 — 부모 유형·자녀 수·나이대를
+             모르면 첫 화면부터 엉뚱한 걸 보여주게 된다. 물음이 셋뿐이고 전부 한 번 누르면 끝이다.
+             ⚠ 대신 «뒤로»(←)는 남긴다. 앞 답을 고칠 길까지 막으면 갇힌 느낌이 든다. -->
         <button class="ob-go" ${got ? "" : "disabled"} onclick="App.obNext()">계속</button>
-        <button class="cm-skip" style="width:100%;margin-top:4px" onclick="App.introToNotify()">건너뛰기</button>
       </div>
     </div>`;
   },
