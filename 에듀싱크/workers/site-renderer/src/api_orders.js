@@ -292,15 +292,107 @@ async function mockPay(request, db, env, id) {
    흐름: 상품ID→개월수 → 토큰 중복 확인(재사용 차단) → 구글 확인 → orders 기록 → activate() 로 연장. */
 const IAP_PRODUCTS = { pass_1m: 1, pass_3m: 3, pass_6m: 6, pass_12m: 12 };
 
+const PLAY_PKG = "com.eduthink.app";
+const PLAY_SCOPE = "https://www.googleapis.com/auth/androidpublisher";
+
+/* 액세스 토큰은 1시간짜리다 — 요청마다 새로 받으면 느리고 구글 쿼터를 태운다.
+   워커 인스턴스가 살아 있는 동안만 들고 있는다(죽으면 다시 받는다). */
+let _playTok = { v: null, exp: 0 };
+
+const b64url = (buf) => btoa(String.fromCharCode(...new Uint8Array(buf)))
+  .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+const b64urlStr = (s) => b64url(new TextEncoder().encode(s));
+
+/* PEM(PKCS#8) → CryptoKey. 서비스 계정 JSON 의 private_key 는 줄바꿈이 escape 된 채로 온다. */
+async function importPkcs8(pem) {
+  const body = String(pem).replace(/\\n/g, String.fromCharCode(10))
+    .replace(/-----[A-Z ]+-----/g, "").replace(/\s+/g, "");
+  const raw = Uint8Array.from(atob(body), (c) => c.charCodeAt(0));
+  return crypto.subtle.importKey("pkcs8", raw.buffer,
+    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["sign"]);
+}
+
+/* 서비스 계정 → OAuth 액세스 토큰 (JWT bearer).
+   ⚠ 실패를 «성공»으로 흘리지 않는다 — 여기서 새면 그게 곧 공짜 이용권이다. */
+async function playAccessToken(env) {
+  const now = Math.floor(Date.now() / 1000);
+  if (_playTok.v && _playTok.exp > now + 60) return _playTok.v;
+
+  let sa;
+  try { sa = JSON.parse(env.GOOGLE_PLAY_SA); } catch { return null; }
+  if (!sa || !sa.client_email || !sa.private_key) return null;
+
+  const head = b64urlStr(JSON.stringify({ alg: "RS256", typ: "JWT" }));
+  const claim = b64urlStr(JSON.stringify({
+    iss: sa.client_email, scope: PLAY_SCOPE,
+    aud: "https://oauth2.googleapis.com/token", iat: now, exp: now + 3600,
+  }));
+  let jwt;
+  try {
+    const key = await importPkcs8(sa.private_key);
+    const sig = await crypto.subtle.sign("RSASSA-PKCS1-v1_5", key,
+      new TextEncoder().encode(head + "." + claim));
+    jwt = head + "." + claim + "." + b64url(sig);
+  } catch (e) { console.error("[iap/jwt]", e && e.message); return null; }
+
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 8000);
+  let res;
+  try {
+    res = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST", signal: ctrl.signal,
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: "grant_type=urn:ietf:params:oauth:grant-type:jwt-bearer&assertion=" + encodeURIComponent(jwt),
+    });
+  } catch { return null; } finally { clearTimeout(timer); }
+  if (!res.ok) { console.error("[iap/token]", res.status); return null; }
+  const j = await res.json().catch(() => null);
+  if (!j || !j.access_token) return null;
+  _playTok = { v: j.access_token, exp: now + (j.expires_in || 3600) };
+  return j.access_token;
+}
+
+/* 구글에 «이 영수증이 진짜인가»를 묻는다.
+   ⚠ **여기가 결제의 마지막 관문**이다. 통과시키는 조건을 넓히면 그만큼 공짜가 샌다.
+     · purchaseState 0 = 구매완료. 1 = 취소, 2 = 보류(가족 승인 대기 등) → 둘 다 거절.
+     · acknowledgementState 는 확인만 하고 막지 않는다 — 우리가 곧 승인할 것이라서.
+   ⚠ 서비스 계정이 없거나 구글이 답을 안 주면 **거절**한다. 열어 두면 그게 곧 구멍이다. */
 async function verifyGooglePurchase(env, productId, token) {
-  // 서비스 계정이 없으면 «확인 불가» — 통과시키지 않는다.
   if (!env.GOOGLE_PLAY_SA) return { ok: false, reason: "not_configured" };
-  /* TODO(계정 열리면):
-       ① 서비스 계정 JWT → OAuth 액세스 토큰
-       ② GET androidpublisher/v3/applications/com.eduthink.app/purchases/products/{productId}/tokens/{token}
-       ③ purchaseState===0(구매완료) && consumptionState 확인 → { ok:true, orderId }
-       ④ 소모성이면 consume 까지 (안 하면 같은 상품을 다시 못 산다) */
-  return { ok: false, reason: "not_implemented" };
+  const at = await playAccessToken(env);
+  if (!at) return { ok: false, reason: "auth_failed" };
+
+  const url = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${PLAY_PKG}`
+    + `/purchases/products/${encodeURIComponent(productId)}/tokens/${encodeURIComponent(token)}`;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 8000);
+  let res;
+  try { res = await fetch(url, { headers: { Authorization: "Bearer " + at }, signal: ctrl.signal }); }
+  catch { return { ok: false, reason: "network" }; }
+  finally { clearTimeout(timer); }
+
+  if (res.status === 404) return { ok: false, reason: "not_found" };   // 없는 영수증
+  if (!res.ok) { console.error("[iap/verify]", res.status); return { ok: false, reason: "http_" + res.status }; }
+  const j = await res.json().catch(() => null);
+  if (!j) return { ok: false, reason: "bad_json" };
+  if (j.purchaseState !== 0) return { ok: false, reason: "state_" + j.purchaseState };
+  return { ok: true, orderId: j.orderId || null, acknowledged: j.acknowledgementState === 1 };
+}
+
+/* 승인(acknowledge) — 3일 안에 안 하면 구글이 **자동 환불**한다.
+   ⚠ 실패해도 이용권은 이미 켰다. 여기서 되돌리면 돈 낸 사람이 못 쓴다 —
+     로그만 남기고 넘어간다(실패하면 환불되니 손해는 우리가 아니라 우리 쪽 매출이다). */
+async function ackGooglePurchase(env, productId, token) {
+  const at = await playAccessToken(env);
+  if (!at) return false;
+  const url = `https://androidpublisher.googleapis.com/androidpublisher/v3/applications/${PLAY_PKG}`
+    + `/purchases/products/${encodeURIComponent(productId)}/tokens/${encodeURIComponent(token)}:acknowledge`;
+  try {
+    const r = await fetch(url, { method: "POST",
+      headers: { Authorization: "Bearer " + at, "Content-Type": "application/json" }, body: "{}" });
+    if (!r.ok) console.error("[iap/ack]", r.status);
+    return r.ok;
+  } catch (e) { console.error("[iap/ack]", e && e.message); return false; }
 }
 
 async function billingVerify(request, db, env) {
@@ -348,6 +440,9 @@ async function billingVerify(request, db, env) {
 
   const order = await db.prepare("SELECT * FROM orders WHERE id = ?").bind(r.meta.last_row_id).first();
   const expires = await activate(db, order);
+  /* 🔴 **승인(acknowledge)을 안 하면 구글이 3일 뒤 자동 환불한다.**
+     이용권을 켠 «뒤에» 부른다 — 승인부터 하고 켜다가 실패하면 돈은 받고 못 쓰게 된다. */
+  if (!v.acknowledged) await ackGooglePurchase(env, productId, token);
   const after = await db.prepare("SELECT * FROM orders WHERE id=?").bind(order.id).first();
   return apiOk({ order: publicOrder(after), expires_at: expires });
 }
