@@ -7309,9 +7309,12 @@ body {
         126px 은 «시계만 있을 때» 판의 윗변이 있던 자리다 — 시계는 그대로 있고 띠만 아래에 붙는다.
    ⚠ 판이 아래로 더 나오므로 그림 아래 여백도 같이 벌린다. 안 벌리면 첫 카드를 덮는다. */
 :root #screen:has(.hv3-art) #board {
-  align-self: flex-start; margin-top: 182px; margin-bottom: 0;
+  /* ⚠ 이 147px 은 **눈으로 맞춘 값**이다(2026-08-10 대표님: 「단풍잎 반만 가려야 해」).
+     그림마다 잎 위치가 다르니 «정답»은 없다 — 폰에서 보고 정한 자리다. 함부로 바꾸지 말 것.
+     아래 `.hv3-art { margin-bottom }` 과 **짝**이다. 하나만 바꾸면 첫 카드를 덮거나 뜬다. */
+  align-self: flex-start; margin-top: 147px; margin-bottom: 0;
 }
-:root #screen:has(.hv3-art) .hv3-art { margin-bottom: 152px; }
+:root #screen:has(.hv3-art) .hv3-art { margin-bottom: 117px; }
 
 /* ── 🚦 우 → 좌로 흐른다. 그래서 «전광판»이다 ──────────────────────────
    흐르니까 글이 길어도 잘리지 않는다 — 「시간표가 아직 없...」 잘림이 여기서 풀린다.
