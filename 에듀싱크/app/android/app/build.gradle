@@ -1,5 +1,14 @@
 apply plugin: 'com.android.application'
 
+// ── 릴리즈 서명 (2026-08-09) ──────────────────
+// ⚠ 비밀번호는 keystore.properties 에 있고 그 파일은 **git 에 안 올라간다**.
+//   ⚠⚠ 이 키를 잃으면 플레이에 올린 앱을 **영영 업데이트할 수 없다.**
+//      다른 키로 서명한 것은 «다른 앱»으로 취급된다. 두 곳 이상 백업할 것.
+// ⚠ 파일이 없으면 서명 없이 그냥 넘어간다 — 다른 사람이 받아도 debug 빌드는 되게.
+def ksFile = rootProject.file("keystore.properties")
+def ks = new Properties()
+if (ksFile.exists()) { ksFile.withInputStream { ks.load(it) } }
+
 android {
     namespace = "com.eduthink.app"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -16,8 +25,19 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (ksFile.exists()) {
+                storeFile file(ks['storeFile'])
+                storePassword ks['storePassword']
+                keyAlias ks['keyAlias']
+                keyPassword ks['keyPassword']
+            }
+        }
+    }
     buildTypes {
         release {
+            if (ksFile.exists()) { signingConfig signingConfigs.release }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
