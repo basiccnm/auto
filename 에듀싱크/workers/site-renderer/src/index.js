@@ -170,6 +170,7 @@ import {
   adminFeedbackPage,
   adminPaymentsPage,
   adminOrdersPage,
+  adminAuditPage,
   adminInquiriesPage,
   adminCommunityPage,
   adminDataPage,
@@ -2115,6 +2116,26 @@ async function handleAdminPayments(request, db, url) {
 
 /* 앱 주문 — orders 표(앱 인앱결제·무통장·모의). 부모 이름은 accounts, 자녀 별명은 children에서 끌어온다.
    자녀가 지워져도 주문 줄은 남아야 한다(정산 근거) → LEFT JOIN. */
+/* 감사 기록 보기 (2026-08-10) — 읽기 전용이다. 지우는 라우트는 만들지 않는다.
+   ⚠ 500줄만 본다. 다 보여주면 느리고, 오래된 것은 어차피 화면에서 안 찾는다(필요하면 검색). */
+async function handleAdminAudit(db, url) {
+  const q = (url.searchParams.get("q") || "").trim();
+  let sql = "SELECT * FROM admin_audit";
+  const binds = [];
+  if (q) {
+    sql += " WHERE reason LIKE ? OR target_id LIKE ? OR actor LIKE ? OR detail LIKE ?";
+    binds.push(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`);
+  }
+  sql += " ORDER BY id DESC LIMIT 500";
+  const { results } = await db.prepare(sql).bind(...binds).all();
+  const rows = (results || []).map((r) => ({
+    ...r,
+    atF: String(r.at || "").replace("T", " ").slice(0, 16),
+    targetKind: r.target_kind, targetShort: String(r.target_id || "").slice(0, 10),
+  }));
+  return html(adminAuditPage(rows, { q }, await getAdminBadges(db)));
+}
+
 async function handleAdminOrders(db, url) {
   const q = (url.searchParams.get("q") || "").trim();
   const status = (url.searchParams.get("s") || "").trim();
@@ -2971,6 +2992,7 @@ export default {
         return redirect("/admin/inquiries");
       }
 
+      if (path === "/admin/audit") return handleAdminAudit(db, url);
       if (path === "/admin/orders") return handleAdminOrders(db, url);
       /* ⚠ 돈이 오가는 자리 — **누가 확인했는지 남긴다.** 남기지 않으면
          나중에 «이 주문은 왜 켜졌지?» 를 아무도 답할 수 없다. */
