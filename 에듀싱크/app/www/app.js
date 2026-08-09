@@ -5128,8 +5128,12 @@ function boardView() {
          흐르니까 글이 길어도 잘리지 않는다 — 「시간표가 아직 없...」으로 잘리던 문제가 같이 풀린다.
          ⚠ 같은 문장을 **두 번** 이어 붙인다. 한 번만 두면 글이 다 지나간 뒤 빈 줄이 생긴다.
          ⚠ 임박한 내 일정도 같은 줄에 이어 붙인다 — 줄이 둘이면 판이 또 커져 그림을 덮는다. */
-      const tail = next ? ` · 📌 ${esc(next.start)} ${esc(next.title)}` : "";
-      const one = `${n.t}${n.s ? ` · ${n.s}` : ""}${tail}`;
+      /* 🚦 전광판 문구는 **`p` 하나**다(대표님 형식 확정 2026-08-10) —
+         「(방학기간 현재 일정 없음)」 「(태권도학원 수업중)」 「(주말 현재 일정 없음)」 「(1교시 국어 수업중)」.
+         값은 전부 **서버에서 받아 온 것**으로 만든다: 시간표(timetables)·학원(activities)·학사일정(academic_schedules).
+         ⚠ p 가 없으면 옛 방식(t · s)으로 떨어진다 — 새 상태를 추가하고 p 를 빼먹어도 빈 줄이 되지 않게. */
+      const tail = next ? ` (${esc(next.start)} ${esc(next.title)})` : "";
+      const one = `${n.p || `(${n.t}${n.s ? ` ${n.s}` : ""})`}${tail}`;
       /* ⚠ 앞의 점을 뺐다(대표님 2026-08-10) — 점이 있으면 글이 그 뒤에서만 흐른다.
          전광판은 **판 왼쪽 끝까지** 흘러야 전광판으로 보인다. */
       return `<div class="bd-now ${n.k}"><div class="bd-mq"><span>${one}<b>${one}</b></span></div></div>`;
@@ -6177,7 +6181,11 @@ function nowDoing() {
     .filter((a) => String(a.days_of_week || "").split(",").includes(String(wd)))
     .sort((x, y) => String(x.start_time).localeCompare(String(y.start_time)));
   const inAct = acts.find((a) => a.start_time && a.end_time && now >= toMin(a.start_time) && now < toMin(a.end_time));
-  if (inAct) return { t: `${esc(inAct.name)} 중`, s: `${esc(inAct.end_time)}까지`, k: "act" };
+  /* 🚦 `p` = **전광판에 흐르는 문구**(대표님 2026-08-10 형식 확정).
+        「(태권도학원 수업중)」 「(1교시 국어 수업중)」 「(방학기간 현재 일정 없음)」 「(주말 현재 일정 없음)」
+     ⚠ 괄호까지가 한 덩어리다. t·s 는 다른 화면(nowCard)이 쓰므로 그대로 둔다. */
+  if (inAct) return { t: `${esc(inAct.name)} 중`, s: `${esc(inAct.end_time)}까지`,
+    p: `(${esc(inAct.name)} 수업중)`, k: "act" };
 
   if (hasClass) {
     for (let r = 0; r < grid.length; r++) {
@@ -6186,24 +6194,29 @@ function nowDoing() {
       const a0 = toMin(p.start), b0 = toMin(p.end);
       if (now >= a0 && now < b0) {
         const v = subj(r);
-        return { t: v ? `${r + 1}교시 ${esc(v)}` : `${r + 1}교시`, s: `${esc(p.end)}까지 ${left(b0 - now)}`, k: "class" };
+        return { t: v ? `${r + 1}교시 ${esc(v)}` : `${r + 1}교시`, s: `${esc(p.end)}까지 ${left(b0 - now)}`,
+          p: `(${r + 1}교시 ${v ? `${esc(v)} ` : ""}수업중)`, k: "class" };
       }
       const np = STUB.periods[r + 1];
       if (np && np.start && now >= b0 && now < toMin(np.start)) {
         if (now >= toMin(L.start) && now < toMin(L.end)) {
-          return { t: "점심시간", s: `${esc(L.end)}까지 ${left(toMin(L.end) - now)}`, k: "lunch" };
+          return { t: "점심시간", s: `${esc(L.end)}까지 ${left(toMin(L.end) - now)}`,
+            p: `(점심시간)`, k: "lunch" };
         }
         const v = subj(r + 1);
-        return { t: "쉬는 시간", s: `${left(toMin(np.start) - now)} 뒤 ${r + 2}교시${v ? ` ${esc(v)}` : ""}`, k: "rest" };
+        return { t: "쉬는 시간", s: `${left(toMin(np.start) - now)} 뒤 ${r + 2}교시${v ? ` ${esc(v)}` : ""}`,
+          p: `(쉬는시간 다음 ${r + 2}교시${v ? ` ${esc(v)}` : ""})`, k: "rest" };
       }
     }
     if (now >= toMin(L.start) && now < toMin(L.end)) {
-      return { t: "점심시간", s: `${esc(L.end)}까지 ${left(toMin(L.end) - now)}`, k: "lunch" };
+      return { t: "점심시간", s: `${esc(L.end)}까지 ${left(toMin(L.end) - now)}`,
+        p: `(점심시간)`, k: "lunch" };
     }
     const first = STUB.periods[0];
     if (first && first.start && now < toMin(first.start)) {
       const v = subj(0);
-      return { t: "등교 전", s: `${esc(first.start)} 1교시${v ? ` ${esc(v)}` : ""}`, k: "before" };
+      return { t: "등교 전", s: `${esc(first.start)} 1교시${v ? ` ${esc(v)}` : ""}`,
+        p: `(등교 전 ${esc(first.start)} 1교시${v ? ` ${esc(v)}` : ""})`, k: "before" };
     }
   }
 
@@ -6211,20 +6224,25 @@ function nowDoing() {
   if (next) {
     // 방학·주말엔 «하교»가 틀린 말이다 — 학교를 안 갔다. 학원 이름만 말한다.
     return (onBreak || weekend)
-      ? { t: esc(next.name), s: `${esc(next.start_time)} · ${left(toMin(next.start_time) - now)} 뒤`, k: "out" }
-      : { t: "하교", s: `${left(toMin(next.start_time) - now)} 뒤 ${esc(next.name)}`, k: "out" };
+      ? { t: esc(next.name), s: `${esc(next.start_time)} · ${left(toMin(next.start_time) - now)} 뒤`,
+          p: `(${esc(next.name)} ${esc(next.start_time)} 시작)`, k: "out" }
+      : { t: "하교", s: `${left(toMin(next.start_time) - now)} 뒤 ${esc(next.name)}`,
+          p: `(하교 ${left(toMin(next.start_time) - now)} 뒤 ${esc(next.name)})`, k: "out" };
   }
   if (!acts.length) {
     /* 여기부터는 «오늘 더 할 게 없다». **그래도 말은 한다.**
        순서가 뜻을 정한다 — 방학이면 방학이 먼저고(주말이어도 방학이다), 그 다음이 주말이다. */
-    if (onBreak) return { t: "방학", s: "오늘 학원 없음", k: "done" };
-    if (weekend) return { t: wd === 6 ? "토요일" : "일요일", s: "오늘 학원 없음", k: "done" };
-    if (hasClass) return { t: "오늘 일정 끝", s: "", k: "done" };
+    if (onBreak) return { t: "방학", s: "오늘 학원 없음", p: "(방학기간 현재 일정 없음)", k: "done" };
+    if (weekend) return { t: wd === 6 ? "토요일" : "일요일", s: "오늘 학원 없음",
+      p: "(주말 현재 일정 없음)", k: "done" };
+    if (hasClass) return { t: "오늘 일정 끝", s: "", p: "(오늘 일정 끝)", k: "done" };
     /* 학기 중 평일인데 시간표가 없다 — 학교가 아직 안 올렸거나 반이 안 맞는 경우다.
        조용히 비우면 부모는 이유를 모른 채 «고장»으로 읽는다. */
-    return { t: "시간표가 아직 없어요", s: "학교가 올리면 들어와요", k: "none" };
+    return { t: "시간표가 아직 없어요", s: "학교가 올리면 들어와요",
+      p: "(시간표 없음 학교가 올리면 들어와요)", k: "none" };
   }
-  return { t: "오늘 일정 끝", s: `${esc(acts[acts.length - 1].name)}까지 마쳤어요`, k: "done" };
+  return { t: "오늘 일정 끝", s: `${esc(acts[acts.length - 1].name)}까지 마쳤어요`,
+    p: `(오늘 일정 끝 ${esc(acts[acts.length - 1].name)}까지 마쳤어요)`, k: "done" };
 }
 
 function nowCard() {
