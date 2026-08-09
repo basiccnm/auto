@@ -1999,8 +1999,25 @@ async function handleAdminMembers(db, request) {
     groupMap.get(c.owner_token).push(c);
   }
   // 회원 상세 모달용 부가 데이터: 소셜계정 / 결제내역 / 알림신청 / 무료체험 — 전부 owner_token으로 묶는다.
+  /* ⚠ 예전엔 `users`(옛 토큰 계정)만 읽었다. 그런데 실서버는 **전원이 `accounts`**
+     (아이디·비밀번호 가입)이고 `users` 는 **0행**이다 → 관리자 목록에 이메일·아이디가
+     하나도 안 나오고 전부 「토큰」으로만 보였다(2026-08-09 실측: accounts 10건 · users 0건).
+     대표님 지적 「아이디가 확실히 있어야 한다」의 원인이 이것이다 — 데이터는 멀쩡했고 화면이 안 읽었다.
+     → 둘 다 읽어 `accounts` 를 우선한다. 옛 토큰 계정이 남아 있어도 그대로 보인다. */
   const { results: users } = await db.prepare("SELECT owner_token, provider, nickname, created_at, last_login_at FROM users").all();
-  const acctMap = new Map(users.map((u) => [u.owner_token, u]));
+  const acctMap = new Map(users.map((u) => [u.owner_token, { ...u, kind: "token" }]));
+  const { results: accts } = await db.prepare(
+    `SELECT a.owner_token, a.display_name, a.email, a.status, a.created_at, a.last_login_at,
+            (SELECT identifier FROM auth_methods WHERE account_id = a.id ORDER BY id LIMIT 1) AS login_id
+       FROM accounts a`
+  ).all();
+  for (const a of accts) {
+    acctMap.set(a.owner_token, {
+      owner_token: a.owner_token, provider: "id", nickname: a.display_name,
+      email: a.email, login_id: a.login_id, status: a.status,
+      created_at: a.created_at, last_login_at: a.last_login_at, kind: "account",
+    });
+  }
   const { results: pays } = await db.prepare("SELECT * FROM payments ORDER BY created_at DESC").all();
   const payMap = new Map();
   for (const p of pays) { if (!payMap.has(p.owner_token)) payMap.set(p.owner_token, []); payMap.get(p.owner_token).push(p); }

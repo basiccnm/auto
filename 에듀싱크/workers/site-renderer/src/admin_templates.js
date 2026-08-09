@@ -313,15 +313,18 @@ export function adminMonitorPage({ schoolCounts, lastSync, recentErrors, latestR
 export function adminMembersPage(groups, subscriber = false, maxChildren = 3, badges) {
   const gs = groups || [];
   const repOf = (g) => (g.account && g.account.nickname) ? g.account.nickname : (g.kids[0] ? g.kids[0].nickname : "-");
+  /* ⚠ 「아이디가 확실히 있어야 한다」(대표님) — 목록에서 **누구인지 바로 보여야** 한다.
+     로그인 아이디를 우선하고, 없으면 이메일, 그것도 없으면 옛 토큰 계정이라고 말한다. */
+  const idOf = (g) => (g.account && (g.account.login_id || g.account.email)) || "";
   const provClass = (p) => p ? `prov-${p}` : "prov-none";
-  const provLabel = (p) => p ? (PROV_KO[p] || p) : "토큰";
+  const provLabel = (p) => p === "id" ? "아이디" : (p ? (PROV_KO[p] || p) : "토큰");
 
   const rows = gs.map((g, i) => {
     const st = statePill(g.kids);
     const paid = (g.payments || []).some((p) => p.status !== "refunded");
     const school = g.kids.length ? `${escapeHtml(g.kids[0].school_name)}${g.kids.length > 1 ? ` 외 ${g.kids.length - 1}` : ""}` : "-";
     return `<div class="trow click" data-i="${i}">
-      <div style="flex:1.6;display:flex;align-items:center;gap:9px;min-width:0"><span class="prov ${provClass(g.account && g.account.provider)}">${escapeHtml(provLabel(g.account && g.account.provider))}</span><span class="ell" style="font-size:14px;font-weight:700">${escapeHtml(repOf(g))}</span></div>
+      <div style="flex:1.6;display:flex;align-items:center;gap:9px;min-width:0"><span class="prov ${provClass(g.account && g.account.provider)}">${escapeHtml(provLabel(g.account && g.account.provider))}</span><span class="ell" style="min-width:0"><b style="display:block;font-size:14px;font-weight:700">${escapeHtml(repOf(g))}</b>${idOf(g) ? `<span style="display:block;font-size:12px;color:#6b7280">${escapeHtml(idOf(g))}</span>` : ""}</span></div>
       <span style="width:70px;font-size:14px;color:#374151">${g.kids.length}명</span>
       <span class="ell" style="flex:1.2;font-size:14px;color:#374151">${school}</span>
       <span style="width:150px"><span class="pill ${st.cls}">${st.text}</span></span>
@@ -340,6 +343,11 @@ export function adminMembersPage(groups, subscriber = false, maxChildren = 3, ba
     notif: g.notif ? "신청" : "미신청",
     trial: g.trial ? "사용" : "미사용",
     ownerToken: String(g.token),
+    /* 검색·상세에서 «누구인지»를 알려면 아이디가 있어야 한다 (2026-08-09 지적) */
+    loginId: (g.account && g.account.login_id) || "",
+    email: (g.account && g.account.email) || "",
+    joinedAt: (g.account && g.account.created_at) || "",
+    lastLogin: (g.account && g.account.last_login_at) || "",
     kids: g.kids.map((c) => { const p = childPill(c); return {
       id: c.id, nickname: c.nickname, school: c.school_name, slug: c.school_slug,
       gradeClass: `${c.grade}학년${c.class_name ? " " + c.class_name + "반" : ""}`,
@@ -354,7 +362,7 @@ export function adminMembersPage(groups, subscriber = false, maxChildren = 3, ba
 
   const body = `
     <div class="hrow"><div class="hleft"><h2 class="h2">유료 회원</h2><span class="sub">부모 1명 = 1행 · ${gs.length}명 · 행을 누르면 자녀·결제·계정 전체</span></div>
-      <div class="search" style="width:240px"><span style="font-size:14px;color:#6b7280">🔍</span><input id="mq" placeholder="닉네임·자녀 별명 검색" oninput="mFilt()"></div></div>
+      <div class="search" style="width:240px"><span style="font-size:14px;color:#6b7280">🔍</span><input id="mq" placeholder="아이디·이메일·닉네임·자녀 별명" oninput="mFilt()"></div></div>
     <div class="card">
       <div class="thead"><span style="flex:1.6">대표</span><span style="width:70px">자녀 수</span><span style="flex:1.2">학교</span><span style="width:150px">이용 상태</span><span style="width:80px">결제</span></div>
       <div class="adm-scroll" style="max-height:440px;overflow-y:auto" id="mbody">${rows || `<div class="empty">등록된 회원이 없습니다.</div>`}</div>
@@ -390,7 +398,7 @@ export function adminMembersPage(groups, subscriber = false, maxChildren = 3, ba
         var rows=Array.prototype.slice.call(document.querySelectorAll('#mbody .trow[data-i]'));
         rows.forEach(function(r){r.addEventListener('click',function(){memModal(+r.getAttribute('data-i'));});});
         window.mFilt=function(){var q=(document.getElementById('mq').value||'').trim().toLowerCase();
-          rows.forEach(function(r){var m=MEMBERS[+r.getAttribute('data-i')];var hit=!q||m.rep.toLowerCase().indexOf(q)>=0||m.kids.some(function(k){return k.nickname.toLowerCase().indexOf(q)>=0;});r.style.display=hit?'':'none';});};
+          rows.forEach(function(r){var m=MEMBERS[+r.getAttribute('data-i')];var hay=[m.rep,m.loginId,m.email].join(' ').toLowerCase();var hit=!q||hay.indexOf(q)>=0||m.kids.some(function(k){return k.nickname.toLowerCase().indexOf(q)>=0;});r.style.display=hit?'':'none';});};
         var inp=document.getElementById('tcq'),box=document.getElementById('tcres');
         if(inp)attachSchoolSearch(inp,box,function(name,slug){document.getElementById('tcslug').value=slug;inp.value=name;document.getElementById('tcpick').textContent='선택됨: '+name;});
       })();
