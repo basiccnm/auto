@@ -3552,8 +3552,10 @@ const Screens = {
                 /* ⚠ 저장된 반이 실제 목록에 없으면 **시간표가 안 나온다.**
                    조용히 두면 부모는 이유를 모른 채 빈 시간표만 본다 — 반드시 말해 준다. */
                 : `⚠ 지금 「${esc(String(S.childDraft.class_name))}」로 돼 있는데 이 학년엔 없는 반이에요. 다시 골라주세요`)
+            /* ⚠ 학교를 안 골랐으면 「N개 반이에요」는 **근거 없는 숫자**다 — 아무 말도 안 한다.
+               안내문이 길면 드롭다운 옆에서 네 줄로 흘러 화면을 망가뜨린다(폰 실측). 짧게. */
             : (S.classBusy ? "반 이름을 알아보는 중…"
-                : `${g}학년은 ${classes}개 반이에요 · 학교가 시간표를 올리면 실제 반 이름으로 바뀌어요`)}</p></div>
+                : (S.childDraft.school ? "학교가 시간표를 올리면 실제 반 이름이 떠요" : ""))}</p></div>
       </div>
       <label class="f">별명 * <span style="font-weight:400">(화면에는 이 이름만 보여요)</span></label>
       <input id="ce-nick" placeholder="예: 셋째" value="${esc(S.childDraft.nickname)}" oninput="S.childDraft.nickname=this.value">
@@ -9137,6 +9139,15 @@ const App = {
       if (!names.length) names = await pull("1");
       if (!names.length) names = await pull("2");
       S.classNames = names.length ? names.sort() : null;
+      /* ⚠ 받아온 목록에 **지금 값이 없으면 화면과 데이터가 어긋난다.**
+         드롭다운은 첫 항목(「난초」)을 보여주는데 저장될 값은 기본값 「1」로 남아,
+         그대로 등록하면 NEIS 에 CLASS_NM=1 로 물어 **시간표가 영영 0건**이 된다(폰 실측).
+         새로 등록하는 중이면 「1」은 부모가 고른 게 아니다 → 조용히 첫 반으로 맞춘다.
+         이미 등록된 아이를 고치는 중이면 부모가 **직접 고른 값**이니 함부로 안 바꾸고 경고만 띄운다. */
+      if (S.classNames && !S.classNames.some((n) => String(n) === String(S.childDraft.class_name))
+          && !S.childEditId) {
+        S.childDraft.class_name = S.classNames[0];
+      }
     } catch (e) { S.classNames = null; }
     S.classBusy = false; this.render();
   },
