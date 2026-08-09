@@ -2889,6 +2889,13 @@ const Screens = {
 
   school: () => {
     const sc = schoolInfo();
+    /* ⚠ 「schedule」은 **이제 학교 화면의 탭이 아니다** — 달력은 #calendar 로 떨어져 나갔다.
+       그런데 calendar() 가 S.schoolTab = "schedule" 을 전역에 써 놓고 나가서,
+       달력을 본 뒤 #school 에 닿으면 학교정보 자리에 달력이 그려졌다(08-09 실측:
+       두 화면 스샷이 픽셀까지 같았다). 메뉴로 들어오면 go() 가 info 를 넣어 괜찮고
+       뒤로가기·옛 주소·딥링크로 올 때만 터진다.
+       → 없는 탭으로 들어온 것이니 «학교정보»로 되돌린다. 위의 커뮤니티 처리와 같은 방식이다. */
+    if (S.schoolTab === "schedule") S.schoolTab = "info";
     // 중·고에서 커뮤니티 탭으로 들어오면(홈 메뉴·옛 주소) 학교정보로 되돌린다 — 없는 탭에 갇히지 않게
     if (S.schoolTab === "community" && !String(sc.kind || "").startsWith("초")) S.schoolTab = "info";
     const t = S.schoolTab;
@@ -7513,7 +7520,12 @@ const App = {
        바깥(위젯·알림·저장된 링크)에서 아직 올 수 있으니, 보던 탭에 맞는 **단독 화면**으로 넘긴다.
        replaceState 라 뒤로가기 기록에 «학교 탭»이 남지 않는다. */
     if (name === "school") {
-      name = { meal: "meal", schedule: "calendar", timetable: "timetable", community: "community" }[S.schoolTab] || "schoolinfo";
+      /* ⚠ schedule → calendar 매핑을 **뺐다**(08-09). 달력은 #calendar 로 떨어져 나갔는데
+         calendar() 가 S.schoolTab="schedule" 을 전역에 써 놓고 나가서, 달력을 본 뒤
+         #school 에 닿으면 **주소는 #school 인데 달력이 그려졌다**(스샷 두 장이 픽셀까지 같았다).
+         메뉴로 들어오면 go() 가 info 를 넣어 괜찮고 뒤로가기·옛 주소로 올 때만 터졌다.
+         ⚠ 라우터가 화면을 고른 뒤에 school() 이 돈다 — school() 안에서 고치려 했다가 안 먹었다. */
+      name = { meal: "meal", timetable: "timetable", community: "community" }[S.schoolTab] || "schoolinfo";
       history.replaceState(null, "", "#" + name);
     }
     /* 주소가 비었을 때의 «집» — 회원은 홈, 비회원(설문까지 마친 사람)은 둘러보기,
