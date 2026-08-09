@@ -7309,9 +7309,9 @@ body {
         126px 은 «시계만 있을 때» 판의 윗변이 있던 자리다 — 시계는 그대로 있고 띠만 아래에 붙는다.
    ⚠ 판이 아래로 더 나오므로 그림 아래 여백도 같이 벌린다. 안 벌리면 첫 카드를 덮는다. */
 :root #screen:has(.hv3-art) #board {
-  align-self: flex-start; margin-top: 142px; margin-bottom: 0;
+  align-self: flex-start; margin-top: 182px; margin-bottom: 0;
 }
-:root #screen:has(.hv3-art) .hv3-art { margin-bottom: 112px; }
+:root #screen:has(.hv3-art) .hv3-art { margin-bottom: 152px; }
 
 /* ── 🚦 우 → 좌로 흐른다. 그래서 «전광판»이다 ──────────────────────────
    흐르니까 글이 길어도 잘리지 않는다 — 「시간표가 아직 없...」 잘림이 여기서 풀린다.
@@ -7359,3 +7359,23 @@ body {
 :root[data-theme="charcoal"] #board .bd-now, :root[data-theme="lavender"] #board .bd-now {
   border-left: none;
 }
+
+/* ── 전광판 글씨를 키우고 칸도 같이 키운다 (2026-08-10 대표님 지시 ②) ────────
+   「글씨가 너무 작고 색상을 알아보기 어렵다」.
+   ⚠ 칸 높이를 **숫자로 박지 않는다** — 글씨가 커지면 칸이 저절로 따라오게
+     `line-height` + `min-height: 0` 으로 글씨가 높이를 정하게 둔다.
+     박아 두면 나중에 글씨만 키웠을 때 또 잘린다(이 화면에서 이미 한 번 겪었다).
+   ⚠ 색은 흐린 회색이 아니라 **테마 잉크를 그대로** 쓰고 살짝 더 눌러 대비를 얻는다.
+     유리판 위 글씨라 옅게 두면 그림에 묻힌다. */
+:root #board .bd-mq > span {
+  font-size: 17.5px; font-weight: 900; line-height: 1.45; letter-spacing: -.3px;
+  color: color-mix(in srgb, var(--art-ink) 90%, #000);
+}
+:root[data-theme="dark"] #board .bd-mq > span,
+:root[data-theme="navy"] #board .bd-mq > span,
+:root[data-theme="charcoal"] #board .bd-mq > span,
+:root[data-theme="lavender"] #board .bd-mq > span {
+  color: color-mix(in srgb, var(--art-ink) 92%, #FFF);
+}
+:root #board .bd-now { margin-top: 7px; padding-top: 7px; min-height: 0; }
+:root #board .bd-mq { line-height: 1.45; }
