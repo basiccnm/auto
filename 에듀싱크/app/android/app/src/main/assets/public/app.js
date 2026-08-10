@@ -2609,20 +2609,37 @@ const Screens = {
      **이 화면 안에서 끝나야 한다.**
      구성: 일러스트 띠 → ①지금 1줄 → ②학교 그룹 → ③아이 그룹 → 하단 3버튼.
      ⚠ 밀도: 한 줄에 한 가지, 여러 개면 «외 n». 줄 자체는 오늘카드 편집에서 끌 수 있다. */
+  /* ══ 홈 — 새 디자인 정본 (2026-08-11 확정) ══════════════════════
+     시각 정본: mockups/main-A-google.html · 값: design/아이서랍-정본.md · css: design.css
+
+     🔴 클래스는 전부 **ns-** 다. 옛 홈 규칙이 style.css 10개 구획에 흩어져 있어서,
+        이름이 겹치면 어디서 새는지 못 찾는다. 이름을 갈아 옛 규칙을 무력화했다.
+
+     구조 — 위·아래가 색, 가운데가 흰색으로 감싸는 형태
+       ① 머리   ☰ ────────── 아이서랍
+       ② 지금   시계 + 전광판  (한 칩. 테마 그림이 여기 들어간다)
+       ③ D-day  가장 가까운 큰 행사 하나 (없으면 줄 자체가 없다)
+       ④ 서랍장 오늘 4칸 — 일정 · 준비물 · 방과후 · 미션
+       ⑤ 하단   달력 · ＋ · 미션 (떠 있는 판)
+     ══════════════════════════════════════════════════════════════ */
   home: () => {
     const c = cur();
-    const T = S.todayCards;
     const unread = unreadFor("parent");
-    const dow = new Date(`${TODAY.slice(0, 4)}-${TODAY.slice(4, 6)}-${TODAY.slice(6)}`).getDay();
+    const d = new Date(`${TODAY.slice(0, 4)}-${TODAY.slice(4, 6)}-${TODAY.slice(6)}`);
+    const dow = d.getDay();
     const wdKo = ["일", "월", "화", "수", "목", "금", "토"][dow];
-
-    // 내일 준비물 — 저녁(19시~) 배너도 같은 값을 쓴다
     const tomorrow = ymdPlus(TODAY, 1);
     const packs = STUB.supplies.filter((x) => x.date === tomorrow && !x.done);
-    /* 배너 슬롯은 **행사 전용**이다(2026-08-03 지시).
-       저녁 «내일 챙길 것 n개» 배너는 없앴다 — 바로 아래 준비물 버튼에 같은 숫자가 뜨고 있어서
-       한 화면에 같은 말이 두 번 나왔다(§4 «기능당 입구 하나»).
-       ⚠ 저녁 알림(푸시)은 그대로다. 없앤 건 «화면 안 배너»뿐이다. */
+
+    /* 오늘 일정 — 학사일정 + 내 일정. 시각 순 */
+    const sch = schedulesOf().filter((e) => e.date === TODAY && !e.name.includes("토요휴업일")
+      && !(S.holiOff && (e.closure_type || "").includes("공휴일")));
+    const mine = (STUB.myEvents || []).filter((e) => e.date === TODAY);
+    const evs = [...sch.map((e) => ({ at: "", t: e.name })), ...mine.map((e) => ({ at: e.start || "", t: e.title }))]
+      .sort((x, y) => String(x.at || "99:99").localeCompare(String(y.at || "99:99")));
+    const acts = STUB.activities.filter((a) => String(a.days_of_week || "").split(",").includes(String(dow)));
+
+    /* D-day — 가장 가까운 «큰» 학교 행사 하나만 */
     const nextBig = schedulesOf()
       .filter((e) => e.date >= TODAY
         && !(S.holiOff && (e.closure_type || "").includes("공휴일"))
@@ -2630,261 +2647,75 @@ const Screens = {
         && classifyEvent(e.name, e.closure_type))
       .sort((a, b) => a.date.localeCompare(b.date))[0];
 
-    /* 한 줄 부품 — [아이콘][이름][값][>] . 값이 길면 … 로 자른다(밀도 규칙) */
-    const line = (cls, icon, name, value, go) => `
-      <button class="hv3-line ${cls}" onclick="${go}">
-        <span class="ic ${cls}"><i aria-hidden="true" class="ti ${icon}"></i></span>
-        <b>${name}</b><span class="tx">${value}</span>
-        <i aria-hidden="true" class="ti ti-chevron-right go"></i>
+    const ms = S.missions;
+    const msDone = (ms || []).filter((x) => x.status === "done").length;
+    const pend = (isChildToken() || S.childView || S.kidMode) ? 0 : (S.verifyPending || []).length;
+
+    /* 서랍 앞판 한 칸 — [칩][이름·부제][값][›] */
+    const drw = (chip, icon, name, sub, val, cls, go) => `
+      <button class="ns-row" onclick="${go}">
+        <span class="chip ${chip}"><i aria-hidden="true" class="ti ${icon}"></i></span>
+        <span class="n">${name}${sub ? `<em>${sub}</em>` : ""}</span>
+        <span class="v ${cls || ""}">${val}</span>
+        <i aria-hidden="true" class="ti ti-chevron-right ar"></i>
       </button>`;
 
-    /* ── 내용을 직접 보여주는 줄 (2026-08-03 지시) ────────────────
-       「급식 ›」처럼 제목과 화살표만 있으면 **눌러야만 알 수 있다.**
-       부모가 하루에 확인하는 것들이라 이름은 작게 위로 올리고 **내용이 본문**이 된다.
-       화살표는 빼고, 줄 전체를 눌러 상세로 간다(이동은 그대로 유지).
-       ⚠ 값은 이미 esc() 를 거쳤거나 우리가 만든 마크업이다 — 여기서 다시 escape 하지 않는다. */
-    /* ⚠ 이름을 **값 위 별도 줄**로 두면 줄 수가 두 배가 된다 —
-       360×800 에서 162px 넘쳤다(2026-08-03 실측). 값 앞에 작은 라벨로 붙여 한 줄에 넣는다. */
-    const body = (cls, icon, name, html, go) => `
-      <button class="hv3-line big ${cls}" onclick="${go}">
-        <span class="ic ${cls}"><i aria-hidden="true" class="ti ${icon}"></i></span>
-        <span class="bd"><span class="vl"><em class="nm">${name}</em>${html}</span></span>
-      </button>`;
-    /* 없는 날 — 줄을 지우지 않고 **회색 한 줄로 줄인다.**
-       아예 없애면 「어제는 있었는데 오늘은 왜 없지」를 앱 탓으로 읽는다. */
-    const none = (cls, icon, text) => `
-      <div class="hv3-line empty">
-        <span class="ic ${cls}"><i aria-hidden="true" class="ti ${icon}"></i></span>
-        <span class="bd"><span class="vl">${text}</span></span>
-      </div>`;
-    const more = (arr, n) => arr.length > n ? ` <em class="hv3-more">외 ${arr.length - n}</em>` : "";
+    /* 전광판 — nowDoing() 이 만든 문구. 없는 날에도 «없다»고 말한다(빈 줄 금지) */
+    const n = nowDoing();
+    const mqTxt = `${n && n.p ? n.p : ""}${nextBig ? `  ·  ${esc(nextBig.name)}${ddayLabel(nextBig.date) ? ` ${esc(ddayLabel(nextBig.date))}` : ""}` : ""}${packs.length ? `  ·  내일 챙길 것 ${packs.length}개` : "  ·  내일 준비물은 다 챙겼어요"}`;
 
     return `
-    <div class="hd-top">
-      ${S.kidMode
-        ? `<button class="hv3-ham" onclick="App.kidModeOff()" aria-label="부모 모드로 나가기">
-             <i aria-hidden="true" class="ti ti-lock"></i></button>`
-        : `<button class="hv3-ham" onclick="App.drawerOpen()" aria-label="메뉴${unread ? ` · 안 읽음 ${unread}개` : ""}"><i aria-hidden="true" class="ti ti-menu-2"></i>${unread ? `<span class="hd-badge">${unread}</span>` : ""}</button>`}
-      <!-- 아이가 없으면(구경 중) 자녀칩 자리에 **앱 이름**만 둔다(2026-08-04 지시).
-           ⚠ 여기에 「가입하기」 버튼을 뒀다가 걷어냈다. 들어오자마자 가입을 들이밀면
-             «구경하러 왔는데 문 앞에서 붙잡는» 꼴이다. 가입 길은 서랍(☰)에 있으면 족하다.
-           ⚠ 빈 알약은 그리지 않는다 — «내 아이가 사라졌나»로 읽힌다. -->
-      <!-- ⚠ 자녀 «프로필 칩»을 걷어냈다(대표님 지시 08-08).
-           아이를 바꾸는 길은 **서랍 안**에 그대로 있다(hv3-drwho) — 입구가 둘일 이유가 없고,
-           맨 위 줄이 비면 그림이 더 크게 보인다. -->
-      <span class="hd-gap"></span>
-      <!-- 서랍·알림 아이콘을 걷어냈다(대표님 지시 2026-08-09).
-           **메뉴 안에 「서랍」과 「대화」가 이미 있다** — 입구가 둘일 이유가 없고,
-           맨 위 줄이 비면 그림이 더 크게 보인다(자녀 칩을 걷어낸 것과 같은 이유).
-           안 읽은 개수는 **메뉴 버튼 위 숫자**로 옮겼다 — 새 알림이 온 걸 홈에서 모르면
-           그건 기능이 준 것이다. -->
+    <div class="ns-home"${S.art ? ` data-art="${jsq(S.art)}"` : ""} style="${S.art ? `--ns-art:url(themes/${jsq(S.art)}.webp)` : ""}">
+
+      <div class="ns-hd">
+        ${S.kidMode
+          ? `<button class="ham" onclick="App.kidModeOff()" aria-label="부모 모드로 나가기"><i aria-hidden="true" class="ti ti-lock"></i></button>`
+          : `<button class="ham" onclick="App.drawerOpen()" aria-label="메뉴${unread ? ` · 안 읽음 ${unread}개` : ""}"><i aria-hidden="true" class="ti ti-menu-2"></i>${unread ? `<span class="badge">${unread}</span>` : ""}</button>`}
+        <h1>아이서랍</h1>
+      </div>
+
+      <div class="ns-now">
+        <div class="ns-clock">
+          <span class="d">${+TODAY.slice(4, 6)}월 ${+TODAY.slice(6)}일 <span class="${dow === 0 || dow === 6 ? "off" : ""}">${wdKo}요일</span></span>
+          <span class="t" id="ns-t">${clockHM()}</span>
+        </div>
+        <div class="ns-mq"><span>${mqTxt}<b style="padding-left:60px">${mqTxt}</b></span></div>
+      </div>
+
+      ${!nextBig ? "" : `<button class="ns-dday" onclick="App.dayOpen('${nextBig.date}')">
+        <b>${esc(nextBig.name)}</b><span class="v">${esc(ddayLabel(nextBig.date) || "")} ›</span>
+      </button>`}
+
+      ${!c ? `<button class="ns-dday" onclick="${TOKENS.access ? "App.childAddStart()" : "location.hash='#login'"}">
+        <b>${TOKENS.access ? "아이를 등록하면 시작돼요" : "로그인하고 시작해요"}</b><span class="v">›</span></button>` : ""}
+
+      <div class="ns-lb">오늘</div>
+      <div class="ns-chest">
+        ${drw("b", "ti-calendar", "오늘 일정",
+          evs.length ? `${evs[0].at ? esc(fmtT(evs[0].at)) : "종일"} · ${esc(evs[0].t)}` : "",
+          evs.length ? `${evs.length}개` : "없어요", "", `App.dayOpen('${TODAY}')`)}
+        ${drw("b", "ti-backpack", "내일 준비물", "",
+          packs.length ? `${packs.length}개` : "완료", packs.length ? "" : "ok", "location.hash='#supplies'")}
+        ${drw("nt", "ti-run", "방과후 · 학원", "",
+          acts.length ? `${acts.length}개` : "없어요", "", "location.hash='#afterschool'")}
+        ${pend ? drw("p", "ti-eye", "확인해 주세요", "", `${pend}건`, "need", "location.hash='#game'") : ""}
+        ${drw("p", "ti-target", "오늘 미션", "",
+          !ms || !ms.length ? "아직 없어요" : `${msDone} / ${ms.length}`, "", "location.hash='#game'")}
+      </div>
+
+      <div class="ns-bar">
+        <button onclick="location.hash='#calendar'"><i>📅</i><b>달력</b></button>
+        <button class="plus" onclick="App.editOpen('plan')" aria-label="새로 넣기"></button>
+        <button onclick="location.hash='#game'"><i>⭐</i><b>미션</b></button>
+      </div>
     </div>
-
-    <!-- 일러스트 헤더 + 전광판.
-         ⚠ 예전 규칙(§6)은 「그림만 · 정보 텍스트를 얹지 않는다」였다. **08-09 대표님 지시로 바꿨다** —
-           「시계를 일러까지 올려서 투명 유지하면서」. 유리판은 뒤가 비쳐야 유리라서,
-           맨색 위에 얹으면 흐림이 티가 안 난다. 그림 위에 얹어야 참조(타운보드)처럼 읽힌다.
-         ⚠ 그래서 aria-hidden 을 뗐다 — 안에 **읽어야 할 글자**(날짜·시각)가 들어왔다.
-         ⚠ 그림은 테마마다 밝기가 다르다. 글자 대비는 그림이 아니라 **아래 어둠막(::after)**
-           이 책임진다 — 막을 지우면 밝은 그림에서 시계가 사라진다. -->
-    <div class="hv3-art">${boardView()}</div>
-
-    <!-- 🔴 서버에 못 올라간 아이 — **홈에서 계속 보인다.** 토스트는 화면이 바뀌면 묻힌다.
-         이걸 안 보여 주면 부모는 저장된 줄 알고 쓰다가, 어느 날 아이가 통째로 사라진다. -->
-    ${!(c && c.saveFailed) ? "" : `<button class="hd-trial soon" onclick="App.childRetrySave()">
-      ${esc(c.nickname)}가 이 폰에만 있어요<em>${esc(String(c.saveFailed))} · 다시 시도<i aria-hidden="true" class="ti ti-arrow-back-up"></i></em></button>`}
-
-    ${promoteCard(c)}
-    <!-- 아이가 없으면(구경 중) **다음에 뭘 할지**를 홈에서 말해 준다(2026-08-09 실기).
-         ⚠ 예전에 여기 「가입하기」를 뒀다가 걷어낸 적이 있다 — 들어오자마자 가입을
-           들이미는 게 싫어서였다. 그건 지금도 맞다. 그래서 **가입이 아니라 «이유»**를 말한다.
-         ⚠ 빈 카드 넉 장만 있는 홈은 «고장난 앱»처럼 보인다.
-           ☰ 안에 「아이 등록하기」가 있지만, 메뉴를 열어야 보이는 것은 «없는 것»에 가깝다. -->
-    ${cur() && !S.authEnded ? "" : S.authEnded ? `<button class="hm-start" onclick="location.hash='#login'">
-      <b>다시 로그인해 주세요</b>
-      <em>${esc(String(S.authEnded))}<i aria-hidden="true" class="ti ti-chevron-right"></i></em></button>`
-      /* ⚠ 로그인 전에 「아이를 등록하면 시작돼요」라고 하면 **말과 행선지가 어긋난다** —
-           눌러 보면 가입 화면이 뜬다(대표님 지적 2026-08-10).
-         ⚠ 그리고 **이미 가입한 사람**은 가입 화면에서 막힌다. 먼저 할 일은 로그인이다.
-           가입 길은 로그인 화면 안에 「가입」으로 있다 — 새 사람도 거기서 간다. */
-      /* ⚠ 설명을 붙이지 않는다(대표님 2026-08-10: 「설명을 해줄 필요 없다고」).
-           할 일이 하나뿐인 자리에 설명을 달면 그건 광고지 안내가 아니다. */
-      : !TOKENS.access ? `<button class="hm-start one" onclick="location.hash='#login'">
-      <b>로그인하고 시작해요</b><i aria-hidden="true" class="ti ti-chevron-right"></i></button>`
-      : `<button class="hm-start" onclick="App.childAddStart()">
-      <b>아이를 등록하면 시작돼요</b>
-      <em>급식 · 시간표 · 학사일정이 매일 저절로 들어와요<i aria-hidden="true" class="ti ti-chevron-right"></i></em>
-    </button>`}
-    <!-- ⚠ 여기에 «지금은 구경만 하고 계세요» 가입 유도 카드를 얹었다가 걷어냈다(2026-08-04 지시).
-         비회원에게 보여주려는 건 **회원이 보는 그 화면 그대로**다. 그 위에 안내 카드를 덧대면
-         «진짜 화면»이 아니라 광고가 낀 화면이 된다. 가입 길은 위 자녀칩 자리 하나로 족하다. -->
-    ${(() => {
-      const d = passDaysLeft(c);
-      if (!passOpen(c) || d < 0 || d > 3) return "";
-      // 결제한 사람의 마지막 3일에 「체험」이라 쓰면 안 된다 — pass.paid 로 가른다(2026-08-10)
-      return `<button class="hd-trial" onclick="location.hash='#pay'">
-        ${c.pass && c.pass.paid ? "이용권" : "체험"} ${d === 0 ? "오늘까지" : `${d}일 남음`}<em>이용권 보기<i aria-hidden="true" class="ti ti-chevron-right"></i></em></button>`;
-    })()}
-    <!-- D-day 행사 — 가장 가까운 «큰» 학교 행사 하나만. 없으면 슬롯 자체가 없다 -->
-    ${!nextBig ? "" : `<button class="hd-trial" onclick="App.dayOpen('${nextBig.date}')">
-      ${esc(nextBig.name)}<em>${esc(ddayLabel(nextBig.date) || "")}<i aria-hidden="true" class="ti ti-chevron-right"></i></em></button>`}
-
-    <!-- ① 전광판 — **표시 전용.** 탭도 링크도 없다(§1).
-         시각은 분마다 갱신되고, 아이 상태는 시간표·학원을 보고 저절로 바뀐다.
-         ⚠ 시간표가 없거나 방학이면 **아무 말도 안 한다** — 시각만 남긴다(지어내기 금지). -->
-
-    <!-- ② 일정 카드 — 오늘 일정을 **내용 그대로**. 탭하면 일간 화면 -->
-    ${(() => {
-      const acts = STUB.activities.filter((a) => String(a.days_of_week || "").split(",").includes(String(dow)));
-      const mine = (STUB.myEvents || []).filter((e) => e.date === TODAY);
-      const sch  = schedulesOf().filter((e) => e.date === TODAY && !e.name.includes("토요휴업일")
-        && !(S.holiOff && (e.closure_type || "").includes("공휴일")));
-      const all = [
-        ...sch.map((e) => ({ at: "", t: e.name, k: "sc" })),
-        ...mine.map((e) => ({ at: e.start || "", t: e.title, k: "me" })),
-      ].sort((x, y) => String(x.at || "99:99").localeCompare(String(y.at || "99:99")));
-      const SHOW = 3;
-      /* 세 카드를 **같은 한 줄 문법**으로 맞춘다(2026-08-04 지시) —
-         [아이콘] 제목 …… 값 [>]. 내용이 있으면 그 아래로 펼친다.
-         ⚠ 하나만 아이콘이 있으면 그 줄만 특별해 보인다 → 셋 다 준다. */
-      return `<button class="hv3-card k-day" onclick="App.dayOpen('${TODAY}')">
-        <div class="hv3-hdrow">
-          <span class="ic"><i aria-hidden="true" class="ti ti-calendar"></i></span>
-          <b>오늘 일정</b>
-          ${all.length ? `<em class="val">${all.length}개</em>` : `<em class="val">일정이 없어요</em>`}
-          <i aria-hidden="true" class="ti ti-chevron-right go"></i>
-        </div>
-        ${!all.length ? "" : `<ul class="hv3-evs">${all.slice(0, SHOW).map((x) => `
-            <li class="${x.k}"><span class="at">${x.at ? esc(fmtT(x.at)) : "종일"}</span><span class="tx">${esc(x.t)}</span></li>`).join("")}
-          </ul>${all.length > SHOW ? `<p class="hv3-morep">외 ${all.length - SHOW}개</p>` : ""}`}
-      </button>`;
-    })()}
-
-    <!-- ③ 준비물 — **버튼 하나.** 내용은 나열하지 않는다. 숫자는 «내일» 미체크 개수(§1) -->
-    ${(() => {
-      const n = packs.length;
-      return `<button class="hv3-card k-supply ${n ? "on" : ""}" onclick="location.hash='#supplies'">
-        <div class="hv3-hdrow">
-          <span class="ic"><i aria-hidden="true" class="ti ti-backpack"></i></span>
-          <b>내일 준비물</b>
-          ${n ? `<span class="cnt">${n}</span>` : `<em class="val">완료</em>`}
-          <i aria-hidden="true" class="ti ti-chevron-right go"></i>
-        </div></button>`;
-    })()}
-
-    <!-- ④ 방과후 -->
-    ${(() => {
-      const acts = STUB.activities.filter((a) => String(a.days_of_week || "").split(",").includes(String(dow)))
-        .sort((x, y) => String(x.start_time).localeCompare(String(y.start_time)));
-      return `<button class="hv3-card k-after" onclick="location.hash='#afterschool'">
-        <div class="hv3-hdrow">
-          <span class="ic"><i aria-hidden="true" class="ti ti-run"></i></span>
-          <b>방과후 · 학원</b>
-          <em class="val">${acts.length ? `${acts.length}개` : "없어요"}</em>
-          <i aria-hidden="true" class="ti ti-chevron-right go"></i>
-        </div>
-        ${!acts.length ? "" : `<ul class="hv3-evs">${acts.map((a) => `
-            <li class="act"><span class="at">${esc(fmtT((a.start_time || "").slice(0, 5)))}</span>
-              <span class="tx">${esc(a.name)}</span>
-              <span class="til">${esc(fmtT((a.end_time || "").slice(0, 5)))}</span></li>`).join("")}</ul>`}
-      </button>`;
-    })()}
-
-
-    <!-- ⑤ 확인해 주세요 — 2단계 보상의 «2차»가 기다리는 자리 (2026-08-07 §3.2).
-         ⚠ 앱에서 **빨강을 쓰는 유일한 자리**다. 여기가 흔해지면 빨강이 아무 뜻도 없어진다.
-         ⚠ 아이 화면에는 안 그린다 — 보너스를 주는 건 부모다. -->
-    ${(() => {
-      const kid = isChildToken() || S.childView || S.kidMode;
-      const n = kid ? 0 : (S.verifyPending || []).length;
-      if (!n) return "";
-      return `<button class="hv3-card k-mission need" onclick="location.hash='#game'">
-        <div class="hv3-hdrow">
-          <span class="ic"><i aria-hidden="true" class="ti ti-eye"></i></span>
-          <b>확인해 주세요</b><span class="cnt">${n}</span>
-          <i aria-hidden="true" class="ti ti-chevron-right go"></i>
-        </div>
-        </button>`;
-    })()}
-
-    <!-- ⑥ 오늘 미션 — 홈 아래가 통째로 비어 있었다(2026-08-07 §6.4 «MVP 핵심 기능 완전 누락»).
-         ⚠ 🎲 리롤은 **넣지 않았다.** 서버에 그 길이 아직 없다 —
-           눌러도 아무 일이 없는 버튼을 두면 그게 고장으로 읽힌다(§4 «안 되는 스위치 금지»). -->
-    ${(() => {
-      const list = S.missions;
-      /* ⚠ 아직 안 받아온 상태(null)라고 카드를 **지우면 안 된다.**
-         비회원(구경)은 `loadMissions` 가 아예 안 돌아 null 로 영영 남는다 →
-         2026-08-07 에뮬 실기에서 **비회원 홈 아래가 그대로 비어 있었다**(§6.4 가 지적한 그 모습).
-         «회원이 보는 진짜 홈 그대로»가 원칙이므로 빈 상태 카드를 그대로 보여 준다. */
-      const done = (list || []).filter((x) => x.status === "done").length;
-      if (!list || !list.length) {
-        return `<button class="hv3-card k-mission" onclick="location.hash='#game'">
-          <div class="hv3-hdrow">
-            <span class="ic"><i aria-hidden="true" class="ti ti-target"></i></span>
-            <b>오늘 미션</b><em class="val">아직 없어요</em>
-            <i aria-hidden="true" class="ti ti-chevron-right go"></i>
-          </div></button>`;
-          /* ⚠ 설명 한 줄을 덧붙이지 않는다(2026-08-07 지시). 다른 카드는 «제목 + 값 + ›» 한 줄인데
-             여기만 «골라 주면 아이가…» 를 달아 두면 그 카드만 튀고, 매번 읽을 말도 아니다. */
-      }
-      return `<button class="hv3-card k-mission" onclick="location.hash='#game'">
-        <div class="hv3-hdrow">
-          <span class="ic"><i aria-hidden="true" class="ti ti-target"></i></span>
-          <b>오늘 미션</b><em class="val">${done}/${list.length}</em>
-          <i aria-hidden="true" class="ti ti-chevron-right go"></i>
-        </div>
-        <ul class="hv3-msn">${list.slice(0, 3).map((x) => `
-          <!-- ⚠ 아이콘은 **서브셋에 있는 것만** 쓴다. 없는 이름을 쓰면 그 자리가 «빈칸»으로 뜬다
-               (2026-08-03 에 5개가 그랬고, 2026-08-07 에 내가 6개를 또 그렇게 넣었다).
-               fonts/tabler-subset.css 에 그 이름이 있는지 보고 쓸 것. ti-circle 은 없다 → ti-square.
-               ⚠ 이 주석에 역따옴표를 쓰지 말 것 — 템플릿 문자열 안이라 그 자리에서 문법이 깨진다. -->
-          <li class="${x.status}"><i aria-hidden="true" class="ti ${x.status === "done" ? "ti-circle-check" : "ti-square"}"></i>
-            <span class="tx">${esc(x.title)}</span><span class="st">★${x.stars}</span></li>`).join("")}
-        </ul></button>`;
-    })()}
-
-    <!-- 스타코인 상점 카드는 홈에서 뺐다(2026-08-07 지시) — 부모의 매일 화면에 매일 볼 것이 아니다.
-         입구는 드로어 «보상» 그룹. 미션·확인해주세요 카드는 부모 일이라 남긴다. -->
-
-    <!-- 하단 3버튼 (§1) — 좌 달력 · 가운데 큰 ＋ · 우 미션 -->
-    <!-- 달력에만 라벨이 없어 셋이 삐뚤어 보였다(2026-08-04 지적) — 같은 자리에 같은 라벨을 준다 -->
-    <button class="hv3-cal" onclick="location.hash='#calendar'" aria-label="달력">
-      <i aria-hidden="true" class="ti ti-calendar"></i></button>
-    <button class="hv3-fab" onclick="App.editOpen('plan')" aria-label="새로 넣기">
-      <i aria-hidden="true" class="ti ti-plus"></i></button>
-    ${(() => {
-      const wait = (S.missions || []).filter((x) => x.status === "waiting").length;
-      const done = (S.missions || []).filter((x) => x.status === "done").length;
-      /* ★ = **미션 게임**으로 들어간다(2026-08-08 대표님 지시).
-           ⚠ «아이 전용 화면»이 아니다 — 부모도 아이도 이 안으로 들어오고, 안에서 역할만 갈린다
-             (부모는 내주고·승인하고, 아이는 해내고 받는다).
-           ⚠ 한 번 #mission 으로 되돌렸다가 다시 고쳤다. 지시는 «노란 별 = 게임 미션»이다. */
-      return `<button class="hv3-star" onclick="location.hash='#game'" aria-label="미션 게임">
-        <span class="st">★</span>${wait ? `<em class="bdg">${wait}</em>` : ""}</button>`;
-    })()}
 
     ${drawerView(c)}
     ${coachView()}
     ${reactSheetView()}
     ${stickerView()}
     ${pinPadView()}
-
-    ${chatDock()}
-    <!-- 자녀폰 미연결 안내 — 물음표를 눌렀을 때만(2026-08-03 폰 실기) -->
-    ${!S.linkWarn ? "" : `
-    <div class="modal sheetwrap" onclick="App.linkWarnClose()">
-      <div class="sheet" onclick="event.stopPropagation()">
-        <div class="sheet-grip"></div>
-        <div class="sheet-hd"><b>자녀폰이 아직 연결되지 않았어요</b></div>
-        <p class="lw-p">사진 미션은 <b>아이 폰에서 찍어 보내야</b> 도장이 나가요.</p>
-        <p class="lw-p">내 정보 → 자녀폰에서 <b>6자리 코드</b>를 받아 넣으면 돼요.</p>
-        <div class="sheet-act nodel">
-          <button class="act-cancel" onclick="App.linkWarnClose()">닫기</button>
-          <button class="act-del" style="background:var(--accent);color:#fff"
-            onclick="App.linkWarnClose();location.hash='#mypage'">연결하러 가기</button>
-        </div>
-      </div>
-    </div>`}`;
+    ${chatDock()}`;
   },
 
   // ── 3-1. 홈 편집 — 원형 메뉴 켜기/끄기 + 끌어서 순서 · 캐러셀 내용(2026-07-25) ──
@@ -5207,6 +5038,15 @@ function inputBar(kind, ph) {
    ⚠ **지어내지 않는다.** 시간표가 없거나 방학이면 아이 상태 줄을 아예 안 그린다.
      시각만 남는다. 「3교시 국어」를 방학에 말하는 것이 이 화면이 할 수 있는 최악이다.
    ⚠ 표시 전용이라 button 이 아니라 div 다. 누를 수 없게 생겨야 안 누른다. */
+/* 시계 글자 — 새 홈(ns-)이 쓴다. 초는 안 보여 준다(64px 에 초까지 넣으면 숫자가 흔들린다).
+   ⚠ 콜론을 1초마다 깜빡여 «살아 있다»를 말한다 — 초를 뺀 대신 이게 그 역할을 한다. */
+function clockHM() {
+  const d = new Date();
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  return `${hh}<i class="${d.getSeconds() % 2 ? "off" : ""}">:</i>${mm}`;
+}
+
 function boardView() {
   const d = new Date();
   const hh = String(d.getHours()).padStart(2, "0");
@@ -5266,23 +5106,13 @@ let BOARD_TIMER = null;
 function startBoard() {
   clearInterval(BOARD_TIMER);
   BOARD_TIMER = setInterval(() => {
-    const el = document.getElementById("board");
-    if (!el) { clearInterval(BOARD_TIMER); BOARD_TIMER = null; return; }
-    const box = document.createElement("div");
-    box.innerHTML = boardView();
-    const fresh = box.firstElementChild;
-    if (!fresh) return;
-    /* ⚠ 판을 통째로 갈아끼우면 **흐르던 전광판이 매초 처음으로 튄다.**
-       시계는 매초 바뀌어야 하고, 전광판 줄은 «내용이 실제로 바뀔 때»만 손댄다. */
-    const t0 = el.querySelector(".bd-time"), t1 = fresh.querySelector(".bd-time");
-    if (t0 && t1 && t0.innerHTML !== t1.innerHTML) t0.innerHTML = t1.innerHTML;
-    const n0 = el.querySelector(".bd-now"), n1 = fresh.querySelector(".bd-now");
-    if (n1 && !n0) el.appendChild(n1);
-    else if (n0 && !n1) n0.remove();
-    else if (n0 && n1 && n0.innerHTML !== n1.innerHTML) {
-      n0.className = n1.className; n0.innerHTML = n1.innerHTML;
-    }
-  }, 1000);   // 1초마다 — 초를 보여 주기로 했으니(2026-08-09). 전광판 마크업만 바꿔 끼워 가볍다
+    /* 시계만 갈아끼운다 — 화면 전체를 다시 그리면 입력 칸이 날아가고(한글 조합 깨짐)
+       스크롤도 튄다. 전광판은 흐르는 중이라 건드리면 처음부터 다시 흐른다. */
+    const t = document.getElementById("ns-t");
+    if (t) { t.innerHTML = clockHM(); return; }
+    const b = document.getElementById("board");     // 옛 홈(다른 화면에서 아직 쓴다)
+    if (b) b.outerHTML = boardView();
+  }, 1000);
 }
 
 /* ═══ 아이 흔적 (2026-08-03 지시서 0803-1 §3) ═══════════════════
@@ -6152,78 +5982,74 @@ function subHeader(title, sub) {
    순서가 곧 뜻이다 — 맨 위가 «누구 것을 보고 있나»(자녀 전환),
    그 아래가 상시 메뉴, 맨 아래 작게 내 정보·설정.
    당일 것(오늘·달력·미션)은 여기 없다. 그건 홈과 하단 3버튼이 진다. */
+/* ══ 드로어 — 새 디자인 정본 (2026-08-11 확정) ══════════════════
+   시각 정본: mockups/main-A-google.html · css: design.css
+
+   구조 — 위(테마 면)와 아래(틴트)가 가운데 흰 메뉴를 감싼다
+     ① 프로필  🌱 ─── 이름 🗄️      서랍은 여기서 바로 간다
+                학교 / 이용권 / 자녀폰   ← 세 줄
+     ② 테마    지금 고른 테마 이름까지 (19벌이라 뭘 쓰는지 보여야 한다)
+     ③ 학교    급식 · 시간표 · 학교정보 · 커뮤니티      (파랑 칩)
+     ④ 우리 아이 서류 · 대화·알림 · 고객센터·문의        (자주 칩)
+     ⑤ 바닥    내 정보 · 설정                          (틴트 판)
+
+   ⚠ 상태바를 덮지 않는다(top:var(--sa-t)). 예전엔 top:0 이라 시계·배터리까지 가렸다.
+   ⚠ 보상(상점·티켓·아이 모드)은 **미션 화면 안**으로 옮겼다 — 입구가 둘일 이유가 없다.
+   ══════════════════════════════════════════════════════════════ */
 function drawerView(c) {
-  /* 아이 모드에서는 서랍이 아예 열리지 않는다 (§5④) — 여는 버튼만 감추면 제스처로 열린다 */
-  if (S.kidMode) return "";
+  if (S.kidMode) return "";          /* 아이 모드에선 서랍이 아예 안 열린다 (§5④) */
   if (!S.drawer) return "";
   const undone = STUB.documents.filter((d) => d.kind === "field" && !d.reported).length;
   const unread = unreadFor("parent");
-  /* 그룹 배치 (2026-08-07 마이다이어리 벤치마킹) — 홈에서 뺀 보상 화면들의 정식 입구가 여기다.
-     학교(매일 보는 것) → 보상(스타코인 경제) → 소통(오가는 것) 순. ⚠ 아이콘은 서브셋에 있는 것만 */
-  const GROUPS = [
-    ["학교", [
-      ["ti-archive",   "서랍",     "location.hash='#timeline'", ""],
-      ["ti-table",     "시간표",   "location.hash='#timetable'", ""],
-      ["ti-tools-kitchen-2", "급식", "location.hash='#meal'", ""],
-      ["ti-school",    "학교정보", "location.hash='#schoolinfo'", ""],
-    ]],
-    ["보상", [
-      ["ti-discount",  "스타코인 상점", "location.hash='#store'", ""],
-      ["ti-receipt",   "내 티켓",   "location.hash='#tickets'", ""],
-      ["ti-user",      "아이 모드", "location.hash='#childmode'", ""],
-    ]],
-    ["소통", [
-      ["ti-file-text", "서류",     "location.hash='#docs'", undone ? String(undone) : ""],
-      ["ti-message-circle", "대화", "location.hash='#notify'", unread ? String(unread) : ""],
-      ["ti-messages",  "커뮤니티", "location.hash='#community'", ""],
-    ]],
-  ];
-  /* 사용기한 줄 — 결제를 붙이기 전이라 **자리만** 잡아 둔다(§4).
-     ⚠ 없는 기능을 있는 것처럼 눌리게 두지 않는다. 지금은 누를 수 없는 «표시»다. */
   const pass = passLabel(c);
+  const artNm = (ART_SETS.find((a) => a.key === S.art) || {}).label || "기본";
+
+  const item = (chip, icon, name, go, badge) => `
+    <button class="ns-item" onclick="App.drawerClose();${go}">
+      <span class="chip ${chip}"><i aria-hidden="true" class="ti ${icon}"></i></span>${name}
+      ${badge ? `<span class="cnt">${badge}</span>` : ""}
+    </button>`;
+
   return `
-  <div class="hv3-dim" onclick="App.drawerClose()">
-    <nav class="hv3-drawer" onclick="event.stopPropagation()">
-      <div class="hv3-drlogo"><span>★</span>아이서랍</div>
+  <div class="ns-dim" onclick="App.drawerClose()"></div>
+  <nav class="ns-drawer"${S.art ? ` data-art="${jsq(S.art)}"` : ""} onclick="event.stopPropagation()">
 
-      <!-- ⚠ 아이가 없으면(구경 중) 여기서 자녀 이름을 읽다가 **서랍이 통째로 안 열렸다**
-           (2026-08-04 실측). 그 자리에 «아이 등록하기»를 둔다 — 가입 길이 여기 하나면 족하다.
-           ⚠ 이 주석에 역따옴표를 쓰지 말 것 — 템플릿 문자열 안이라 그 자리에서 문법이 깨진다. -->
-      <!-- ⚠ 별명이 **한 글자**면 이니셜 아바타(첫 글자)와 이름이 똑같아 두 번 쓴 것처럼 보인다
-           (「콩」 옆에 「콩」 — 2026-08-10 폰 실측). 사진이 있으면 겹치지 않으니 그대로 둔다. -->
-      ${c ? `<button class="hv3-drwho" onclick="App.drawerClose();location.hash='#switch'">
-        ${(c.photo || c.photoLocal || String(c.nickname || "").trim().length > 1) ? childFace(c, "hd-face") : ""}
-        <span class="nm"><b>${esc(c.nickname)}</b><em>${[esc(schoolName(c)), c.grade ? `${c.grade}학년` : ""].filter(Boolean).join(" · ")}</em></span>
-        <i aria-hidden="true" class="ti ti-chevron-right"></i>
-      </button>
-
-      <!-- ⚠ 「무료 사용 중」이라고 하면 안 된다 — 2026-07-28 부터 **무료 티어가 없다**. 값을 모르면 모른다고 한다. -->
-      <div class="hv3-drpass">${esc(pass?.t || "확인 중")}</div>`
-      : `<button class="hv3-drwho" onclick="App.drawerClose();App.childAddStart()">
-        <span class="nm"><b>아이 등록하기</b></span>
-        <i aria-hidden="true" class="ti ti-chevron-right"></i>
-      </button>`}
-
-      <button class="hv3-dritem" onclick="App.drawerClose();location.hash='#theme'">
-        <i aria-hidden="true" class="ti ti-palette"></i>테마</button>
-
-      <div class="hv3-drhr"></div>
-
-      <div class="hv3-drscroll">
-        ${GROUPS.map(([cap, items], gi) => `
-          ${gi ? `<div class="hv3-drhr"></div>` : ""}
-          <div class="hv3-drcap">${cap}</div>
-          ${items.map(([ic, nm, go, bd]) => `
-          <button class="hv3-dritem" onclick="App.drawerClose();${go}">
-            <i aria-hidden="true" class="ti ${ic}"></i>${nm}
-            ${bd ? `<span class="hd-badge" style="position:static;margin-left:auto">${bd}</span>` : ""}</button>`).join("")}`).join("")}
+    <div class="ns-me">
+      <div class="top">
+        <span class="av"><i aria-hidden="true" class="ti ti-user"></i></span>
+        <span class="nm">${c ? esc(c.nickname) : "아이서랍"}</span>
+        ${c ? `<button class="go" onclick="App.drawerClose();location.hash='#timeline'" aria-label="서랍">
+          <i aria-hidden="true" class="ti ti-archive"></i></button>` : ""}
       </div>
-      <div class="hv3-drfoot">
-        <button class="hv3-dritem sub" onclick="App.drawerClose();location.hash='#mypage'">
-          <i aria-hidden="true" class="ti ti-settings"></i>내 정보 · 설정</button>
-      </div>
-    </nav>
-  </div>`;
+      ${c ? `<div class="stats">
+        <span class="s">학교<b>${esc(schoolName(c))}${c.grade ? ` · ${c.grade}학년` : ""}${c.class_name ? ` ${esc(c.class_name)}반` : ""}</b></span>
+        <span class="s">이용권<b>${esc(pass?.t || "확인 중")}</b></span>
+        <span class="s">자녀폰<b>${c.child_device ? "연결됨" : "연결 안 됨"}</b></span>
+      </div>` : `<div class="stats">
+        <span class="s">시작하기<b>${TOKENS.access ? "아이 등록하기" : "로그인"}</b></span>
+      </div>`}
+    </div>
+
+    <button class="ns-thm" onclick="App.drawerClose();location.hash='#theme'">
+      <i aria-hidden="true" class="ti ti-palette"></i>
+      <span class="nm">테마</span><span class="cur">${esc(artNm)}</span><i class="ar">›</i>
+    </button>
+
+    <div class="ns-sec">학교</div>
+    ${item("b", "ti-tools-kitchen-2", "급식", "location.hash='#meal'")}
+    ${item("b", "ti-table", "시간표", "location.hash='#timetable'")}
+    ${item("b", "ti-school", "학교정보", "location.hash='#schoolinfo'")}
+    ${item("b", "ti-messages", "커뮤니티", "location.hash='#community'")}
+
+    <div class="ns-sec">우리 아이</div>
+    ${item("p", "ti-file-text", "서류", "location.hash='#docs'", undone ? String(undone) : "")}
+    ${item("p", "ti-message-circle", "대화 · 알림", "location.hash='#notify'", unread ? String(unread) : "")}
+    ${item("p", "ti-info-circle", "고객센터 · 문의", "location.hash='#help'")}
+
+    <div class="ns-foot">
+      ${item("b", "ti-settings", "내 정보 · 설정", "location.hash='#mypage'")}
+    </div>
+  </nav>`;
 }
 
 /* ⚠ ＋ 퀵입력 «반쪽 시트»는 폐지했다(2026-08-03 §3 «팝업·반쪽 시트 전면 폐지»).

@@ -1,0 +1,38 @@
+@theme {
+  --color-canvas: #ffffff;
+  --color-canvas-dark: #22242a;
+  --color-foreground: #3c4043;
+  --color-foreground-inverse: #e8e8e8;
+  --color-muted: #5f6368;
+  --color-outline: #dadce0;
+  --color-primary: #1a73e8;
+  --font-display: Google Sans Display;
+  --font-search-system: Arial;
+  --font-text: Google Sans Text;
+  --font-ui: Google Sans;
+  --leading-action: 24px;
+  --text-action: 16px;
+  --tracking-action: 0.5px;
+  --font-weight-action: 500;
+  --leading-body: 24px;
+  --text-body: 16px;
+  --font-weight-body: 400;
+  --leading-display: 56px;
+  --text-display: 48px;
+  --tracking-display: -0.5px;
+  --font-weight-display: 400;
+  --leading-search-field: 22px;
+  --text-search-field: 16px;
+  --font-weight-search-field: 400;
+  --spacing-lg: 24px;
+  --spacing-md: 16px;
+  --spacing-sm: 8px;
+  --spacing-xl: 32px;
+  --spacing-xs: 4px;
+  --radius-card: 24px;
+  --radius-full: 1000px;
+  --radius-nav: 4px;
+  --radius-search-key: 8px;
+  --shadow-flat: none;
+  --shadow-search-key-hover: rgba(23,23,23,0.24) 0px 1px 3px 0px;
+}

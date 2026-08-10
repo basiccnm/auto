@@ -1,0 +1,231 @@
+/* ══════════════════════════════════════════════════════════════════════
+   아이서랍 디자인 정본 — A모듈(부모앱)          확정 2026-08-11
+   정본 문서: design/아이서랍-정본.md · 시각 정본: mockups/main-A-google.html
+
+   🔴 여기 없는 색·크기·간격·모서리는 쓰지 않는다. 필요하면 **이 파일에 먼저 추가**한다.
+   🔴 «덮어쓰기 금지» — 안 맞으면 선택자를 세게 쓰지 말고 토큰을 고친다.
+      그렇게 눌러온 것이 style.css 에 234개까지 쌓여서, 한 곳을 고치면 다른 데가
+      튀어나오는 상태가 됐다(2026-08-10 실측). 그게 이 파일을 만든 이유다.
+
+   🔴 클래스 앞에 **ns-** 를 붙인다(new system).
+      옛 홈·드로어 규칙이 style.css 10개 구획에 흩어져 있어서, 이름이 겹치면
+      어디서 새는지 영원히 못 찾는다. 이름을 갈면 옛 규칙은 **아예 안 걸린다.**
+
+   테마 19벌 = 그림 18 + 기본(구글 파랑). 다크모드 없음(단일 라이트).
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── 토큰 ─────────────────────────────────────────────────────────── */
+:root {
+  /* 무채색 — 구글 */
+  --ns-canvas:#ffffff;  --ns-bg:#f2f3f6;   --ns-chest:#dfe2e8;
+  --ns-ink:#202124;     --ns-fg:#3c4043;   --ns-muted:#5f6368;
+  --ns-line:#dadce0;
+
+  /* 기본 테마 = 구글 파랑. 그림 테마를 고르면 아래 [data-art] 가 덮는다 */
+  --ns-blue:#1a73e8; --ns-blue-tx:#185abc; --ns-blue-tint:#CADBF0;   /* 한 단 진하게(대표님 C안) — 잉크 4.62:1 */
+  --t-ink:var(--ns-blue-tx); --t-bar:var(--ns-blue); --t-tint:var(--ns-blue-tint);
+  --ns-scrim:0;                     /* 그림이 있을 때만 1 */
+
+  /* 자주 — 「우리 아이」 */
+  --ns-plum-tx:#6E2246; --ns-plum-tint:#F8EFF4;
+
+  /* 쉬는 날(토·일·공휴일) — 틴트 위 5.09:1 */
+  --ns-off:#c5221f;
+
+  /* 간격 · 모서리 */
+  --ns-4:4px; --ns-8:8px; --ns-16:16px; --ns-24:24px;
+  --ns-r-band:4px; --ns-r:8px; --ns-r-pill:1000px;
+
+  /* 크기 */
+  --ns-clock:64px; --ns-h-nav:48px; --ns-h-row:54px; --ns-h-band:42px; --ns-h-dday:48px;
+
+  --ns-sh:0 1px 2px rgba(0,0,0,.05), 0 2px 10px rgba(0,0,0,.05);
+}
+
+/* ── 테마 19벌 ────────────────────────────────────────────────────────
+   세 값이 한 벌이다 — 잉크(글자) · 바(면) · 틴트(옅은 면).
+   전부 그림에서 표본을 떠서 **대비 4.5:1 을 넘을 때까지 자동 조정**한 값이다.
+   ⚠ 사람이 고르지 않는다. 새 그림이 들어오면 같은 계산을 돌려 한 줄 추가한다.
+     (계산식은 design/아이서랍-정본.md) */
+[data-art]{--ns-scrim:1}
+[data-art="theme_01"]{--t-ink:#5E2000;--t-bar:#5E2000;--t-tint:#EECBB9}
+[data-art="theme_02"]{--t-ink:#706419;--t-bar:#847514;--t-tint:#EEE7B9}
+[data-art="theme_03"]{--t-ink:#4D6E2D;--t-bar:#57822D;--t-tint:#D5EEBE}
+[data-art="theme_04"]{--t-ink:#162348;--t-bar:#111F48;--t-tint:#B9C8EE}
+[data-art="theme_05"]{--t-ink:#7E502E;--t-bar:#A76432;--t-tint:#EED0BA}
+[data-art="theme_06"]{--t-ink:#993316;--t-bar:#992908;--t-tint:#EEC5B9}
+[data-art="theme_07"]{--t-ink:#29405B;--t-bar:#243D5B;--t-tint:#C1D6EE}
+[data-art="theme_08"]{--t-ink:#174928;--t-bar:#124925;--t-tint:#B9EECC}
+[data-art="theme_09"]{--t-ink:#103370;--t-bar:#062D70;--t-tint:#B9CDEE}
+[data-art="theme_10"]{--t-ink:#3D7066;--t-bar:#3F8073;--t-tint:#C9EEE7}
+[data-art="theme_11"]{--t-ink:#7B4F50;--t-bar:#A46364;--t-tint:#EED1D1}
+[data-art="theme_12"]{--t-ink:#002976;--t-bar:#002976;--t-tint:#B9CCEE}
+[data-art="theme_13"]{--t-ink:#7C5949;--t-bar:#9B6A55;--t-tint:#EED7CD}
+[data-art="theme_14"]{--t-ink:#461D0B;--t-bar:#461906;--t-tint:#EEC9B9}
+[data-art="theme_15"]{--t-ink:#206186;--t-bar:#1D7DB3;--t-tint:#B9DBEE}
+[data-art="theme_16"]{--t-ink:#73643E;--t-bar:#877443;--t-tint:#EEE4C9}
+[data-art="theme_17"]{--t-ink:#69507E;--t-bar:#8C67AC;--t-tint:#E0D0EE}
+[data-art="theme_18"]{--t-ink:#532597;--t-bar:#4C1A97;--t-tint:#CFB9EE}
+
+/* ── 화면 껍데기 ──────────────────────────────────────────────────── */
+body:has(.ns-home), body:has(.ns-drawer){ background:var(--ns-bg); }
+#screen:has(.ns-home){
+  padding:0 var(--ns-16) calc(var(--sa-b) + var(--ns-8));
+  background:var(--ns-bg); min-height:100vh;
+  display:flex; flex-direction:column;
+}
+.ns-home{ display:flex; flex-direction:column; flex:1; min-height:0;
+  color:var(--ns-fg); font-size:16px; font-weight:500; line-height:1.5; }
+
+/* 머리 — ☰ 왼쪽 · 앱 이름 오른쪽(벽에서 한 걸음 안으로) */
+.ns-hd{ display:flex; align-items:center; height:var(--ns-h-nav); flex:none;
+  padding-top:var(--sa-t); box-sizing:content-box; }
+.ns-hd .ham{ width:40px; height:40px; display:grid; place-items:center; font-size:20px;
+  border:none; background:none; color:var(--ns-ink); border-radius:var(--ns-r-pill);
+  margin-left:-4px; position:relative; }
+.ns-hd .ham .badge{ position:absolute; top:2px; right:2px; min-width:16px; height:16px;
+  border-radius:var(--ns-r-pill); background:var(--ns-off); color:#fff;
+  font-size:10px; font-weight:800; display:grid; place-items:center; padding:0 4px; }
+.ns-hd h1{ margin-left:auto; padding-right:20px; font-size:17px; font-weight:700;
+  color:var(--ns-ink); }
+
+/* ── 시계 + 전광판 = 칩 하나 ───────────────────────────────────────
+   ⚠ 가림막(::before)은 **그림이 있을 때만** 켠다. 항상 켜두면 기본 테마의
+     연한 파랑을 하얗게 씻어낸다(2026-08-11 실측 — 세 번 지적받고 찾았다). */
+.ns-now{ position:relative; border-radius:var(--ns-r); overflow:hidden;
+  margin-bottom:var(--ns-16); padding:22px 0 0;
+  background:var(--t-tint) no-repeat; background-image:var(--ns-art, none);
+  background-size:100% auto; background-position:center top; }
+.ns-now::before{ content:""; position:absolute; inset:0; pointer-events:none;
+  opacity:var(--ns-scrim);
+  background:linear-gradient(180deg,rgba(255,255,255,.34) 0%,rgba(255,255,255,.80) 46%,rgba(255,255,255,.94) 100%); }
+.ns-now > *{ position:relative; }
+.ns-clock{ display:flex; align-items:baseline; justify-content:center; gap:var(--ns-8);
+  padding:0 var(--ns-16) 14px; font-variant-numeric:tabular-nums; }
+.ns-clock .d{ font-size:14px; font-weight:600; color:var(--ns-muted); }
+.ns-clock .d .off{ color:var(--ns-off); font-weight:700; }   /* 토·일·공휴일 */
+.ns-clock .t{ font-size:var(--ns-clock); font-weight:700; line-height:1;
+  letter-spacing:-1px; color:var(--t-ink); }
+/* 전광판 — 오른쪽에서 왼쪽으로. 글자는 검정이 제일 잘 읽힌다(틴트 위 14.6:1) */
+.ns-mq{ height:var(--ns-h-band); display:flex; align-items:center; overflow:hidden;
+  border-top:1px solid rgba(0,0,0,.08); }
+.ns-mq > span{ display:inline-block; white-space:nowrap; padding-left:100%;
+  font-size:14px; font-weight:700; color:var(--ns-ink);
+  animation:ns-flow 16s linear infinite; }
+@keyframes ns-flow{ from{transform:translateX(0)} to{transform:translateX(-100%)} }
+@media (prefers-reduced-motion:reduce){ .ns-mq > span{ animation:none; padding-left:14px } }
+
+/* D-day — 가장 가까운 큰 행사 하나. 없으면 줄 자체가 없다 */
+.ns-dday{ display:flex; align-items:center; width:100%; height:var(--ns-h-dday);
+  padding:0 var(--ns-16); margin-bottom:var(--ns-16); border:none; text-align:left;
+  background:var(--t-tint); border-radius:var(--ns-r); font:inherit; color:var(--ns-ink); }
+.ns-dday b{ font-weight:700; }
+.ns-dday .v{ margin-left:auto; color:var(--t-ink); font-size:14px; font-weight:700; }
+
+/* ── 🗄️ 서랍장 — 우리 시그니처 ───────────────────────────────────
+   앱 이름이 아이서랍이다. 화면에서도 서랍이 보여야 한다.
+   몸통(진회색) 안에 앞판(흰색)이 **틈을 두고** 쌓이고, 앞판마다 손잡이와 두께가 있다. */
+.ns-lb{ font-size:14px; font-weight:700; color:var(--ns-muted); padding:0 var(--ns-8) var(--ns-8); }
+.ns-chest{ background:var(--ns-chest); border:1px solid var(--ns-line);
+  border-radius:var(--ns-r); box-shadow:var(--ns-sh);
+  padding:9px; display:flex; flex-direction:column; gap:9px; margin-bottom:var(--ns-16); }
+.ns-row{ display:flex; align-items:center; gap:12px; width:100%;
+  background:var(--ns-canvas); border:1px solid var(--ns-line); border-radius:6px;
+  padding:20px 12px 14px; position:relative; text-align:left; font:inherit;
+  color:var(--ns-ink); box-shadow:0 2px 0 rgba(32,33,36,.08); }
+.ns-row::before{ content:""; position:absolute; top:6px; left:50%; transform:translateX(-50%);
+  width:28px; height:4px; border-radius:2px; background:#d3d7dd; }   /* 손잡이 */
+.ns-row .chip{ width:32px; height:32px; flex:none; border-radius:var(--ns-r);
+  display:grid; place-items:center; }
+.ns-row .chip.b{ background:var(--t-tint); color:var(--t-ink); }
+.ns-row .chip.p{ background:var(--ns-plum-tint); color:var(--ns-plum-tx); }
+.ns-row .chip.nt{ background:#f1f3f4; color:var(--ns-muted); }  /* ⚠ n 은 이름칸 클래스라 충돌 — nt */
+.ns-row .chip .ti{ font-size:17px; }
+.ns-row .n{ flex:1; min-width:0; font-weight:600; }
+.ns-row .n em{ display:block; font-style:normal; font-size:13px; font-weight:500;
+  color:var(--ns-muted); margin-top:1px; }
+.ns-row .v{ font-size:14px; font-weight:700; color:var(--ns-muted);
+  font-variant-numeric:tabular-nums; }
+.ns-row .v.ok{ color:var(--t-ink); }
+.ns-row .v.need{ color:var(--ns-off); }
+.ns-row .ar{ color:var(--ns-muted); font-size:13px; }
+
+/* ── 하단 바 — 떠 있는 판. 배치 고정: [1fr | 48 | 1fr] ────────────
+   ⚠ 좌우 글자 폭이 달라 가운데가 밀렸던 적이 있다. 가운데를 **고정폭**으로 박아야 한다.
+   ⚠ ＋ 는 글자가 아니라 CSS 막대 둘이다 — 글자는 자기 여백이 있어 가운데가 안 맞는다. */
+.ns-bar{ display:grid; grid-template-columns:1fr var(--ns-h-nav) 1fr; align-items:center;
+  margin-top:auto; padding:var(--ns-8) var(--ns-16);
+  background:var(--t-bar); border-radius:var(--ns-r); }
+.ns-bar button{ border:none; background:rgba(255,255,255,.14); color:#fff; font-family:inherit;
+  height:56px; border-radius:var(--ns-r); width:auto; padding:0 24px; justify-self:center;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; }
+.ns-bar button i{ display:block; font-style:normal; font-size:21px; line-height:1; padding-bottom:1px; }
+.ns-bar button b{ font-size:13px; font-weight:800; line-height:1; }
+.ns-bar button.plus{ width:var(--ns-h-nav); height:var(--ns-h-nav); padding:0;
+  background:var(--ns-canvas); border-radius:var(--ns-r-pill); position:relative; }
+.ns-bar button.plus::before,.ns-bar button.plus::after{ content:""; position:absolute;
+  top:50%; left:50%; background:var(--t-bar); border-radius:1px; transform:translate(-50%,-50%); }
+.ns-bar button.plus::before{ width:18px; height:2.5px; }
+.ns-bar button.plus::after{ width:2.5px; height:18px; }
+
+/* ── 드로어 ────────────────────────────────────────────────────────
+   ⚠ 상태바를 덮지 않는다. 바닥선은 **홈 하단 바와 같은 높이**에서 끝난다. */
+.ns-dim{ position:fixed; inset:0; background:rgba(32,33,36,.32); z-index:80; }
+.ns-drawer{ position:fixed; top:var(--sa-t); bottom:0; left:0; width:min(304px,84vw);
+  background:var(--ns-canvas); z-index:81; display:flex; flex-direction:column;
+  padding:var(--ns-16) var(--ns-8) calc(var(--sa-b) + var(--ns-8)); overflow-y:auto; }
+/* 프로필 — 테마 면. 이름은 오른쪽, 서랍 바로가기는 그 옆 */
+.ns-me{ display:flex; flex-direction:column; gap:10px; padding:14px var(--ns-16);
+  margin-bottom:var(--ns-8); background:var(--t-bar); border-radius:var(--ns-r); }
+.ns-me .top{ display:flex; align-items:center; gap:12px; justify-content:space-between; }
+.ns-me .av{ width:44px; height:44px; flex:none; border-radius:var(--ns-r-pill);
+  background:var(--ns-canvas); display:grid; place-items:center; color:var(--t-bar); font-size:22px; }
+.ns-me .nm{ font-size:22px; font-weight:800; color:#fff; margin-left:auto; margin-right:10px; }
+.ns-me .go{ display:grid; place-items:center; width:38px; height:38px; flex:none;
+  border:none; border-radius:var(--ns-r-pill); background:rgba(255,255,255,.18);
+  color:#fff; font-size:18px; }
+.ns-me .stats{ display:flex; flex-direction:column; gap:5px; }
+.ns-me .stats .s{ display:flex; align-items:center; justify-content:space-between;
+  background:rgba(255,255,255,.14); border-radius:6px; padding:8px 12px;
+  font-size:13px; font-weight:600; color:rgba(255,255,255,.92); }
+.ns-me .stats .s b{ font-weight:700; color:#fff; font-variant-numeric:tabular-nums; }
+/* 테마 — 프로필 바로 아래. 19벌이라 «지금 뭘 쓰는지»가 보여야 한다 */
+.ns-thm{ display:flex; align-items:center; gap:12px; width:100%; height:46px; padding:0 10px;
+  margin-bottom:2px; border:none; border-radius:var(--ns-r-band); background:var(--t-tint);
+  color:var(--t-ink); font:inherit; font-size:14px; font-weight:700; text-align:left; }
+.ns-thm .nm{ flex:1; }
+.ns-thm .cur{ font-weight:600; opacity:.85; }
+.ns-thm .ar{ font-size:13px; opacity:.7; }
+/* 묶음 · 항목 */
+.ns-sec{ padding:20px 10px 6px; font-size:13px; font-weight:700; color:var(--ns-muted); }
+.ns-item{ display:flex; align-items:center; gap:12px; width:100%; height:var(--ns-h-row);
+  padding:0 10px; margin-bottom:2px; border:none; background:none; text-align:left;
+  border-radius:var(--ns-r-band); color:var(--ns-ink); font:inherit;
+  font-size:14px; font-weight:600; }
+.ns-item.on{ background:var(--t-tint); color:var(--t-ink); font-weight:700; }
+.ns-item .chip{ width:32px; height:32px; flex:none; border-radius:var(--ns-r);
+  display:grid; place-items:center; }
+.ns-item .chip.b{ background:var(--t-tint); color:var(--t-ink); }
+.ns-item .chip.p{ background:var(--ns-plum-tint); color:var(--ns-plum-tx); }
+.ns-item .chip .ti{ font-size:16px; }
+.ns-item .cnt{ margin-left:auto; min-width:20px; height:20px; padding:0 6px;
+  border-radius:var(--ns-r-pill); background:var(--ns-off); color:#fff;
+  font-size:11px; font-weight:800; display:grid; place-items:center; }
+/* 바닥 — 틴트 판. 위(프로필)와 아래(여기)가 가운데 흰 메뉴를 감싼다 */
+.ns-foot{ margin-top:auto; background:var(--t-tint); border-radius:var(--ns-r); padding:var(--ns-8); }
+.ns-foot .ns-item{ color:var(--t-ink); font-weight:700; margin:0; }
+.ns-foot .ns-item .chip{ background:var(--ns-canvas); }
+
+/* ── 상태바 자리 · 하단 잘림 방지 (2026-08-11 폴드6 실측) ─────────────
+   🔴 상태바 띠(body::before)가 **옛 토큰 --bg**(베이지)를 칠하고 있었다.
+      새 화면에서는 회색 바탕으로 확실하게 고정한다(대표님: 「그냥 회색으로 확실하게」).
+   🔴 하단 바가 «화면 밖으로 밀려 잘리는» 것을 막는다. 내용이 길어지면 margin-top:auto
+      만으로는 부족하다 — sticky 로 붙여 두면 어떤 기기 높이에서도 항상 보인다. */
+body:has(.ns-home)::before, body:has(.ns-drawer)::before{ background:var(--ns-bg); }
+.ns-bar{ position:sticky; bottom:0; z-index:2; }
+
+/* 프로필 정보 줄 — 라벨은 줄바꿈 금지, 값이 길면 줄인다.
+   ⚠ 「학교」가 세로로 쪼개져 «학/교» 로 보였다(2026-08-11 실기). 라벨을 flex:none 로 못 박는다. */
+.ns-me .stats .s{ gap:10px; }
+.ns-me .stats .s > :first-child{ flex:none; white-space:nowrap; }
+.ns-me .stats .s b{ flex:1; text-align:right; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }

@@ -1,0 +1,36 @@
+@theme {
+  --color-canvas: #ffffff;
+  --color-docs-layer: #f9f9f8;
+  --color-ink: #000000;
+  --color-muted: #615d59;
+  --color-primary: #0075de;
+  --color-primary-hover: #005bab;
+  --font-sans: NotionInter;
+  --leading-action: 24;
+  --text-action: 16px;
+  --font-weight-action: 500;
+  --leading-body: 24;
+  --text-body: 16px;
+  --font-weight-body: 400;
+  --leading-heading: 56;
+  --text-heading: 54px;
+  --tracking-heading: -1.875;
+  --font-weight-heading: 700;
+  --leading-hero: 100;
+  --text-hero: 96px;
+  --tracking-hero: -4.6;
+  --font-weight-hero: 600;
+  --leading-label: 20;
+  --text-label: 14px;
+  --font-weight-label: 500;
+  --spacing-lg: 16px;
+  --spacing-md: 12px;
+  --spacing-sm: 8px;
+  --spacing-xl: 24px;
+  --spacing-xs: 4px;
+  --radius-card: 12px;
+  --radius-control: 8px;
+  --radius-docs-input: 5px;
+  --radius-pill: 9999px;
+  --shadow-floating-action: rgba(0,0,0,0.01) 0px 0.175px 1.041px, rgba(0,0,0,0.02) 0px 0.8px 2.925px, rgba(0,0,0,0.027) 0px 2.025px 7.847px, rgba(0,0,0,0.04) 0px 4px 18px;
+}
