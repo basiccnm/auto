@@ -23,7 +23,11 @@ const RE_OPEN = /\{/g;
 const RE_CLOSE = /\}/g;
 const RE_NAME = /[.#][\w-]+/g;
 const RE_ENV = /env\(safe-area-inset-/;
-const RE_MAX = /max\(/;
+/* «감쌌다»고 볼 수 있는 두 가지:
+     ① max(...) 로 바닥값을 깐 것 — 옛 방식. 네비바 없는 기기에서 과하게 뜬다.
+     ② var(--sa-t / --sa-b) — 네이티브가 준 진짜 값. 지금 정본이다(MainActivity.bridgeSafeArea).
+   ⚠ 새 화면은 ②를 쓸 것. env() 를 직접 쓰면 이 검사가 잡는다. */
+const RE_MAX = { test: (t) => t.includes("max(") || t.includes("var(--sa-") || t.includes("--sa-t:") || t.includes("--sa-b:") };
 const RE_FLOAT = /position:\s*(fixed|sticky|absolute)/;
 
 /* CSS 를 블록 단위로 훑으며 콜백에 (선택자줄번호, 블록내용) 을 준다. */
@@ -43,7 +47,9 @@ function eachBlock(fn) {
 const guarded = new Set();
 const guardedSels = new Set();
 eachBlock((selLine, block) => {
-  if (RE_MAX.test(block) && RE_ENV.test(block)) {
+  /* ⚠ 새 방식(var(--sa-b))에는 env() 가 아예 없다 — env 를 요구하면 수집이 안 된다.
+     «안전영역을 제대로 다룬 규칙»이면 수집한다. */
+  if (RE_MAX.test(block)) {
     const s0 = String(selLine).split("{")[0].trim();
     (s0.match(RE_NAME) || []).forEach((n) => guarded.add(n));
     guardedSels.add(s0.replace(/^:root\s+/, ""));

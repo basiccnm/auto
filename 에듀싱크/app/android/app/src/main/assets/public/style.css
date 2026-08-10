@@ -4088,7 +4088,11 @@ body::before {
   font-style: normal; font-size: 11.5px; font-weight: 900; color: var(--accent-ink); white-space: nowrap; }
 /* ⚠ 노란 원 위 **흰 별**은 1.58:1 이었다 — 빛나는 원에 흰 것을 얹으면 형태가 안 읽힌다.
    어둡게 파고 위에 흰 하이라이트를 줘 «동전에 새긴» 것처럼 만든다. */
-.hv3-star .st { font-size: 34px; color: #6E4A00; text-shadow: 0 1px 0 rgba(255,255,255,.5); }
+/* ⚠ 이 별은 **노란 원 위에 파낸 것**처럼 보여야 한다(흰 별은 1.58:1 로 형태가 안 읽혔다).
+   그래서 색을 테마가 아니라 «그 원»에서 가져온다 — 원이 늘 노란색이라 어두운 갈색이 맞다.
+   토큰으로 뽑아 두면 나중에 원 색을 바꿀 때 여기도 같이 바뀐다. */
+:root { --star-ink: #6E4A00; }
+.hv3-star .st { font-size: 34px; color: var(--star-ink); text-shadow: 0 1px 0 rgba(255,255,255,.5); }
 .hv3-star .bdg { position: absolute; top: 0; right: 0; background: var(--danger); color: var(--on-danger);
   border-radius: 999px; font-size: 11.5px; font-weight: 900; padding: 2px 7px; font-style: normal; }
 .hv3-star .lb { position: absolute;  left: 50%; transform: translateX(-50%);
@@ -7139,21 +7143,326 @@ body {
 :root body:has(#tabbar.hidden) #screen {
   padding-bottom: calc(env(safe-area-inset-bottom) + 40px); }
 
-/* ── 하단 3버튼이 시스템 네비게이션 바에 먹히던 것 (2026-08-09 폰 실측) ──────────
-   갤럭시 Z 폴드6에서 **달력·★ 가 아무리 눌러도 반응이 없었다.** 37px 위를 누르면 열렸다
-   → 버튼은 멀쩡한데 **아래 절반이 네비바 위에 놓여 터치를 뺏기고 있었다.**
-
-   원인 둘이 겹쳤다.
-   ① `env(safe-area-inset-bottom)` 이 이 폰에서 **0 으로 온다** — 웹뷰가 네비바를 안 알려준다.
-      그래서 `+ 22px` 만 남아 버튼이 네비바 안으로 들어갔다.
-      → 안전영역을 «못 받는 폰»을 기준으로 **최소 바닥 여백**을 따로 준다.
-   ② 세 버튼의 `bottom` 이 같은데 **크기가 다르다**(＋ 72px · 달력/★ 56px).
-      bottom 이 같으면 아래 끝이 같아, 작은 두 개는 중심이 8px 더 아래다.
-      그래서 ＋ 만 살아남고 좌우 둘만 죽었다 — 셋의 **중심**을 맞춘다. */
-:root .hv3-cal, :root .hv3-star, :root .hv3-fab {
-  bottom: max(calc(env(safe-area-inset-bottom) + 22px), 64px);
+/* ── 알약 «안»에 든 입력칸은 맨몸이어야 한다 (2026-08-10 대표님 지적) ─────────
+   고객센터 검색칸이 바깥 알약과 높이가 안 맞았다.
+   원인: `.dw-search input` 이 `background:none; border:none` 이라고 선언해도,
+   **뒤에 나오는 전역 규칙**이 같은 특정도(0,0,1)로 이겨서 다시 칠한다 —
+     · `input, select { padding:13px; border:1px; margin-top:8px; background:var(--field) }` (837행)
+     · `input, select, textarea { 유리 배경·테두리·안쪽 하이라이트 }` (유리 블록)
+   그래서 알약 안에 **또 하나의 흰 상자**가 생기고, margin-top 8px 만큼 아래로 밀렸다.
+   ⚠ 이 셋은 「컨테이너가 테두리를 그리고 input 은 글자만 담는」 구조다 — 전부 벗긴다.
+   ⚠ 새로 이런 알약을 만들면 여기 선택자를 같이 늘릴 것. 안 그러면 또 이중으로 그려진다. */
+:root .dw-search input,
+:root .nt-send input,
+:root .sheet-two input {
+  background: none; background-color: transparent;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  border: none; box-shadow: none;
+  margin: 0; padding: 0;
 }
-:root .hv3-cal, :root .hv3-star { bottom: max(calc(env(safe-area-inset-bottom) + 30px), 72px); }
-/* 본문이 버튼에 안 깔리게 — 버튼이 올라간 만큼 같이 올린다 */
+:root .dw-search input:focus,
+:root .nt-send input:focus,
+:root .sheet-two input:focus {
+  background: none; background-color: transparent; box-shadow: none; outline: none;
+}
+/* 알약이 높이를 정하고, 입력칸은 그 안을 꽉 채운다 */
+:root .dw-search input { height: 100%; }
+
+/* ── ☰(서랍)이 탭에 안 먹던 것 (2026-08-10 폰 실측) ───────────────────────
+   앱을 켠 직후 홈에서 ☰ 를 눌러도 서랍이 안 열렸다(다른 화면에서 돌아오면 열렸다).
+   ⚠ 일러스트(.hv3-art)를 `margin-top: calc(... * -1 - 6px)` 로 **위로 당겨** 올리는데,
+     그러면 그림이 헤더 줄(.hd-top) 위로 겹쳐 올라온다. 그림은 마크업상 헤더보다 뒤라
+     쌓임 순서에서 이기고, **☰ 를 덮어 터치를 가져간다.**
+   ⚠ 하단 3버튼에서 겪은 것과 같은 부류다 — env(safe-area-inset-*) 가 이 폰에서 0 으로 와서
+     겹침 폭이 예상보다 커진다.
+   → 헤더 줄과 ☰ 를 **그림보다 확실히 위**로 올린다. 모양은 그대로다. */
+:root #screen:has(.hv3-art) .hd-top { position: relative; z-index: 3; }
+:root .hv3-ham { position: relative; z-index: 4; }
+/* 눌리는 넓이도 확보 — 24px 글자 하나는 손가락에 작다(터치 44px 규칙) */
+:root .hv3-ham { min-width: 44px; min-height: 44px; display: inline-flex; align-items: center; }
+
+/* ══ 전광판 — 시계 판 «아래»에 서는 한 줄 (2026-08-10 대표님 지시) ══════════════
+   ① **늘 있어야 한다** — 「있는지 없는지 모르니깐」. 사라지면 고장으로 읽힌다.
+   ② **밑의 카드들과 다르게** — 카드는 «유리 상자 + 둥근 모서리 + 색 레일»이다.
+      전광판은 상자를 쓰지 않는다: 배경 없이 **점 하나 + 굵은 한마디 + 옅은 꼬리**.
+      전광판은 «읽는 것»이고 카드는 «누르는 것»이라, 눌릴 것처럼 보이면 안 된다.
+   ⚠ 시계 판 안에 넣었더니 유리판이 가로로 늘어나 화면 밖으로 넘쳤고
+     그 넘침이 하단 3버튼 자리까지 밀었다(폰 실측) — 판 밖에 두는 이유이기도 하다. */
+:root .nowline { margin: 10px 4px 2px; }
+:root .nowline:empty { display: none; }
+:root .nl-row {
+  display: flex; align-items: center; gap: 8px;
+  min-height: 24px; padding: 0 2px;
+  /* 상자를 그리지 않는다 — 카드와 갈리는 지점이 여기다 */
+  background: none; border: none; box-shadow: none;
+}
+:root .nl-row > i {
+  flex: none; width: 7px; height: 7px; border-radius: 4px;
+  background: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+/* 지금 «하는 일»이 없는 상태(끝남·주말·방학·시간표 없음)는 점을 죽인다 — 색으로 상태를 말한다 */
+:root .nl-row.done > i, :root .nl-row.before > i,
+:root .nl-row.out > i, :root .nl-row.none > i {
+  background: var(--muted); box-shadow: none;
+}
+:root .nl-row b {
+  font-size: 15px; font-weight: 800; letter-spacing: -.2px; color: var(--ink);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+:root .nl-row em {
+  font-style: normal; font-size: 12.5px; font-weight: 700; color: var(--muted);
+  margin-left: auto; flex: none; padding-left: 8px;
+  /* ⚠ 한국어는 단어 안에서 끊으면 못 읽는다 */
+  word-break: keep-all;
+}
+:root .nl-next {
+  display: flex; align-items: center; gap: 5px; margin-top: 3px; padding: 0 2px;
+  font-size: 12.5px; font-weight: 700; color: var(--muted);
+}
+:root .nl-next i { font-size: 13px; flex: none; }
+
+/* 전광판 — 제목이 꼬리말에 밀려 「시간표가 아직 …」으로 잘렸다(폰 실측 2026-08-10).
+   ⚠ 제목이 먼저다. 꼬리는 남는 자리만 쓰고, 모자라면 꼬리가 줄어든다. */
+:root .nl-row b { flex: 1; min-width: 0; }
+:root .nl-row em {
+  max-width: 52%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+/* 첫 카드와 너무 붙어 한 덩어리로 보였다 — 사이를 벌려 «다른 것»임을 띄운다 */
+:root .nowline { margin: 12px 4px 10px; }
+
+/* ══ 전광판 = 시계 판 «안쪽 하단» (2026-08-10 대표님 확정) ═══════════════════
+   판 밖에 글씨만 세웠더니 「글씨로만 있어서 못 알아보겠다」 → 판 안으로 되돌렸다.
+   ⚠ 되돌리면서 다시 터진 문제: 판이 **내용 폭에 맞춰 가로로 늘어난다.**
+     `.hv3-art` 가 flex 라 `#board` 는 flex item 이고, flex item 은 내용 폭을 가진다.
+     상태 줄이 길면 판이 화면 밖으로 나가고, 그 가로 넘침이 **하단 3버튼 자리까지 밀었다**(폰 실측).
+     → 판 폭을 화면에 묶고, 넘치는 글은 판이 아니라 **글이 줄어든다.**
+   ⚠ 밑의 카드들과는 달라야 한다(같은 지시) → 카드 모양(둥근 상자·색 레일)을 쓰지 않는다.
+     판 안에 **얇은 구분선 아래 띠** 하나. 전광판은 읽는 것이고 카드는 누르는 것이다. */
+:root #screen:has(.hv3-art) #board {
+  /* ⚠ `.hv3-art` 가 flex 라 `#board` 는 flex item 이다.
+       · display 를 안 정해 두면 안쪽 줄들이 **가로로 붙는다**(시계 옆에 상태 줄이 붙었다)
+       · align-self: stretch 를 주면 판이 **그림 높이만큼 세로로 커진다**
+     둘 다 폰에서 실제로 겪었다(2026-08-10). 세로로 쌓고, 아래에 붙이고, 폭은 화면에 묶는다. */
+  display: block; align-self: flex-end;
+  width: 100%; max-width: 100%; box-sizing: border-box;
+}
+:root #board .bd-now {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 8px; padding-top: 8px; min-width: 0;
+  border-top: 1px solid color-mix(in srgb, var(--art-ink) 16%, transparent);
+}
+:root #board .bd-now > i {
+  flex: none; width: 7px; height: 7px; border-radius: 4px;
+  background: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+/* 지금 «하는 일»이 없는 상태(끝남·주말·방학·시간표 없음)는 점을 죽인다 */
+:root #board .bd-now.done > i, :root #board .bd-now.before > i,
+:root #board .bd-now.out > i, :root #board .bd-now.none > i {
+  background: color-mix(in srgb, var(--art-ink) 45%, transparent); box-shadow: none;
+}
+:root #board .bd-now b {
+  flex: 1; min-width: 0; font-size: 14.5px; font-weight: 800; letter-spacing: -.2px;
+  color: var(--art-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+:root #board .bd-now em {
+  font-style: normal; font-size: 12px; font-weight: 700; flex: none;
+  max-width: 50%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  color: color-mix(in srgb, var(--art-ink) 66%, transparent);
+}
+:root #board .bd-next {
+  display: flex; align-items: center; gap: 5px; margin-top: 5px; min-width: 0;
+  font-size: 12px; font-weight: 700;
+  color: color-mix(in srgb, var(--art-ink) 66%, transparent);
+}
+:root #board .bd-next i { font-size: 13px; flex: none; }
+/* 판 밖 줄은 폐기 — 흔적을 남기지 않는다 */
+:root .nowline { display: none; }
+
+/* 전광판 마무리 (2026-08-10 폰 실측) ─────────────────────────────────
+   ① 제목이 「시간표가 아직 없...」으로 잘렸다. 꼬리말이 자리를 먼저 차지했기 때문이다.
+      → **제목이 먼저다.** 자리가 모자라면 꼬리말이 먼저 줄어든다(flex-shrink).
+   ② 판이 세로로 커져 일러스트를 덮었다 — 시계와 띠 사이 여백을 줄인다.
+   ③ 구분선이 판 폭을 다 쓰지 않아 어중간했다 — 판 안쪽 끝까지 긋는다. */
+:root #board .bd-now { margin-top: 5px; padding-top: 5px; }
+:root #board .bd-now b { flex: 1 1 auto; min-width: 0; }
+:root #board .bd-now em { flex: 0 1 auto; min-width: 0; max-width: none; }
+
+/* ══ 전광판 — 시계는 제자리, 판은 «아래로» 자란다 (2026-08-10 대표님 지시) ═══════
+   ⚠ `.hv3-art` 는 `align-items: flex-end` 라 판이 **바닥에 붙어 있다.**
+     그래서 판이 커지면 위로 자라 **일러스트를 덮었다**(폰 실측).
+     → 위를 고정하고(flex-start + margin-top) 아래로 자라게 한다.
+        126px 은 «시계만 있을 때» 판의 윗변이 있던 자리다 — 시계는 그대로 있고 띠만 아래에 붙는다.
+   ⚠ 판이 아래로 더 나오므로 그림 아래 여백도 같이 벌린다. 안 벌리면 첫 카드를 덮는다. */
+:root #screen:has(.hv3-art) #board {
+  /* ⚠ 이 147px 은 **눈으로 맞춘 값**이다(2026-08-10 대표님: 「단풍잎 반만 가려야 해」).
+     그림마다 잎 위치가 다르니 «정답»은 없다 — 폰에서 보고 정한 자리다. 함부로 바꾸지 말 것.
+     아래 `.hv3-art { margin-bottom }` 과 **짝**이다. 하나만 바꾸면 첫 카드를 덮거나 뜬다. */
+  align-self: flex-start; margin-top: 147px; margin-bottom: 0;
+}
+:root #screen:has(.hv3-art) .hv3-art { margin-bottom: 117px; }
+
+/* ── 🚦 우 → 좌로 흐른다. 그래서 «전광판»이다 ──────────────────────────
+   흐르니까 글이 길어도 잘리지 않는다 — 「시간표가 아직 없...」 잘림이 여기서 풀린다.
+   ⚠ 같은 문장을 두 번 이어 붙여 끊김 없이 돈다(마크업에서 <b> 로 한 벌 더 붙였다).
+   ⚠ 판 밖으로 새면 안 되므로 창(.bd-mq)이 잘라 준다. */
+:root #board .bd-mq {
+  flex: 1; min-width: 0; overflow: hidden; -webkit-mask-image: linear-gradient(90deg,
+    transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
+          mask-image: linear-gradient(90deg,
+    transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
+}
+:root #board .bd-mq > span {
+  display: inline-block; white-space: nowrap; will-change: transform;
+  animation: bd-marquee 16s linear infinite;
+  font-size: 14.5px; font-weight: 800; letter-spacing: -.2px; color: var(--art-ink);
+}
+/* 두 번째 벌 — 앞 벌이 다 지나가기 전에 뒤따라온다 */
+:root #board .bd-mq > span > b { font-weight: 800; padding-left: 40px; }
+:root #board .bd-mq > span::after { content: ""; }
+@keyframes bd-marquee { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+/* 움직임을 싫어하는 사람에겐 멈춘 채로 보여 준다(접근성) */
+@media (prefers-reduced-motion: reduce) {
+  :root #board .bd-mq > span { animation: none; }
+  :root #board .bd-mq > span > b { display: none; }
+}
+
+/* 전광판 — 앞의 점을 빼고 **판 왼쪽 끝까지** 흐른다 (2026-08-10 대표님 지시).
+   점이 있으면 글이 그 뒤에서만 흘러 «전광판»이 아니라 «항목 한 줄»로 보인다. */
+:root #board .bd-now { gap: 0; padding-left: 0; padding-right: 0; }
+:root #board .bd-now > i { display: none; }
+:root #board .bd-mq {
+  /* 왼쪽 끝까지 — 가장자리 페이드만 남긴다(글이 갑자기 끊겨 보이지 않게) */
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 10px, #000 calc(100% - 10px), transparent 100%);
+          mask-image: linear-gradient(90deg, transparent 0, #000 10px, #000 calc(100% - 10px), transparent 100%);
+}
+
+/* 전광판 앞의 «하얀 짝대기» 제거 (2026-08-10 대표님 지적).
+   6132행의 옛 규칙이 `margin-left:14px; padding-left:14px; border-left:1px solid …` 를 준다 —
+   시계 오른쪽에 상태를 **가로로** 붙이던 시절의 칸막이다.
+   지금은 시계 «아래»에 흐르는 띠라 칸막이가 글을 막고 왼쪽 끝을 못 쓰게 한다. */
+:root #board .bd-now {
+  margin-left: 0; padding-left: 0; border-left: none;
+}
+:root[data-theme="dark"] #board .bd-now, :root[data-theme="navy"] #board .bd-now,
+:root[data-theme="charcoal"] #board .bd-now, :root[data-theme="lavender"] #board .bd-now {
+  border-left: none;
+}
+
+/* ── 전광판 글씨를 키우고 칸도 같이 키운다 (2026-08-10 대표님 지시 ②) ────────
+   「글씨가 너무 작고 색상을 알아보기 어렵다」.
+   ⚠ 칸 높이를 **숫자로 박지 않는다** — 글씨가 커지면 칸이 저절로 따라오게
+     `line-height` + `min-height: 0` 으로 글씨가 높이를 정하게 둔다.
+     박아 두면 나중에 글씨만 키웠을 때 또 잘린다(이 화면에서 이미 한 번 겪었다).
+   ⚠ 색은 흐린 회색이 아니라 **테마 잉크를 그대로** 쓰고 살짝 더 눌러 대비를 얻는다.
+     유리판 위 글씨라 옅게 두면 그림에 묻힌다. */
+:root #board .bd-mq > span {
+  font-size: 17.5px; font-weight: 900; line-height: 1.45; letter-spacing: -.3px;
+  color: color-mix(in srgb, var(--art-ink) 90%, #000);
+}
+:root[data-theme="dark"] #board .bd-mq > span,
+:root[data-theme="navy"] #board .bd-mq > span,
+:root[data-theme="charcoal"] #board .bd-mq > span,
+:root[data-theme="lavender"] #board .bd-mq > span {
+  color: color-mix(in srgb, var(--art-ink) 92%, #FFF);
+}
+:root #board .bd-now { margin-top: 7px; padding-top: 7px; min-height: 0; }
+:root #board .bd-mq { line-height: 1.45; }
+
+/* 로그인 화면 «닫기» — 홈에서 들어왔다가 못 나오던 것 (2026-08-10 폰 실측).
+   ⚠ 안전영역을 못 주는 폰이 있어 max() 로 바닥값을 깐다(하단 3버튼에서 겪은 것과 같다). */
+:root .lg-close {
+  position: absolute; left: 10px; z-index: 5;
+  top: max(calc(env(safe-area-inset-top) + 8px), 40px);
+  width: 44px; height: 44px; min-height: 44px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; line-height: 0;
+  background: var(--card-a); border: none; color: var(--ink); font-size: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .10);
+}
+:root .lg-close i { display: block; line-height: 1; }
+:root .lg-wrap { position: relative; }
+
+/* 시작 카드에 설명이 없을 때 — 제목 한 줄 + 화살표만. 두 줄짜리 여백을 그대로 두면 허전하다. */
+:root .hm-start.one { display: flex; align-items: center; gap: 10px; padding: 18px; }
+:root .hm-start.one > b { flex: 1; min-width: 0; }
+:root .hm-start.one > i { flex: none; opacity: .6; }
+
+/* 이용권 목록 맨 위의 «1주일 무료체험» — 고르는 것이 아니라 지금 상태를 말하는 줄이다.
+   ⚠ 다른 줄과 같은 모양이면 «누를 수 있다»고 읽힌다 → 점선 테두리로 갈라 둔다. */
+:root .plan.trial { border-style: dashed; opacity: .92; cursor: default; }
+:root .plan.trial.on { border-color: var(--accent); }
+:root .plan.trial > b { font-size: 14px; color: var(--muted); }
+/* ⚠ `--accent` 는 어두운 테마(theme_04 dark)에서 이 자리 4.11:1 이라 **미달**이다(전수조사 실측).
+   강조색은 «칠하는 색»이지 «읽는 색»이 아니다 — 글자는 잉크색으로 쓰고 강조는 테두리가 진다. */
+:root .plan.trial.on > b { color: var(--ink); }
+
+/* ── 체크박스가 시스템 기본 파랑이던 것 (2026-08-10 폰 실측) ─────────────────
+   테마가 18벌인데 체크만 안드로이드 기본 파랑이라 어느 테마에서도 겉돌았다.
+   ⚠ `accent-color` 한 줄이면 브라우저가 알아서 칠한다 — 직접 그리면(가짜 체크박스)
+     스크린리더·키보드 초점이 함께 사라진다. 접근성을 버리면서까지 색을 맞출 이유가 없다. */
+:root input[type="checkbox"], :root input[type="radio"] { accent-color: var(--accent); }
+
+
+/* ══ 안전영역 — **네이티브가 준 진짜 값**을 쓴다 (2026-08-10) ═══════════════
+   🔴 CSS `env(safe-area-inset-*)` 는 믿을 수 없다. 갤럭시 Z 폴드6(안드로이드 16)에서
+      **네비게이션 바가 있는데도 0** 으로 왔고, 버튼이 그 밑에 깔려
+      «보이는데 안 눌리는» 상태가 됐다 — 하루에 네 번 겪었다.
+   ⚠ 한때 `max(env(...), 64px)` 로 바닥값을 깔았다. 폴드6에서는 맞았지만
+     **네비바가 없는 기기에서는 과하게 떠서 카드를 가렸다**(에뮬 실측).
+     CSS 로는 «0 인데 바가 있는 기기»와 «0 이 정답인 기기»를 구분할 수 없다 —
+     값이 똑같이 0 인데 뜻이 반대다. 그래서 추측을 버리고 **네이티브에 물어본다.**
+   → MainActivity 가 --sa-top / --sa-bottom 을 넣어 준다(회전·접기·키보드마다 갱신).
+     넘어오기 전 한순간은 env() 로 버틴다. */
+:root {
+  --sa-t: var(--sa-top, env(safe-area-inset-top, 0px));
+  --sa-b: var(--sa-bottom, env(safe-area-inset-bottom, 0px));
+}
+
+/* 아래에 붙는 것 */
+:root .hv3-cal, :root .hv3-star, :root .hv3-fab { bottom: calc(var(--sa-b) + 22px); }
+:root .hv3-cal, :root .hv3-star { bottom: calc(var(--sa-b) + 30px); }
+:root #tabbar { height: calc(var(--tabbar-h) + var(--sa-b)); padding-bottom: var(--sa-b); }
+:root .chatbar     { padding-bottom: calc(var(--sa-b) + 10px); }
+:root .chatsheet   { padding-bottom: var(--sa-b); }
+:root .stickybar   { padding-bottom: calc(var(--sa-b) + 10px); }
+:root .viewer-meta { padding-bottom: calc(var(--sa-b) + 14px); }
+:root .viewer-menu { padding-bottom: var(--sa-b); }
+:root .vw-foot     { padding-bottom: calc(var(--sa-b) + 30px); }
+:root .mk-bot      { padding-bottom: calc(var(--sa-b) + 10px); }
+:root .th-act      { padding-bottom: calc(var(--sa-b) + 10px); }
+:root .ib          { padding-bottom: calc(var(--sa-b) + 10px); }
+:root #homefab, :root .dw-fab, :root .gc-fab { bottom: calc(var(--sa-b) + 16px); }
+:root .toast       { bottom: calc(var(--sa-b) + 16px); }
+:root .hv3-drfoot  { padding: 4px 0 calc(var(--sa-b) + 8px); }
 :root body:has(#tabbar.hidden) #screen:has(.hv3-star),
-:root #screen:has(.hv3-star) { padding-bottom: max(calc(env(safe-area-inset-bottom) + 112px), 154px); }
+:root #screen:has(.hv3-star)   { padding-bottom: calc(var(--sa-b) + 112px); }
+
+/* 위에 붙는 것 */
+:root .viewer-top  { padding-top: calc(var(--sa-t) + 12px); }
+:root .vw-top      { padding-top: calc(var(--sa-t) + 14px); }
+:root .in-skip     { top: calc(var(--sa-t) + 14px); }
+:root .sub-top     { padding-top: calc(var(--sa-t) + 2px); }
+:root body::before { height: var(--sa-t); }
+:root .lg-close    { top: calc(var(--sa-t) + 8px); }
+
+/* ☰ — 스크롤해도 남아야 한다(2026-08-10). 그림이 덮지 못하게 위로 올리고,
+   본문 위에도 얹히므로 유리 원을 깔아 어느 배경에서도 읽히게 한다. */
+:root #screen:has(.hv3-art) .hd-top {
+  position: sticky; top: 0; z-index: 30;
+  padding-top: calc(var(--sa-t) + 12px);
+}
+:root #screen:has(.hv3-art) .hv3-ham {
+  width: 44px; height: 44px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center; line-height: 0;
+  background: rgba(255, 255, 255, .40);
+  -webkit-backdrop-filter: blur(8px) saturate(1.1);
+          backdrop-filter: blur(8px) saturate(1.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .12);
+}
+:root[data-theme="dark"] #screen:has(.hv3-art) .hv3-ham,
+:root[data-theme="navy"] #screen:has(.hv3-art) .hv3-ham,
+:root[data-theme="charcoal"] #screen:has(.hv3-art) .hv3-ham,
+:root[data-theme="lavender"] #screen:has(.hv3-art) .hv3-ham {
+  background: rgba(255, 255, 255, .16);
+}
+:root #screen:has(.hv3-art) .hv3-ham i { display: block; line-height: 1; }
+:root #screen:has(.hv3-art) .hv3-art { margin-top: calc((var(--sa-t) + 12px) * -1 - 6px); }

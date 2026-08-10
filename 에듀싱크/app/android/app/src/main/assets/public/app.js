@@ -342,11 +342,50 @@ const MENU_OFF_DEFAULT = [];
 /* 점심시간 — 학교·학년마다 다르다(저학년은 4교시 뒤, 고학년은 5교시 뒤).
    NEIS가 안 주는 값이라 **사용자가 고친다.** 안 고쳤으면 학교 기본값을 쓴다.
    시간표·하루 일정 세 곳이 다 이 함수를 본다 — 값을 각자 읽으면 한 곳만 고치는 사고가 난다. */
-const lunchOf = () => ({
-  after: S.lunchAfter ?? 4,
-  start: S.lunchTime?.start || STUB.lunch.start,
-  end: S.lunchTime?.end || STUB.lunch.end,
-});
+/* ── 학교급별 일과표 (2026-08-10 대표님 지적: 「초중고가 시간이 틀려」) ──────────
+   🔴 **NEIS 는 교시 «시각»을 주지 않는다** — 교시 번호와 과목만 준다.
+      그래서 앱이 채워야 하는데, 여태 **초등 한 표**를 중·고에도 그대로 썼다.
+      그러면 전광판이 고등학생에게 「1교시 09:40 종료」라고 말한다 — 실제로는 09:30이다.
+   ⚠ 이것도 «대표값»이지 그 학교의 값은 아니다. 학교마다 5~10분씩 다르다.
+     그래도 학교급을 안 보는 것보다는 훨씬 가깝다. 부모가 고칠 길은 다음에 붙인다.
+   ⚠ 수를 세지 말고 **규칙으로 만든다** — 시작 시각 · 수업 길이 · 쉬는 시간 · 점심 위치.
+     표를 손으로 적으면 한 칸 틀려도 아무도 모른다. */
+const SCHOOL_DAY = {
+  "초등학교": { first: "09:00", len: 40, brk: 10, n: 6, lunchAfter: 4, lunchLen: 50 },
+  "중학교":   { first: "08:50", len: 45, brk: 10, n: 7, lunchAfter: 4, lunchLen: 50 },
+  "고등학교": { first: "08:40", len: 50, brk: 10, n: 7, lunchAfter: 4, lunchLen: 50 },
+};
+const schoolDay = () => {
+  const kind = String(cur()?.school?.kind || schoolInfo()?.kind || "초등학교");
+  return SCHOOL_DAY[kind]
+    || (kind.startsWith("고") ? SCHOOL_DAY["고등학교"]
+      : kind.startsWith("중") ? SCHOOL_DAY["중학교"] : SCHOOL_DAY["초등학교"]);
+};
+// ⚠ 이름을 `hhmm` 으로 두면 아래(6741행)의 «ISO → 시:분» 과 부딪힌다 — 분 단위 전용이라 이름을 나눈다
+const minToHM = (m) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+/* 그 아이 학교급의 교시표. 점심은 `lunchAfter` 교시 뒤에 끼고, 그다음 교시는 점심 끝나고 바로 시작한다. */
+function periodsOf() {
+  const d = schoolDay();
+  const out = [];
+  let t = toMin(d.first);
+  for (let i = 1; i <= d.n; i++) {
+    out.push({ n: i, start: minToHM(t), end: minToHM(t + d.len) });
+    t += d.len;
+    t += (i === d.lunchAfter) ? d.lunchLen : d.brk;
+  }
+  return out;
+}
+const lunchOf = () => {
+  const d = schoolDay();
+  const ps = periodsOf();
+  const auto = ps[d.lunchAfter - 1];
+  return {
+    after: S.lunchAfter ?? d.lunchAfter,
+    // 부모가 고쳐 둔 값이 있으면 그게 먼저다 — 학교급 기본값은 «모를 때»만 쓴다
+    start: S.lunchTime?.start || (auto ? auto.end : STUB.lunch.start),
+    end: S.lunchTime?.end || (auto ? minToHM(toMin(auto.end) + d.lunchLen) : STUB.lunch.end),
+  };
+};
 
 const supDayLabel = (d) => {
   const head = d === TODAY ? "오늘 · " : d === ymdPlus(TODAY, 1) ? "내일 · " : "";
@@ -880,7 +919,10 @@ const S = {
   ibText: "",             // 메신저식 입력바에 치고 있는 글자 (§3)
   _missionBusyLoad: false,// 받아오는 중 — 그리기가 잦아 같은 요청이 겹치는 것을 막는다
   missionNew: null,       // 우리 집 미션 만들기 폼 (null = 닫힘)
-  reg: { userid: "", pw: "", pw2: "", name: "", birth: "", email: "", phone: "", t1: true, t2: true },  // 회원가입 입력
+  /* ⚠ **필수 동의를 미리 켜두지 않는다**(2026-08-10 폰 실측에서 잡음).
+     동의는 «본인이 누른 것»이어야 법적으로 의미가 있다 — 미리 체크해 두면 다크패턴이고,
+     실제로 읽지 않은 사람이 동의한 것이 된다. */
+  reg: { userid: "", pw: "", pw2: "", name: "", birth: "", email: "", phone: "", t1: false, t2: false },  // 회원가입 입력
   regServerErr: {},       // 서버가 돌려준 칸별 사유(중복 아이디·이메일 등). _ 는 칸 없는 사유
   regBusy: false,         // 서버에 확인하는 중
   loginBusy: false,
@@ -1579,7 +1621,7 @@ const LEGAL = {
     ["제2조 (서비스 내용)", "서비스는 ① NEIS·학교알리미 등 공공데이터 기반의 급식·시간표·학사일정 안내 ② 자녀 기록(상장·통지표 등) 보관 ③ 교외체험학습 신청서·결석신고서 등 서식 작성 도움 ④ 준비물·일정 관리와 알림 ⑤ 자녀 기기 연결 기능을 제공합니다."],
     ["제3조 (정보의 성격)", "급식·시간표·학사일정은 공공데이터 공시 시점 기준이며 학교 사정으로 실제와 다를 수 있습니다. 서식은 일반적인 양식을 기준으로 하며 학교마다 다를 수 있으므로 제출 전 학교 안내를 확인해야 합니다. 서비스가 제공하는 정보는 참고용입니다."],
     ["제4조 (계정)", "가입은 보호자 본인이 해야 하며, 계정·비밀번호 관리 책임은 이용자에게 있습니다. 만 14세 미만 아동은 직접 가입할 수 없고, 자녀 기기 연결은 보호자가 발급한 코드로만 가능합니다."],
-    ["제5조 (이용권과 결제)", "서비스는 무료 체험 기간(자녀 등록 후 14일) 후 유료 이용권으로 이용합니다. 결제는 Google Play 인앱 결제로 처리되며, 가격·기간은 결제 화면에 표시된 내용을 따릅니다. 이용권은 자녀 1명 기준이며 자녀 추가 시 별도 이용권이 필요합니다."],
+    ["제5조 (이용권과 결제)", "서비스는 무료 체험 기간(자녀 등록 후 7일) 후 유료 이용권으로 이용합니다. 결제는 Google Play 인앱 결제로 처리되며, 가격·기간은 결제 화면에 표시된 내용을 따릅니다. 이용권은 자녀 1명 기준이며 자녀 추가 시 별도 이용권이 필요합니다."],
     ["제6조 (환불)", "환불은 Google Play 환불 정책과 전자상거래 등에서의 소비자보호에 관한 법률에 따릅니다."],
     ["제7조 (이용자 콘텐츠)", "이용자가 올린 기록(사진·메모 등)의 권리는 이용자에게 있으며, 회사는 보관·표시 목적 범위에서만 처리합니다. 회사는 이용자 콘텐츠를 광고 등 다른 목적에 쓰지 않습니다."],
     ["제8조 (금지행위)", "타인의 계정 도용, 서비스의 비정상적 이용(자동화 수집, 서버 공격 등), 법령 위반 목적의 이용을 금지합니다."],
@@ -1635,7 +1677,8 @@ const missionOf = (id) => (S.missions || []).find((x) => x.id === id);
    ⚠ 워커 templates.js 의 공개 고객센터(/help)와 **같은 문안**이다. 한쪽만 고치지 말 것.
    여기 답은 전부 «지금 앱이 실제로 하는 일»이다. 모르는 것을 그럴듯하게 적지 않는다 —
    FAQ가 틀리면 문의가 줄기는커녕 «앱이 거짓말한다»는 문의가 새로 들어온다.
-   숫자(체험 14일·보관 3개월·자녀 1대)는 약관·코드와 같아야 한다. */
+   숫자(체험 7일·보관 3개월·자녀 1대)는 약관·코드와 같아야 한다.
+   ⚠ 2026-08-10 에 14일 → **7일**로 바꿨다(대표님 확정). 서버 TRIAL_DAYS 도 7이다. */
 const FAQ = [
   ["시작하기", [
     ["자녀는 어떻게 등록하나요?",
@@ -1677,7 +1720,7 @@ const FAQ = [
   ]],
   ["이용권·결제", [
     ["무료로 얼마나 써볼 수 있나요?",
-      "자녀를 등록하면 14일 동안 모든 기능을 무료로 쓸 수 있습니다. 자동으로 결제되지 않아요."],
+      "자녀를 등록하면 7일 동안 모든 기능을 무료로 쓸 수 있습니다. 자동으로 결제되지 않아요."],
     ["결제는 자녀별인가요?",
       "네. 이용권은 자녀 1명 기준이라 자녀가 늘면 이용권도 따로 필요합니다."],
     ["환불하고 싶어요.",
@@ -1813,6 +1856,12 @@ const Screens = {
        가운데가 남는 자리를 차지하고, 자녀폰 줄은 아래에 붙는다. */
   login: () => `
     <div class="lg-wrap">
+    <!-- ⚠ 나가는 길이 없었다(폰 실측 2026-08-10). 홈에서 로그인으로 들어가면
+         시스템 뒤로가기 말고는 못 돌아왔다 — «구경만 하려던» 사람이 갇힌다.
+         ⚠ 소개를 아직 안 본 첫 실행에서는 안 보인다. 그때는 로그인이 첫 화면이라
+           돌아갈 «홈»이 없다(빈 화면으로 떨어진다). -->
+    ${!isGuest() ? "" : `<button class="lg-close" onclick="location.hash='#home'" aria-label="닫기">
+      <i aria-hidden="true" class="ti ti-x"></i></button>`}
     <div class="lg">
       <div class="lg-hd">
         ${starMark()}
@@ -2633,7 +2682,7 @@ const Screens = {
     <!-- 🔴 서버에 못 올라간 아이 — **홈에서 계속 보인다.** 토스트는 화면이 바뀌면 묻힌다.
          이걸 안 보여 주면 부모는 저장된 줄 알고 쓰다가, 어느 날 아이가 통째로 사라진다. -->
     ${!(c && c.saveFailed) ? "" : `<button class="hd-trial soon" onclick="App.childRetrySave()">
-      ${esc(c.nickname)}가 이 폰에만 있어요<em>${esc(String(c.saveFailed))} · 다시 시도<i aria-hidden="true" class="ti ti-refresh"></i></em></button>`}
+      ${esc(c.nickname)}가 이 폰에만 있어요<em>${esc(String(c.saveFailed))} · 다시 시도<i aria-hidden="true" class="ti ti-arrow-back-up"></i></em></button>`}
 
     ${promoteCard(c)}
     <!-- 아이가 없으면(구경 중) **다음에 뭘 할지**를 홈에서 말해 준다(2026-08-09 실기).
@@ -2644,6 +2693,14 @@ const Screens = {
     ${cur() && !S.authEnded ? "" : S.authEnded ? `<button class="hm-start" onclick="location.hash='#login'">
       <b>다시 로그인해 주세요</b>
       <em>${esc(String(S.authEnded))}<i aria-hidden="true" class="ti ti-chevron-right"></i></em></button>`
+      /* ⚠ 로그인 전에 「아이를 등록하면 시작돼요」라고 하면 **말과 행선지가 어긋난다** —
+           눌러 보면 가입 화면이 뜬다(대표님 지적 2026-08-10).
+         ⚠ 그리고 **이미 가입한 사람**은 가입 화면에서 막힌다. 먼저 할 일은 로그인이다.
+           가입 길은 로그인 화면 안에 「가입」으로 있다 — 새 사람도 거기서 간다. */
+      /* ⚠ 설명을 붙이지 않는다(대표님 2026-08-10: 「설명을 해줄 필요 없다고」).
+           할 일이 하나뿐인 자리에 설명을 달면 그건 광고지 안내가 아니다. */
+      : !TOKENS.access ? `<button class="hm-start one" onclick="location.hash='#login'">
+      <b>로그인하고 시작해요</b><i aria-hidden="true" class="ti ti-chevron-right"></i></button>`
       : `<button class="hm-start" onclick="App.childAddStart()">
       <b>아이를 등록하면 시작돼요</b>
       <em>급식 · 시간표 · 학사일정이 매일 저절로 들어와요<i aria-hidden="true" class="ti ti-chevron-right"></i></em>
@@ -3517,7 +3574,7 @@ const Screens = {
     ${S.childDraft.photoPreview || S.childDraft.photo
       ? `<div class="ca-picked"><button class="btn-ghost" onclick="App.childPhotoClear()">사진 빼기</button></div>`
       : ""}
-    ${editing ? "" : `<div class="ca-note">아이마다 이용권이 따로예요 · <b>2주 무료 체험</b></div>`}
+    ${editing ? "" : `<div class="ca-note">아이마다 이용권이 따로예요 · <b>1주일 무료 체험</b></div>`}
     <div class="card">
       <!-- 학교 검색이 자녀 등록의 첫 관문이다. 동명 학교가 많아 주소를 같이 보여준다. -->
       <label class="f">학교 *</label>
@@ -3526,13 +3583,18 @@ const Screens = {
         const q = S.schoolQuery.trim();
         if (!q) return S.childDraft.school
           ? `<div class="picked-school"><i class='ti ti-circle-check'></i> <b>${esc(sc.name)}</b><span class="ntime">${esc(sc.address)}</span></div>`
-          : `<p class="sub">전국 12,563개 학교에서 찾아요.</p>`;
+          /* ⚠ 중·고를 막아 놓고 아무 말도 안 하면 중학생 부모는 «우리 학교가 없네?»로,
+               즉 **고장으로** 읽는다. 초등학교만 되는 앱이라고 먼저 말한다. */
+          : `<p class="sub">초등학교 6,336곳에서 찾아요. <b>지금은 초등학생용이에요.</b></p>`;
         if (q.length < 2) return `<p class="sub">두 글자 이상 적어주세요.</p>`;
         if (S.schoolBusy || S.schoolHits === null) return `<p class="sub">찾는 중…</p>`;
         const hits = S.schoolHits;
         if (!hits.length) return S.schoolFrom === "offline"
           ? `<p class="sub">지금은 학교를 찾을 수 없어요. 인터넷 연결을 확인하고 다시 해주세요.</p>`
-          : `<p class="sub">"${q}" 로 찾은 학교가 없어요. 이름을 다시 확인해 주세요.</p>`;
+          /* ⚠ 중·고를 걸러 놓았으므로 「이름을 다시 확인하라」는 **틀린 안내**다 —
+               중학교를 제대로 친 부모가 자기 오타를 찾게 만든다. 왜 없는지를 말한다. */
+          : `<p class="sub">"${esc(q)}" 로 찾은 초등학교가 없어요.<br>
+              이름을 다시 확인해 주세요. <b>중·고등학교는 아직 준비 중이에요.</b></p>`;
         return `
           <p class="sub">${hits.length}곳 찾았어요 — <b>주소를 보고</b> 우리 학교를 고르세요.
 </p>
@@ -3591,6 +3653,9 @@ const Screens = {
 
   // ── 6. 자녀 전환 = 캐릭터 선택 (정본 §10 — "여러 프로필 나열"이 아니라 캐릭터를 고르는 화면) ──
   switch: () => `
+    <!-- ⚠ 나가는 길이 없었다(화면 지도 2026-08-10). 아이를 «바꾸려다 그만두면» 갇힌다 —
+         특히 아이가 하나뿐이면 고를 것도 없이 막다른 길이다. -->
+    <a class="back" href="javascript:App.goBack()" aria-label="뒤로"><i aria-hidden="true" class="ti ti-chevron-left"></i></a>
     <h1 style="text-align:center;padding-top:26px">누구의 기록을 볼까요?</h1>
     <p class="sub" style="text-align:center">캐릭터를 고르면 그 자녀로 전환돼요</p>
     <div class="charselect">
@@ -3617,7 +3682,10 @@ const Screens = {
   upload: () => {
     const c = curView();
     const step = S.uploadStep;
+    /* ⚠ 나가는 길이 없었다(화면 지도 2026-08-10). 사진을 고르다 그만두면 갇힌다 —
+       ①촬영에서 아무것도 안 찍었을 때가 특히 그렇다. */
     const stepBar = `
+      <a class="back" href="javascript:App.goBack()" aria-label="뒤로"><i aria-hidden="true" class="ti ti-chevron-left"></i></a>
       <div class="steps">
         <span class="${step === 0 ? "on" : ""}">① 촬영</span>
         <span class="${step === 1 ? "on" : ""}">② 확인</span>
@@ -4024,6 +4092,8 @@ const Screens = {
          새 코드로 다른 폰이 붙으면 앞 폰은 그 자리에서 끊긴다(서버가 기기 표식으로 판정). -->
     <div class="mp-sec">자녀폰</div>
     <div class="mp-list">
+      <!-- ⚠ 아이가 없으면 목록이 비어 **제목만 덩그러니** 남았다(폰 실측). 왜 비었는지 말한다. -->
+      ${STUB.children.length ? "" : `<div class="mp-row"><span class="mp-l" style="color:var(--muted)">아이를 등록하면 여기서 연결해요</span></div>`}
       ${STUB.children.map((c) => {
         const on = !!c.child_device;
         const when = c.child_device_at ? String(c.child_device_at).slice(0, 10).replace(/-/g, ".") : "";
@@ -4121,8 +4191,9 @@ const Screens = {
       <!-- ⚠ 아직 가입하지 않은 사람에게 「로그아웃」·「회원 탈퇴」를 보여 주고 있었다(폰 실측).
            나갈 문만 있고 **들어올 문이 없었다** — 설정 어디에도 가입 길이 없었다.
            가입 전에는 그 둘을 감추고 「가입하기」와 「로그인」만 둔다.
-           ⚠ 이 자리는 **템플릿 문자열 안**이다. `/* */` 로 쓰면 주석이 아니라 **화면에 그대로 찍힌다**
-             — 실제로 그렇게 찍혔다(2026-08-10 폰 실측). 여기서는 HTML 주석만 쓴다. -->
+           ⚠ 이 자리는 **템플릿 문자열 안**이다. 블록주석으로 쓰면 주석이 아니라 **화면에 그대로 찍히고**,
+             **역따옴표를 쓰면 템플릿이 거기서 끊겨 화면이 통째로 죽는다**(둘 다 2026-08-10 에 겪었다).
+             여기서는 HTML 주석만 쓰고, 역따옴표는 절대 쓰지 않는다. -->
       ${!TOKENS.access ? `
         ${row("", "가입하기", "", "location.hash='#register'", "accent")}
         ${row("", "로그인", "", "location.hash='#login'")}
@@ -4239,7 +4310,7 @@ const Screens = {
   },
 
   /* ── 10-1. 잠금 (2026-07-28) ─────────────────────────────
-     체험 2주가 끝나고 이용권이 없을 때 뜬다. **기록은 안 지운다** —
+     체험 1주일이 끝나고 이용권이 없을 때 뜬다. **기록은 안 지운다** —
      지운다고 하면 무섭고, 실제로도 안 지운다. 다시 열면 그대로 있다고 말해준다. */
   locked: () => {
     const c = cur();
@@ -4274,6 +4345,23 @@ const Screens = {
     <h1 style="margin-top:8px">이용권</h1>
     <p class="sub">자녀 1명당 하나씩 — 지금은 <b>${esc(c.nickname)}</b> 이용권을 골라요</p>
     ${seat > 1 ? `<p class="seatnote"><i class='ti ti-discount'></i> <b>${seat}번째 자녀</b>라 더 저렴해요</p>` : ""}
+    <!-- 🎁 1주일 무료체험 — **선택지 맨 위**(대표님 2026-08-10: 「1주일 무료체험도 넣어서 누르게 하고」).
+         ⚠ 지금은 아이를 등록하면 체험이 **저절로 붙는다**. 그래서 이 줄은 «고르는 것»이 아니라
+           «지금 쓰고 있는 것»을 말한다 — 남은 날을 숫자로 보여 준다.
+           «눌러야 시작»으로 바꾸려면 등록 시 자동 부여를 떼야 하고, 그러면 등록 직후 잠금화면이 뜬다.
+           그 결정은 결제 배치에서 함께 한다(docs/관리자페이지-요구사항.md).
+         ⚠ 남은 날은 **서버가 준 값**이다(pass.expires_at). 앱이 세지 않는다. -->
+    ${(() => {
+      const d = passDaysLeft(c);
+      const on = passOpen(c) && d >= 0;
+      return `<div class="plan trial ${on ? "on" : ""}" aria-disabled="true">
+        <span><b>1주일 무료체험</b>
+          <div class="sub">${on
+            ? (d === 0 ? "오늘까지예요" : `${d}일 남았어요`)
+            : "체험이 끝났어요"}</div></span>
+        <b>${on ? "쓰는 중" : "종료"}</b>
+      </div>`;
+    })()}
     ${list.map((p) => `
       <div class="plan ${S.planSel === p.months ? "on" : ""}" onclick="App.pickPlan(${p.months})">
         <span><b>${p.months}개월</b> ${p.discount ? `<span class="disc">${p.discount}</span>` : ""}<div class="sub">월 ${won(p.per_month)}꼴</div></span>
@@ -4617,7 +4705,7 @@ const Screens = {
     const seg = (key, nm) => `<button class="${S.kidTTDay === key ? "on" : ""}"
       onclick="S.kidTTDay='${key}';App.render()">${nm}</button>`;
     const row = (i, name) => {
-      const pd = STUB.periods[i];
+      const pd = periodsOf()[i];
       const now = !tomorrow && pd && nowMin >= toMin(pd.start) && nowMin < toMin(pd.end);
       return `<div class="kd2-p ${now ? "now" : ""}"><i>${i + 1}</i><b>${esc(shortSubject(name))}</b>
         <span>${now ? "지금" : esc(pd?.start || "")}</span></div>`;
@@ -5106,6 +5194,11 @@ function boardView() {
   const next = (STUB.myEvents || [])
     .filter((e) => e.date === TODAY && e.start && toMin(e.start) >= nowMin)
     .sort((a, b) => String(a.start).localeCompare(String(b.start)))[0];
+  /* ⚠ 상태 줄을 **판 밖**으로 뺐다가 되돌렸다(2026-08-10).
+     밖에 글씨만 세웠더니 「글씨로만 있어서 못 알아보겠다」 —
+     전광판은 **판 안에 있어야** 전광판으로 읽힌다.
+     ⚠ 대신 판이 내용 폭에 맞춰 가로로 늘어나 화면 밖으로 넘쳤고, 그 넘침이
+       하단 3버튼 자리까지 밀었다 → 판 폭을 100% 로 묶고 긴 글은 줄인다(style.css). */
   return `
   <div class="bd" id="board" aria-live="polite">
     <!-- 시계 — «날짜 · 요일» 위, «시각» 아래. 한 줄에 몰면 날짜가 시각에 묻힌다(2026-08-04) -->
@@ -5115,10 +5208,28 @@ function boardView() {
            초를 안 보여 주면 화면이 멈춘 것처럼 보인다. -->
       <span class="tm">${hh}<i class="${d.getSeconds() % 2 ? "off" : ""}">:</i>${mm}<u>${ss}</u></span>
     </div>
-    ${n ? `<div class="bd-now ${n.k}"><i></i><b>${n.t}</b>${n.s ? `<em>${n.s}</em>` : ""}</div>` : ""}
-    ${next ? `<div class="bd-next"><i aria-hidden="true" class="ti ti-pin"></i>${esc(next.start)} ${esc(next.title)}</div>` : ""}
+    <!-- 전광판 — **시계 판 안쪽 하단**(대표님 2026-08-10: 「시계 안에 하단에 있는게 차라리 좋다」).
+         판 밖에 글씨만 세웠더니 «못 알아보겠다» — 판 안에 있어야 전광판으로 읽힌다.
+         ⚠ 그래도 밑의 카드들과는 달라야 한다 → 카드 모양을 쓰지 않고 **판 안의 띠**로 둔다. -->
+    ${!n ? "" : (() => {
+      /* 🚦 **우 → 좌로 흐른다**(대표님 2026-08-10). 그래서 «전광판»이다.
+         흐르니까 글이 길어도 잘리지 않는다 — 「시간표가 아직 없...」으로 잘리던 문제가 같이 풀린다.
+         ⚠ 같은 문장을 **두 번** 이어 붙인다. 한 번만 두면 글이 다 지나간 뒤 빈 줄이 생긴다.
+         ⚠ 임박한 내 일정도 같은 줄에 이어 붙인다 — 줄이 둘이면 판이 또 커져 그림을 덮는다. */
+      /* 🚦 전광판 문구는 **`p` 하나**다(대표님 형식 확정 2026-08-10) —
+         「(방학기간 현재 일정 없음)」 「(태권도학원 수업중)」 「(주말 현재 일정 없음)」 「(1교시 국어 수업중)」.
+         값은 전부 **서버에서 받아 온 것**으로 만든다: 시간표(timetables)·학원(activities)·학사일정(academic_schedules).
+         ⚠ p 가 없으면 옛 방식(t · s)으로 떨어진다 — 새 상태를 추가하고 p 를 빼먹어도 빈 줄이 되지 않게. */
+      const tail = next ? ` (${esc(next.start)} ${esc(next.title)})` : "";
+      const one = `${n.p || `(${n.t}${n.s ? ` ${n.s}` : ""})`}${tail}`;
+      /* ⚠ 앞의 점을 뺐다(대표님 2026-08-10) — 점이 있으면 글이 그 뒤에서만 흐른다.
+         전광판은 **판 왼쪽 끝까지** 흘러야 전광판으로 보인다. */
+      return `<div class="bd-now ${n.k}"><div class="bd-mq"><span>${one}<b>${one}</b></span></div></div>`;
+    })()}
   </div>`;
 }
+
+
 /* ⚠ 예전엔 **분이 바뀔 때만** 갈아끼웠다 — 초를 보여 주기로 했으니 1초마다 돈다.
    화면 전체를 다시 그리지 않고 전광판 마크업만 바꿔 끼우므로 입력·스크롤은 안 튄다.
    분이 바뀔 때만 전광판을 갈아끼운다.
@@ -5136,7 +5247,17 @@ function startBoard() {
     const box = document.createElement("div");
     box.innerHTML = boardView();
     const fresh = box.firstElementChild;
-    if (fresh && fresh.innerHTML !== el.innerHTML) el.innerHTML = fresh.innerHTML;
+    if (!fresh) return;
+    /* ⚠ 판을 통째로 갈아끼우면 **흐르던 전광판이 매초 처음으로 튄다.**
+       시계는 매초 바뀌어야 하고, 전광판 줄은 «내용이 실제로 바뀔 때»만 손댄다. */
+    const t0 = el.querySelector(".bd-time"), t1 = fresh.querySelector(".bd-time");
+    if (t0 && t1 && t0.innerHTML !== t1.innerHTML) t0.innerHTML = t1.innerHTML;
+    const n0 = el.querySelector(".bd-now"), n1 = fresh.querySelector(".bd-now");
+    if (n1 && !n0) el.appendChild(n1);
+    else if (n0 && !n1) n0.remove();
+    else if (n0 && n1 && n0.innerHTML !== n1.innerHTML) {
+      n0.className = n1.className; n0.innerHTML = n1.innerHTML;
+    }
   }, 1000);   // 1초마다 — 초를 보여 주기로 했으니(2026-08-09). 전광판 마크업만 바꿔 끼워 가볍다
 }
 
@@ -5300,8 +5421,14 @@ function parentMissionAdmin(c, coin) {
   }
 
   /* ── 허브 — 2×2 카드. 아이 홈과 **같은 문법**이라 배울 게 없다 ── */
+  /* 타일이 갈 수 있는 곳은 셋이다 — 안쪽 탭(pmTab) · 주소(#) · **직접 실행(!)**.
+     ⚠ 「미션 고르기」는 화면만 띄우면 안 되고 **카탈로그를 받아와야** 한다
+       (안 그러면 「불러오는 중…」에서 멈춘다). 그래서 실행 형태가 필요하다. */
   const tile = (key, icon, name, note, cnt, cls) => `
-    <button class="pm-tile${cls ? " " + cls : ""}" onclick="${key.startsWith("#") ? `location.hash='${key}'` : `App.pmTab('${key}')`}">
+    <button class="pm-tile${cls ? " " + cls : ""}" onclick="${
+      key.startsWith("!") ? key.slice(1)
+      : key.startsWith("#") ? `location.hash='${key}'`
+      : `App.pmTab('${key}')`}">
       ${cnt ? `<span class="pm-badge">${cnt}</span>` : ""}
       <span class="pm-ti">${icon}</span>
       <b>${esc(name)}</b>
@@ -5326,7 +5453,14 @@ function parentMissionAdmin(c, coin) {
       ${tile("bonus", "⭐", "추가 증정", leftBonus ? `${leftBonus}개에 줄 수 있어요` : "해낸 미션에 ＋1", leftBonus)}
       ${tile("today", "📋", "오늘 한 것", "아침·학교·방과후", 0)}
       ${tile("#store", "🏪", "진열대 꾸미기", "바꿀 것을 정해요", 0)}
-      ${tile("#mission", "🎯", "미션 고르기", "무엇을 시킬지", 0)}
+      <!-- 🔴 「미션 고르기」가 **#mission(오늘 준 것)** 으로 가고 있었다(대표님 지적 2026-08-10:
+             「미션 고르기도 이상하게 되어 있는데」).
+           고르는 화면은 **#missionpick** 이다 — 카탈로그에서 담는 곳.
+           #mission 은 «오늘 이 아이에게 뭘 줬나»를 보는 곳이라, 이름과 도착지가 어긋나 있었다.
+           ⚠ 이름이 「고르기」면 고르는 화면으로 가야 한다. 그게 안 맞으면 부모는
+             «눌렀는데 다른 게 나온다»로 읽고, 그때부터 이 앱을 못 믿는다. -->
+      ${tile("!App.missionPickOpen()", "🎯", "미션 고르기", "무엇을 시킬지", 0)}
+      ${tile("#mission", "📅", "오늘 준 미션", "지금 뭘 주고 있나", 0)}
       ${tile("preview", "👀", "아이 화면", "아이가 보는 그대로", 0)}
     </div>
   </div>`;
@@ -6031,13 +6165,16 @@ function drawerView(c) {
       <!-- ⚠ 아이가 없으면(구경 중) 여기서 자녀 이름을 읽다가 **서랍이 통째로 안 열렸다**
            (2026-08-04 실측). 그 자리에 «아이 등록하기»를 둔다 — 가입 길이 여기 하나면 족하다.
            ⚠ 이 주석에 역따옴표를 쓰지 말 것 — 템플릿 문자열 안이라 그 자리에서 문법이 깨진다. -->
+      <!-- ⚠ 별명이 **한 글자**면 이니셜 아바타(첫 글자)와 이름이 똑같아 두 번 쓴 것처럼 보인다
+           (「콩」 옆에 「콩」 — 2026-08-10 폰 실측). 사진이 있으면 겹치지 않으니 그대로 둔다. -->
       ${c ? `<button class="hv3-drwho" onclick="App.drawerClose();location.hash='#switch'">
-        ${childFace(c, "hd-face")}
+        ${(c.photo || c.photoLocal || String(c.nickname || "").trim().length > 1) ? childFace(c, "hd-face") : ""}
         <span class="nm"><b>${esc(c.nickname)}</b><em>${[esc(schoolName(c)), c.grade ? `${c.grade}학년` : ""].filter(Boolean).join(" · ")}</em></span>
         <i aria-hidden="true" class="ti ti-chevron-right"></i>
       </button>
 
-      <div class="hv3-drpass">${esc(pass?.t || "무료 사용 중")}</div>`
+      <!-- ⚠ 「무료 사용 중」이라고 하면 안 된다 — 2026-07-28 부터 **무료 티어가 없다**. 값을 모르면 모른다고 한다. -->
+      <div class="hv3-drpass">${esc(pass?.t || "확인 중")}</div>`
       : `<button class="hv3-drwho" onclick="App.drawerClose();App.childAddStart()">
         <span class="nm"><b>아이 등록하기</b></span>
         <i aria-hidden="true" class="ti ti-chevron-right"></i>
@@ -6121,7 +6258,13 @@ function coachView() {
 function nowDoing() {
   const d = new Date();
   const wd = d.getDay();
-  if (wd === 0 || wd === 6) return null;
+  /* 🔴 **전광판은 늘 한 줄 있어야 한다**(대표님 2026-08-10: 「있는지 없는지 모르니깐」).
+     예전엔 토·일이면 여기서 곧장 null 을 돌려 **줄이 통째로 사라졌다.**
+     그러면 부모는 «오늘 아무 일도 없구나»가 아니라 «이 앱 고장 났나»로 읽는다.
+     ⚠ 원래 규칙(2026-07-28)은 「없는 일을 있다고 하지 마라」였다. 그건 지금도 맞다 —
+       다만 **없다고 말하는 것은 지어내는 것이 아니다.** 입을 닫는 대신 없다고 말한다.
+     ⚠ 주말에도 **학원은 간다** → 수업만 끄고 학원은 그대로 본다(방학과 같은 취급). */
+  const weekend = wd === 0 || wd === 6;
   const tt = ttOf();
   const grid = tt.grid || [];
   /* ⚠ **방학·휴업일이면 수업이 없다.** 시간표는 지난 학기 것이 그대로 남아 있어서,
@@ -6130,7 +6273,8 @@ function nowDoing() {
      방학에도 학원은 간다. 그래서 **수업만 끄고 학원은 그대로 본다.** */
   const onBreak = !!vacationRanges().find(([a0, b0]) => TODAY >= a0 && TODAY < b0)
     || schedulesOf().some((e) => e.date === TODAY && (e.closure_type || "").includes("휴업"));
-  const hasClass = !onBreak && grid.some((row) => row.some((v) => v));
+  // 주말엔 수업 칸을 아예 보지 않는다 — col = wd-1 이 −1 이 되어 엉뚱한 교시를 말한다
+  const hasClass = !weekend && !onBreak && grid.some((row) => row.some((v) => v));
   const now = d.getHours() * 60 + d.getMinutes();
   const L = lunchOf();
   const left = (m) => (m >= 60 ? `${Math.floor(m / 60)}시간 ${m % 60 ? `${m % 60}분` : ""}`.trim() : `${m}분`);
@@ -6141,45 +6285,69 @@ function nowDoing() {
     .filter((a) => String(a.days_of_week || "").split(",").includes(String(wd)))
     .sort((x, y) => String(x.start_time).localeCompare(String(y.start_time)));
   const inAct = acts.find((a) => a.start_time && a.end_time && now >= toMin(a.start_time) && now < toMin(a.end_time));
-  if (inAct) return { t: `${esc(inAct.name)} 중`, s: `${esc(inAct.end_time)}까지`, k: "act" };
+  /* 🚦 `p` = **전광판에 흐르는 문구**(대표님 2026-08-10 형식 확정).
+        「(태권도학원 수업중)」 「(1교시 국어 수업중)」 「(방학기간 현재 일정 없음)」 「(주말 현재 일정 없음)」
+     ⚠ 괄호까지가 한 덩어리다. t·s 는 다른 화면(nowCard)이 쓰므로 그대로 둔다. */
+  if (inAct) return { t: `${esc(inAct.name)} 중`, s: `${esc(inAct.end_time)}까지`,
+    // 「수업중」만으로는 언제 끝나는지 모른다 → **끝나는 시각**을 붙인다(대표님 2026-08-10)
+    p: `(${esc(inAct.name)} 수업중 ${esc(inAct.end_time)} 종료)`, k: "act" };
 
   if (hasClass) {
     for (let r = 0; r < grid.length; r++) {
-      const p = STUB.periods[r];
+      const p = periodsOf()[r];
       if (!p || !p.start || !p.end) continue;
       const a0 = toMin(p.start), b0 = toMin(p.end);
       if (now >= a0 && now < b0) {
         const v = subj(r);
-        return { t: v ? `${r + 1}교시 ${esc(v)}` : `${r + 1}교시`, s: `${esc(p.end)}까지 ${left(b0 - now)}`, k: "class" };
+        return { t: v ? `${r + 1}교시 ${esc(v)}` : `${r + 1}교시`, s: `${esc(p.end)}까지 ${left(b0 - now)}`,
+          p: `(${r + 1}교시 ${v ? `${esc(v)} ` : ""}수업중 ${esc(p.end)} 종료)`, k: "class" };
       }
-      const np = STUB.periods[r + 1];
+      const np = periodsOf()[r + 1];
       if (np && np.start && now >= b0 && now < toMin(np.start)) {
         if (now >= toMin(L.start) && now < toMin(L.end)) {
-          return { t: "점심시간", s: `${esc(L.end)}까지 ${left(toMin(L.end) - now)}`, k: "lunch" };
+          return { t: "점심시간", s: `${esc(L.end)}까지 ${left(toMin(L.end) - now)}`,
+            p: `(점심시간)`, k: "lunch" };
         }
         const v = subj(r + 1);
-        return { t: "쉬는 시간", s: `${left(toMin(np.start) - now)} 뒤 ${r + 2}교시${v ? ` ${esc(v)}` : ""}`, k: "rest" };
+        return { t: "쉬는 시간", s: `${left(toMin(np.start) - now)} 뒤 ${r + 2}교시${v ? ` ${esc(v)}` : ""}`,
+          p: `(쉬는시간 다음 ${r + 2}교시${v ? ` ${esc(v)}` : ""})`, k: "rest" };
       }
     }
     if (now >= toMin(L.start) && now < toMin(L.end)) {
-      return { t: "점심시간", s: `${esc(L.end)}까지 ${left(toMin(L.end) - now)}`, k: "lunch" };
+      return { t: "점심시간", s: `${esc(L.end)}까지 ${left(toMin(L.end) - now)}`,
+        p: `(점심시간)`, k: "lunch" };
     }
-    const first = STUB.periods[0];
+    const first = periodsOf()[0];
     if (first && first.start && now < toMin(first.start)) {
       const v = subj(0);
-      return { t: "등교 전", s: `${esc(first.start)} 1교시${v ? ` ${esc(v)}` : ""}`, k: "before" };
+      return { t: "등교 전", s: `${esc(first.start)} 1교시${v ? ` ${esc(v)}` : ""}`,
+        p: `(등교 전 ${esc(first.start)} 1교시${v ? ` ${esc(v)}` : ""})`, k: "before" };
     }
   }
 
   const next = acts.find((a) => a.start_time && toMin(a.start_time) > now);
   if (next) {
-    // 방학엔 «하교»가 틀린 말이다 — 학교를 안 갔다. 학원 이름만 말한다.
-    return onBreak
-      ? { t: esc(next.name), s: `${esc(next.start_time)} · ${left(toMin(next.start_time) - now)} 뒤`, k: "out" }
-      : { t: "하교", s: `${left(toMin(next.start_time) - now)} 뒤 ${esc(next.name)}`, k: "out" };
+    // 방학·주말엔 «하교»가 틀린 말이다 — 학교를 안 갔다. 학원 이름만 말한다.
+    return (onBreak || weekend)
+      ? { t: esc(next.name), s: `${esc(next.start_time)} · ${left(toMin(next.start_time) - now)} 뒤`,
+          p: `(${esc(next.name)} ${esc(next.start_time)} 시작)`, k: "out" }
+      : { t: "하교", s: `${left(toMin(next.start_time) - now)} 뒤 ${esc(next.name)}`,
+          p: `(하교 ${left(toMin(next.start_time) - now)} 뒤 ${esc(next.name)})`, k: "out" };
   }
-  if (!acts.length) return onBreak ? { t: "방학", s: "오늘 학원 없음", k: "done" } : (hasClass ? { t: "오늘 일정 끝", s: "", k: "done" } : null);
-  return { t: "오늘 일정 끝", s: `${esc(acts[acts.length - 1].name)}까지 마쳤어요`, k: "done" };
+  if (!acts.length) {
+    /* 여기부터는 «오늘 더 할 게 없다». **그래도 말은 한다.**
+       순서가 뜻을 정한다 — 방학이면 방학이 먼저고(주말이어도 방학이다), 그 다음이 주말이다. */
+    if (onBreak) return { t: "방학", s: "오늘 학원 없음", p: "(방학기간 현재 일정 없음)", k: "done" };
+    if (weekend) return { t: wd === 6 ? "토요일" : "일요일", s: "오늘 학원 없음",
+      p: "(주말 현재 일정 없음)", k: "done" };
+    if (hasClass) return { t: "오늘 일정 끝", s: "", p: "(오늘 일정 끝)", k: "done" };
+    /* 학기 중 평일인데 시간표가 없다 — 학교가 아직 안 올렸거나 반이 안 맞는 경우다.
+       조용히 비우면 부모는 이유를 모른 채 «고장»으로 읽는다. */
+    return { t: "시간표가 아직 없어요", s: "학교가 올리면 들어와요",
+      p: "(시간표 없음 학교가 올리면 들어와요)", k: "none" };
+  }
+  return { t: "오늘 일정 끝", s: `${esc(acts[acts.length - 1].name)}까지 마쳤어요`,
+    p: `(오늘 일정 끝 ${esc(acts[acts.length - 1].name)}까지 마쳤어요)`, k: "done" };
 }
 
 function nowCard() {
@@ -6724,7 +6892,7 @@ function dayTimeline(date, opts = {}) {
   if (fit) {
     const times = [];
     if (school) {
-      if (withClasses) STUB.periods.forEach((p) => { if (ttOf().grid[p.n - 1]?.[dayIdx]) times.push(toMin(p.start), toMin(p.end)); });
+      if (withClasses) periodsOf().forEach((p) => { if (ttOf().grid[p.n - 1]?.[dayIdx]) times.push(toMin(p.start), toMin(p.end)); });
       if (withMeal && mealsOf().some((m) => m.date === date && m.type === "중식")) times.push(toMin(lunchOf().start), toMin(lunchOf().end));
       STUB.activities.filter((a) => a.days_of_week.split(",").includes(String(dayIdx + 1)))
         .forEach((a) => times.push(toMin(a.start_time), toMin(a.end_time)));
@@ -6744,7 +6912,7 @@ function dayTimeline(date, opts = {}) {
   // 이 하루에 실제로 무언가 있는 시각들(빈 구간을 찾기 위해)
   const spans = [];
   if (school) {
-    if (withClasses) STUB.periods.forEach((p) => { if (ttOf().grid[p.n - 1]?.[dayIdx]) spans.push([toMin(p.start), toMin(p.end)]); });
+    if (withClasses) periodsOf().forEach((p) => { if (ttOf().grid[p.n - 1]?.[dayIdx]) spans.push([toMin(p.start), toMin(p.end)]); });
     if (withMeal && meal) spans.push([toMin(lunchOf().start), toMin(lunchOf().end)]);
     acts.forEach((a) => spans.push([toMin(a.start_time), toMin(a.end_time)]));
   }
@@ -6800,7 +6968,7 @@ function dayTimeline(date, opts = {}) {
         ${rows.map((r) => r.gap
           ? `<div class="daygap" style="height:${GAP_H}px">⋯ ${r.gap[0]}시~${r.gap[r.gap.length - 1] + 1}시 비어 있어요</div>`
           : `<div class="wk-slot" style="height:${DAY.px * 2}px"></div>`).join("")}
-        ${school && withClasses ? STUB.periods.map((p) => {
+        ${school && withClasses ? periodsOf().map((p) => {
           const subject = ttOf().grid[p.n - 1]?.[dayIdx];
           return subject ? box(p.start, p.end, "cls", subject, `${p.n}교시`) : "";
         }).join("") : ""}
@@ -6975,9 +7143,9 @@ function timetableTab() {
      엄마가 3시에 앱을 열면 궁금한 건 5교시가 아니라 «오늘 학원 몇 시»다.
      ⚠ 손으로 접거나 편 적이 있으면(S.ttFold) 그 뜻이 이긴다. 자동은 «안 건드렸을 때»만이다. */
   const nowMin = (() => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); })();
-  const last = STUB.periods[Math.max(0, (tt.grid || []).length - 1)] || STUB.periods[STUB.periods.length - 1];
+  const last = periodsOf()[Math.max(0, (tt.grid || []).length - 1)] || periodsOf()[periodsOf().length - 1];
   const outMin = last?.end ? toMin(last.end) : toMin(lunchOf().end) + 120;
-  const afterHours = nowMin >= outMin || nowMin < toMin(STUB.periods[0]?.start || "09:00");
+  const afterHours = nowMin >= outMin || nowMin < toMin(periodsOf()[0]?.start || "09:00");
   const schoolOpen = S.ttFold?.school ?? !afterHours;
   const afterOpen = S.ttFold?.after ?? afterHours;
   const at = (r, c) => S.ttOverrides[`${r}-${c}`] ?? tt.grid[r][c];
@@ -7004,7 +7172,7 @@ function timetableTab() {
       const head = `<div class="hd"></div>` + DAY_KO.map((d, i) =>
         `<div class="hd ${i === todayCol ? "today" : ""}">${d}</div>`).join("");
       const rows = tt.grid.map((row, r) => {
-        const t = STUB.periods[r] || {};
+        const t = periodsOf()[r] || {};
         /* 교시 칸 — 「1교시 / 09:00」 두 줄. 끝 시각까지 넣으면 석 줄이 되어 숫자가 과목보다
            시끄러웠다(2026-07-28 실기기). 끝 시각은 칸을 눌렀을 때 시트가 알려준다. */
         const cells = `<div class="hd tt-period"><b>${r + 1}교시</b>${t.start ? `<span>${t.start}</span>` : ""}</div>` +
@@ -7433,7 +7601,7 @@ const CHILD_SCREENS = ["childlink", "login", "terms", "policy",
    보호는 **앱 잠금**(내정보 → 앱 잠금)이 대신한다 — 그쪽은 앱 전체를 한 번만 막는다.
    화면 이름을 다시 넣으면 그 화면은 예전처럼 진입 때 잠긴다. */
 const BIO_LOCKED = [];
-/* 이용권 게이트 (2026-07-28 사장님 확정) — **2주 체험 후 전면 유료. 무료 티어 없음.**
+/* 이용권 게이트 (2026-07-28 사장님 확정) — **1주일 체험 후 전면 유료. 무료 티어 없음.**
    PASS_FREE 만 체험이 끝나도 열린다. 이 목록에 화면을 더하는 것은
    «그 기능을 공짜로 준다»는 뜻이므로 함부로 늘리지 않는다.
      · 이용권/내정보 — 결제하러 가는 길과 로그아웃이 막히면 안 된다
@@ -7451,11 +7619,11 @@ function passDaysLeft(c) {
 /* 지금 이 아이 화면을 열어도 되는가.
    ⚠ **무료 개방 기한(free_open_until)을 안 보고 있었다**(2026-08-03 발견).
      `active` 만 봐서, 자녀를 막 등록한 사람에게 그 자리에서 «체험이 끝났어요»가 떴다 —
-     2주 체험이 남아 있는데도 첫 실행이 통째로 막힌 것이다.
+     1주일 체험이 남아 있는데도 첫 실행이 통째로 막힌 것이다.
    ⚠ 기한은 **서버가 주는 값**이다. 앱이 지어내지 않는다. 값이 없으면 닫힌 것으로 본다. */
 const passOpen = (c) => {
   /* `pass === null` 은 «방금 등록해서 서버 응답을 기다리는 중»뿐이다(childAdd → childSaveServer).
-     그 아이는 서버가 방금 14일 체험을 붙여 준 아이다 → 잠그지 않는다.
+     그 아이는 서버가 방금 1주일 체험을 붙여 준 아이다 → 잠그지 않는다.
      잠가 두면 등록하자마자 «이용권이 필요해요» 잠금화면이 번쩍인다.
      ⚠ 진짜 데이터는 어차피 서버가 막는다 — 앱이 이중으로 막을 자리가 아니다. */
   if (c && c.pass === null) return true;
@@ -8330,7 +8498,13 @@ const App = {
     const seq = ++this._schoolSeq;
     this._schoolTimer = setTimeout(async () => {
       try {
-        const r = await api(`/schools/search?q=${encodeURIComponent(q)}`);
+        /* 🎒 **지금은 초등학교만 낸다**(대표님 확정 2026-08-10).
+           DB 에는 중·고도 다 있지만(중 3,322 · 고 2,404), 이 앱의 상품은 초등용
+           미션·별도장이라 중·고 부모가 들어오면 «훅만 있고 물건이 없는» 앱이 된다.
+           중·고는 다른 상품을 붙여 따로 낸다(docs/관리자페이지-요구사항.md).
+           ⚠ 되돌리는 법: 아래 `&level=elem` 한 줄만 빼면 전국 12,563곳이 다시 나온다.
+             서버는 안 건드렸다 — 필터는 원래부터 있던 기능이다. */
+        const r = await api(`/schools/search?q=${encodeURIComponent(q)}&level=elem`);
         if (seq !== this._schoolSeq) return;                 // 더 최근 입력이 있으면 이 응답은 버린다
         S.schoolHits = r?.ok ? r.data.items : [];
         S.schoolFrom = "server";
@@ -8376,8 +8550,10 @@ const App = {
        ⚠ 폼을 다 채우게 한 뒤 되돌리면 입력이 아깝다 → **들어오는 자리에서** 가입으로 보낸다.
          가입이 끝나면 register() 가 이 화면(#child-add)으로 도로 데려온다. */
     if (!TOKENS.access) {
-      toast("아이를 등록하려면 먼저 가입해야 해요");
-      location.hash = "#register"; this.render(); return;
+      /* ⚠ 예전엔 곧장 «가입» 화면으로 보냈다 — **이미 가입한 사람이 거기서 막힌다.**
+         로그인 화면으로 보낸다. 그 안에 「가입」 길이 있어 새 사람도 막히지 않는다. */
+      toast("먼저 로그인해 주세요");
+      location.hash = "#login"; this.render(); return;
     }
     location.hash = "#child-add"; this.render();
   },
@@ -8408,8 +8584,8 @@ const App = {
     /* 입구(childAddStart)에서 막지만, 주소를 직접 치거나 오래 열어 둔 화면으로도 여기 닿는다.
        **서버에 못 올릴 자녀를 만들지 않는다** — 만들면 조용히 사라진다. */
     if (S.childEditId == null && !TOKENS.access) {
-      toast("아이를 등록하려면 먼저 가입해야 해요");
-      location.hash = "#register"; this.render(); return;
+      toast("먼저 로그인해 주세요");
+      location.hash = "#login"; this.render(); return;
     }
     if (!d.nickname.trim()) return toast("별명을 넣어주세요");
     if (!d.agree) return toast("보호자 동의가 있어야 기록을 보관할 수 있어요");
