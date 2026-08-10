@@ -7440,3 +7440,9 @@ body {
   background: rgba(255, 255, 255, .16);
 }
 :root #screen:has(.hv3-art) .hv3-ham i { display: block; line-height: 1; }
+
+/* ── 서랍 맨 아래 「내 정보 · 설정」이 네비게이션 바에 물리던 것 (2026-08-10 폰 실측) ──
+   4822행이 `env(safe-area-inset-bottom) + 4px` 만 준다. 이 폰은 그 값이 **0 으로 온다** →
+   버튼이 네비바 위에 놓여 터치를 뺏긴다. 하단 3버튼·상단 ☰ 와 **같은 원인, 같은 처방**이다.
+   ⚠ env() 만 믿으면 안 된다 — 안 주는 폰이 있다. 언제나 max() 로 바닥값을 깐다. */
+:root .hv3-drfoot { padding: 4px 0 max(calc(env(safe-area-inset-bottom) + 4px), 56px); }
