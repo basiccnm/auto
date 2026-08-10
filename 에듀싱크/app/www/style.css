@@ -7466,3 +7466,8 @@ body {
 }
 :root #screen:has(.hv3-art) .hv3-ham i { display: block; line-height: 1; }
 :root #screen:has(.hv3-art) .hv3-art { margin-top: calc((var(--sa-t) + 12px) * -1 - 6px); }
+
+/* 일간 화면의 빈 안내 — 밝은 테마 3.58~3.60:1 로 **미달**이었다(전수조사 실측 2026-08-10).
+   ⚠ 「비어 있다」는 말도 읽혀야 정보다. 흐리게 두면 «빈 화면»과 구별이 안 된다.
+   `--muted-card` 는 카드 위 보조글씨용이라 이 큰 안내문에는 너무 옅다 → 한 단계 진하게. */
+:root .dy-blank { color: color-mix(in srgb, var(--ink) 74%, transparent); }
