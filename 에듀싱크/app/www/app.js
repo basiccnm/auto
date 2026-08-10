@@ -1154,9 +1154,11 @@ async function loadMe() {
            늘 «이용권 없음»으로 읽혔다. 게이트를 켜자마자 **전원이 잠겼다**(2026-07-28 실측).
            둘 다 받아준다. active 는 여기서 기한을 보고 직접 판정한다. */
         child_device: !!k.child_device, child_device_at: k.child_device_at || null,   // 자녀폰 연결 상태
-        pass: k.pass || (() => {
+        /* paid(2026-08-10) — 서버가 orders 를 보고 알려 준다. 체험도 유료도 만료일은 한 칸이라
+           이 표식 없이는 유료 이용권이 「1주일 무료체험 쓰는 중」으로 그려졌다(최종 검수 실측). */
+        pass: k.pass ? { ...k.pass, paid: !!k.pass_paid } : (() => {
           const exp = k.pass_expires_at || null;
-          return { active: !!(exp && new Date(exp).getTime() > Date.now()), expires_at: exp };
+          return { active: !!(exp && new Date(exp).getTime() > Date.now()), expires_at: exp, paid: !!k.pass_paid };
         })(),
       }));
       S.currentChildId = pickDefaultChild(STUB.children).id;   // 기본 자녀부터 — 없으면 첫째
@@ -2711,8 +2713,9 @@ const Screens = {
     ${(() => {
       const d = passDaysLeft(c);
       if (!passOpen(c) || d < 0 || d > 3) return "";
+      // 결제한 사람의 마지막 3일에 「체험」이라 쓰면 안 된다 — pass.paid 로 가른다(2026-08-10)
       return `<button class="hd-trial" onclick="location.hash='#pay'">
-        체험 ${d === 0 ? "오늘까지" : `${d}일 남음`}<em>이용권 보기<i aria-hidden="true" class="ti ti-chevron-right"></i></em></button>`;
+        ${c.pass && c.pass.paid ? "이용권" : "체험"} ${d === 0 ? "오늘까지" : `${d}일 남음`}<em>이용권 보기<i aria-hidden="true" class="ti ti-chevron-right"></i></em></button>`;
     })()}
     <!-- D-day 행사 — 가장 가까운 «큰» 학교 행사 하나만. 없으면 슬롯 자체가 없다 -->
     ${!nextBig ? "" : `<button class="hd-trial" onclick="App.dayOpen('${nextBig.date}')">
@@ -4354,11 +4357,14 @@ const Screens = {
     ${(() => {
       const d = passDaysLeft(c);
       const on = passOpen(c) && d >= 0;
+      /* 결제한 사람에겐 「무료체험」이라 부르면 안 된다 — 만료일 칸이 하나라 생긴 오표기(2026-08-10 최종 검수).
+         서버가 orders 를 보고 준 pass.paid 로 가른다. */
+      const paid = !!(c.pass && c.pass.paid);
       return `<div class="plan trial ${on ? "on" : ""}" aria-disabled="true">
-        <span><b>1주일 무료체험</b>
+        <span><b>${paid ? "이용권" : "1주일 무료체험"}</b>
           <div class="sub">${on
             ? (d === 0 ? "오늘까지예요" : `${d}일 남았어요`)
-            : "체험이 끝났어요"}</div></span>
+            : paid ? "이용권이 끝났어요" : "체험이 끝났어요"}</div></span>
         <b>${on ? "쓰는 중" : "종료"}</b>
       </div>`;
     })()}

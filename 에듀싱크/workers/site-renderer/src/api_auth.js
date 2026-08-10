@@ -307,6 +307,14 @@ async function me(request, db, env) {
     .bind(auth.account.id).all();
   const thisDev = auth.deviceId || null;
 
+  /* 유료 여부(2026-08-10) — trial_expires_at 한 칸에 체험·유료 만료일이 **섞여 있어서**
+     앱이 유료 이용권도 「1주일 무료체험 쓰는 중」으로 그렸다(최종 검수 실측: 44일 남은 유료가 체험으로).
+     돈을 냈다는 근거는 orders 뿐이다(hasActivePass 와 같은 규칙) — 자녀별로 표시만 갈라 준다. */
+  const { results: paidRows } = await db
+    .prepare("SELECT DISTINCT child_id FROM orders WHERE account_id = ? AND status = 'active' AND expires_at > ?")
+    .bind(auth.account.id, new Date().toISOString()).all();
+  const paidSet = new Set((paidRows || []).map((r) => r.child_id));
+
   return apiOk({
     account: publicAccount(auth.account),
     marketing: (() => { try { return JSON.parse(auth.account.marketing || "null"); } catch (e) { return null; } })(),
@@ -319,6 +327,7 @@ async function me(request, db, env) {
       id: k.id, nickname: k.nickname, grade: k.grade, class_name: k.class_name,
       school: { slug: k.school_slug, name: k.school_name },
       pass_expires_at: k.trial_expires_at,
+      pass_paid: paidSet.has(k.id),        // true = 결제 이용권 / false = 무료체험 (표시용)
       // 자녀폰 연결 상태(2026-07-31) — 기기 표식은 내보내지 않는다. 붙었나·언제만 알려준다.
       child_device: !!k.child_device, child_device_at: k.child_device_at || null,
     })),

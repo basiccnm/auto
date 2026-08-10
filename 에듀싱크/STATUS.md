@@ -1,6 +1,6 @@
 # 에듀싱크(아이서랍) — 현재 상태
 
-**[기준일시] 2026-08-10 15:50** · 지난 기록은 `_archive/STATUS-20260810-새벽작업.md`
+**[기준일시] 2026-08-10 18:40** · 지난 기록은 `_archive/STATUS-20260810-새벽작업.md`
 
 ---
 
@@ -32,9 +32,16 @@ CDP_TIMEOUT=420000 node scripts/emul_eval.mjs --file scripts/probe_screens.js
 - 릴리즈 키: `C:\Users\hardb\Desktop\eduthink-release-key\` (폴더명에 한글 금지)
 - 워커 `eduthink-site-renderer` (workers.dev · 커스텀 도메인 없음)
 
+**최종 검수(18:37) 추가** — 로그인·로그아웃 한 바퀴 12항목 실측 통과(`probe_auth_flow`).
+몽타주 2장 업로드: `G:\내 드라이브\에듀싱크-검수\20260810-1837-최종검수-{라이트,다크}.jpg`.
+발견 1건 고침: **유료 이용권이 「1주일 무료체험 쓰는 중」으로 표기**되던 것
+(만료일이 `trial_expires_at` 한 칸이라 구분 불가 → `/me` 가 orders 근거 `pass_paid` 를 줌).
+
 ## ② 진행 중
 
-없음.
+🔴 **워커 미배포 1건** — `/me` 의 `pass_paid`(위 표기 수정의 서버 반쪽).
+앱(APK)엔 이미 들어갔고 드라이런 통과. **「배포해」 지시가 오면 `npx wrangler deploy`** 후
+이용권 화면이 「이용권 · 44일 남았어요」로 바뀌는지 에뮬로 확인할 것.
 
 ## ③ 다음 할 일 — 순서대로
 
