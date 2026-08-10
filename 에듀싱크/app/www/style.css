@@ -3844,11 +3844,18 @@ body { font-weight: 500; }
 /* ═══ ⑤ 상태표시줄 가림막 (2026-08-03 폰 실측) ═══════════════════
    viewport-fit=cover 라 글이 상태표시줄 밑으로 지나가며 겹쳐 보였다.
    본문 위에 배경색 띠를 고정으로 깔아 지나가는 글을 가린다. 팝업(300)보다는 아래. */
+/* 상태바 자리를 테마색으로 덮는 띠 — 글이 상태바 아이콘과 겹쳐 읽히지 않게.
+   🔴 이게 «화면 위 베이지 띠»의 정체였다(2026-08-10 폴드6). z-index 200 으로 맨 위에 있어서
+      아이 세계(파랑) 화면에서도 부모 테마색을 칠했다. body 배경을 아무리 바꿔도 소용없었던 이유다.
+   ⚠ 아래 세계 규칙과 짝이다 — 한쪽만 고치면 다시 어긋난다. */
 body::before {
   content: ""; position: fixed; top: 0; left: 0; right: 0;
   height: var(--sa-t); background: var(--bg); z-index: 200;
   pointer-events: none;
 }
+/* 아이 세계 화면에서는 세계 색으로. 그라데이션의 «맨 윗 색»이라 이어져 보인다 */
+body:has(#screen > .gmw)::before, body:has(#screen > .gmp)::before,
+body:has(#screen > .gm)::before { background: #4A9BFF; }
 
 /* ═══ ⑨ 고객센터 갈래 제목 — 파랑 포인트 (사장님 지시) ══════════════ */
 .faq-sechd > span { color: var(--accent); }
@@ -5361,12 +5368,27 @@ body:has(#tabbar.hidden) #screen:has(.ib),
   --surf: transparent; --bg: transparent; --outer: transparent;
 }
 
+/* 🔴 세계 화면에서는 **몸통까지** 세계 색으로 (2026-08-10 폴드6 실기).
+   gmw 가 음수 여백으로 아무리 끌어올려도 상태바·네비바 뒤, 오버스크롤에는
+   body 의 부모 테마색(베이지)이 비친다 — 엣지-투-엣지라 그 영역이 다 보인다.
+   여백 수치를 쫓는 대신 바탕 자체를 같은 그라데이션으로 — 어떤 틈이 생겨도 세계 색이다. */
+/* ⚠ html 에도 같이 준다 — 화면 바탕(canvas)을 칠하는 건 html 이다.
+   body 만 주면 body 상자가 끝나는 지점 아래(네비바 자리)가 부모 테마색으로 남는다(폴드6 실측). */
+html:has(#screen > .gmw), html:has(#screen > .gmp), html:has(#screen > .gm),
+body:has(#screen > .gmw) { background: linear-gradient(180deg, #4A9BFF, #7C5CFF) fixed; }
+
 .gmw { --g-panel: #FFFFFF; --g-panel2: #F2F6FF;
   --g-ink: #16203A; --g-sub: #5B6B8C;
   --g-gold: #FFC531; --g-gold-d: #E8930B; --g-gold-ink: #7A4E00;
   --g-lime: #38D46A; --g-pink: #FF6BAA; --g-shadow: 0 5px 0 rgba(0, 0, 0, .12);
   min-height: 100vh; margin: calc(var(--sa-t) * -1 - 18px) -20px -24px;
-  padding: max(calc(var(--sa-t) + 8px), 30px) 14px calc(var(--sa-b) + 20px);
+  /* ⚠ 바닥값 max() 를 뺐다 (2026-08-10 폴드6 실기). 엣지-투-엣지가 되면서 웹뷰가 상태바 «뒤»까지 온다 —
+     위 margin 이 (sa-t + 18px) 만큼 끌어올리므로 여기서 그만큼 되돌려야 헤더가 상태바를 벗어난다.
+     옛 값 max(sa-t+8, 30) 은 웹뷰가 상태바 «아래»서 시작하던 시절 것이라 폴드6에서 10px 잘렸다. */
+  /* ⚠ 아래 여백은 «네비바 + 위 margin 상쇄»다. margin-bottom 이 -24px 이라
+     sa-b + 20 으로는 실제 여백이 44px 밖에 안 남아 **마지막 카드가 네비바에 깔렸다**
+     (폴드6 실측 5px). 넉넉히 둔다 — 세계 화면은 아래가 그라데이션이라 남아도 표가 안 난다. */
+  padding: calc(var(--sa-t) + 22px) 14px calc(var(--sa-b) + 52px);
   background: linear-gradient(180deg, #4A9BFF, #7C5CFF); color: var(--g-ink);
   /* ⚠ 전수검사에서 가로로 2px 이 새고 있었다 — 아이 세계는 가로로 흐를 것이 없다.
      넘치는 표·코드 같은 것은 각자 제 상자에서 스크롤한다(전역 규칙). */
@@ -5434,7 +5456,13 @@ body:has(#tabbar.hidden) #screen:has(.ib),
   --g-gold: #FFC531; --g-gold-d: #E8930B; --g-gold-ink: #7A4E00;
   --g-lime: #38D46A; --g-shadow: 0 5px 0 rgba(0, 0, 0, .12);
   min-height: 100vh; margin: calc(var(--sa-t) * -1 - 18px) -20px -24px;
-  padding: max(calc(var(--sa-t) + 8px), 30px) 14px calc(var(--sa-b) + 20px);
+  /* ⚠ 바닥값 max() 를 뺐다 (2026-08-10 폴드6 실기). 엣지-투-엣지가 되면서 웹뷰가 상태바 «뒤»까지 온다 —
+     위 margin 이 (sa-t + 18px) 만큼 끌어올리므로 여기서 그만큼 되돌려야 헤더가 상태바를 벗어난다.
+     옛 값 max(sa-t+8, 30) 은 웹뷰가 상태바 «아래»서 시작하던 시절 것이라 폴드6에서 10px 잘렸다. */
+  /* ⚠ 아래 여백은 «네비바 + 위 margin 상쇄»다. margin-bottom 이 -24px 이라
+     sa-b + 20 으로는 실제 여백이 44px 밖에 안 남아 **마지막 카드가 네비바에 깔렸다**
+     (폴드6 실측 5px). 넉넉히 둔다 — 세계 화면은 아래가 그라데이션이라 남아도 표가 안 난다. */
+  padding: calc(var(--sa-t) + 22px) 14px calc(var(--sa-b) + 52px);
   background: linear-gradient(180deg, #4A9BFF, #7C5CFF);
   /* ⚠ 토큰만 갈아입히고 **글자색을 안 주면** 부모 색이 그대로 상속된다 —
      기기에서 재 보니 실제 글자가 부모 --ink(#1A1A1F)였다(08-08).

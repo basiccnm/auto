@@ -27,6 +27,12 @@ public class MainActivity extends BridgeActivity {
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
         getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
         getWindow().setNavigationBarColor(android.graphics.Color.TRANSPARENT);
+        /* ⚠ 삼성 One UI 는 투명 바 위에 **대비 보정 막**을 자동으로 깐다(API 29+).
+           끄지 않으면 바 자리가 늘 뿌옇게 떠서 «색이 안 맞는» 띠로 보인다(폴드6 실측). */
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            getWindow().setStatusBarContrastEnforced(false);
+            getWindow().setNavigationBarContrastEnforced(false);
+        }
         // 상태바 아이콘은 진하게 — 라이트 테마가 기본이고, 다크에서도 파스텔이라 읽힌다
         new androidx.core.view.WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView())
             .setAppearanceLightStatusBars(true);

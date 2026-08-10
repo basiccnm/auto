@@ -3244,6 +3244,15 @@ const Screens = {
     const band = S.pickBand || bandOf(c);
     const list = (S.missionCatalog || {})[band];
     const picked = S.missionPick || [];
+    /* 🔴 주소로 곧장 들어오면 **영영 「불러오는 중…」에 갇혔다**(2026-08-10 폴드6 실기).
+       카탈로그를 받아오는 일도, 담긴 것을 채우는 일도 missionPickOpen 안에만 있어서
+       뒤로가기·주소 복원으로 이 화면에 닿으면 아무도 안 불러왔다(「0개 담김」도 같은 뿌리).
+       화면이 스스로 자기 데이터를 챙긴다 — 한 번만(loadBand 가 받은 밴드는 다시 안 받는다). */
+    if (!Array.isArray(list) && !S._pickSelfLoad) {
+      S._pickSelfLoad = true;
+      if (!(S.missionPick || []).length) S.missionPick = (S.missions || []).filter((x) => x.status === "open").map((x) => x.code);
+      setTimeout(() => { App.loadBand(band).finally(() => { S._pickSelfLoad = false; }); }, 0);
+    }
     const BANDS = [["low", "저학년"], ["mid", "중학년"], ["high", "고학년"]];
 
     const head = `

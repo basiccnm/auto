@@ -13,6 +13,14 @@
         <item name="windowActionBar">false</item>
         <item name="windowNoTitle">true</item>
         <item name="android:background">@null</item>
+        <!-- 시스템 바를 투명하게 — 화면 색이 끝까지 이어지게 (2026-08-10 폴드6).
+             ⚠ 코드의 setStatusBarColor/setNavigationBarColor 는 API 35+ 에서 무시된다.
+                테마에서 지정해야 먹는다. 대비 보정막도 여기서 끈다(삼성 One UI 가 자동으로 깐다). -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:enforceStatusBarContrast">false</item>
+        <item name="android:enforceNavigationBarContrast">false</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
     </style>
 
 
