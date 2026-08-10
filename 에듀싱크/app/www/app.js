@@ -2682,7 +2682,7 @@ const Screens = {
     <!-- 🔴 서버에 못 올라간 아이 — **홈에서 계속 보인다.** 토스트는 화면이 바뀌면 묻힌다.
          이걸 안 보여 주면 부모는 저장된 줄 알고 쓰다가, 어느 날 아이가 통째로 사라진다. -->
     ${!(c && c.saveFailed) ? "" : `<button class="hd-trial soon" onclick="App.childRetrySave()">
-      ${esc(c.nickname)}가 이 폰에만 있어요<em>${esc(String(c.saveFailed))} · 다시 시도<i aria-hidden="true" class="ti ti-refresh"></i></em></button>`}
+      ${esc(c.nickname)}가 이 폰에만 있어요<em>${esc(String(c.saveFailed))} · 다시 시도<i aria-hidden="true" class="ti ti-arrow-back-up"></i></em></button>`}
 
     ${promoteCard(c)}
     <!-- 아이가 없으면(구경 중) **다음에 뭘 할지**를 홈에서 말해 준다(2026-08-09 실기).
