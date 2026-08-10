@@ -30,6 +30,14 @@
       if (cs.backgroundColor === "rgba(0, 0, 0, 0)") continue;
       const cn = (e.className || "").toString().split(/\s+/)[0];
       if (!cn) continue;
+      /* ⚠ 일부러 불투명한 것들 — 유리로 만들면 안 된다(2026-08-10 전수조사에서 판정).
+           toast     검은 알약. 뒤가 비치면 «지금 뜬 알림»으로 안 읽힌다
+           page      서류 미리보기의 A4 «종이». 종이는 비치지 않는다
+           nt-send   대화 입력바. 뒤 글이 비치면 쓰던 글자를 못 읽는다
+           kd2-lunch 아이 화면 급식 카드. 아이 세계는 부모 테마(유리)를 안 탄다
+         ⚠ 여기 더할 때는 «왜 불투명해야 하는가»를 한 줄로 남길 것.
+           근거 없이 늘리면 이 검사는 곧 아무것도 안 잡는 검사가 된다. */
+      if (["toast", "page", "nt-send", "kd2-lunch"].includes(cn)) continue;
       (hits[cn] = hits[cn] || new Set()).add(sc);
     }
   }

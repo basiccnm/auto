@@ -7410,7 +7410,9 @@ body {
 :root .plan.trial { border-style: dashed; opacity: .92; cursor: default; }
 :root .plan.trial.on { border-color: var(--accent); }
 :root .plan.trial > b { font-size: 14px; color: var(--muted); }
-:root .plan.trial.on > b { color: var(--accent); }
+/* ⚠ `--accent` 는 어두운 테마(theme_04 dark)에서 이 자리 4.11:1 이라 **미달**이다(전수조사 실측).
+   강조색은 «칠하는 색»이지 «읽는 색»이 아니다 — 글자는 잉크색으로 쓰고 강조는 테두리가 진다. */
+:root .plan.trial.on > b { color: var(--ink); }
 
 /* ── 체크박스가 시스템 기본 파랑이던 것 (2026-08-10 폰 실측) ─────────────────
    테마가 18벌인데 체크만 안드로이드 기본 파랑이라 어느 테마에서도 겉돌았다.
