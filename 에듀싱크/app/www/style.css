@@ -429,15 +429,15 @@ body {
   position: relative; box-shadow: 0 0 24px rgba(0,0,0,.12);
 }
 /* 화면 좌우 여백 — 16 → 20px (2026-08-03 «답답하지 않게»). 360px 폭에서 본문은 320px 이 된다. */
-#screen { padding: 18px 20px calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 24px); min-height: 100vh; }
+#screen { padding: 18px 20px calc(var(--tabbar-h) + var(--sa-b) + 24px); min-height: 100vh; }
 
 /* ── 하단 탭 ─────────────────────────────── */
 /* 폰 제스처바(safe-area)만큼 아이콘을 올린다. 안 그러면 구글 하단 네비와 겹쳐 안 눌린다(2026-07-24 Z Fold6). */
 #tabbar {
   position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
   width: 100%; max-width: var(--frame);
-  height: calc(var(--tabbar-h) + env(safe-area-inset-bottom));
-  padding-bottom: env(safe-area-inset-bottom);
+  height: calc(var(--tabbar-h) + var(--sa-b));
+  padding-bottom: var(--sa-b);
   background: var(--card); border-top: 1px solid var(--line);
   display: flex; z-index: 40;
 }
@@ -469,7 +469,7 @@ body {
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px 10px; margin-top: 24px;
   /* 맨 밑 대화창(.chatbar)이 화면에 고정으로 떠 있다 — 그만큼 자리를 비워두지 않으면
      마지막 줄이 가린다. 실제로 「편집」 글자가 통째로 덮여 있었다(2026-07-27 실측: 라벨 791~812, 대화창 795~). */
-  padding-bottom: calc(84px + env(safe-area-inset-bottom));
+  padding-bottom: calc(84px + var(--sa-b));
 }
 .circleitem {
   display: flex; flex-direction: column; align-items: center; gap: 8px;
@@ -518,7 +518,7 @@ body {
   position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
   width: 100%; max-width: var(--frame); z-index: 42;
   display: flex; align-items: center; gap: 10px; text-align: left;
-  padding: 10px 14px calc(10px + env(safe-area-inset-bottom));
+  padding: 10px 14px calc(10px + var(--sa-b));
   background: var(--card); border: none; border-top: 1px solid var(--line);
   box-shadow: 0 -4px 16px rgba(0,0,0,.06); cursor: pointer;
 }
@@ -542,7 +542,7 @@ body {
   width: 100%; max-width: var(--frame); height: min(72vh, 560px); z-index: 45;
   display: flex; flex-direction: column;
   background: var(--bg); border-radius: 20px 20px 0 0;
-  padding-bottom: env(safe-area-inset-bottom);
+  padding-bottom: var(--sa-b);
   box-shadow: 0 -8px 30px rgba(0,0,0,.18); animation: sheetup .22s ease-out;
 }
 @keyframes sheetup { from { transform: translate(-50%, 12%); opacity: .6; } to { transform: translate(-50%, 0); opacity: 1; } }
@@ -654,7 +654,7 @@ h1 { font-size: var(--fs-title); font-weight: 800; letter-spacing: -.02em; }
 /* 위·아래 줄은 사진 **위에 얹는다** — 자리를 따로 먹으면 사진이 그만큼 작아진다. */
 .viewer-top { position: absolute; top: 0; left: 0; right: 0; z-index: 2;
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
-  padding: calc(12px + env(safe-area-inset-top)) 14px 22px; border-bottom: none;
+  padding: calc(12px + var(--sa-t)) 14px 22px; border-bottom: none;
   background: linear-gradient(to bottom, rgba(0,0,0,.62), rgba(0,0,0,0)); }
 .viewer-top b { font-size: 15px; color: #fff; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .viewer-actions { display: flex; gap: 4px; flex: none; }
@@ -688,13 +688,13 @@ h1 { font-size: var(--fs-title); font-weight: 800; letter-spacing: -.02em; }
 .pager .iconbtn:disabled { opacity: .3; }
 .viewer-icon { font-size: 80px; padding: 40px; }
 .viewer-meta { position: absolute; bottom: 0; left: 0; right: 0; z-index: 2;
-  padding: 24px 16px calc(14px + env(safe-area-inset-bottom));
+  padding: 24px 16px calc(14px + var(--sa-b));
   font-size: var(--fs-sm); color: rgba(255,255,255,.86);
   background: linear-gradient(to top, rgba(0,0,0,.62), rgba(0,0,0,0)); }
 /* ⋯ 메뉴 — 사진 위에 뜨는 시트. 예전엔 카드 맨 밑에 붙어서 사진이 밀려 올라갔다. */
 .viewer-menu { position: absolute; left: 0; right: 0; bottom: 0; z-index: 3;
   display: flex; flex-direction: column; border-top: none; background: var(--card);
-  border-radius: 18px 18px 0 0; padding-bottom: env(safe-area-inset-bottom);
+  border-radius: 18px 18px 0 0; padding-bottom: var(--sa-b);
   box-shadow: 0 -10px 30px rgba(0,0,0,.35); }
 .viewer-menu button { min-height: 50px; background: transparent; color: var(--ink); font-size: 14px; border-bottom: 1px solid var(--line); border-radius: 0; }
 .viewer-menu button:last-child { border-bottom: none; }
@@ -703,9 +703,9 @@ h1 { font-size: var(--fs-title); font-weight: 800; letter-spacing: -.02em; }
 /* 화면 아래 고정 액션 바 — 탭바 위에 떠서 사진이 아무리 커도 버튼이 항상 눌린다(2026-07-24) */
 .stickybar {
   position: fixed; left: 50%; transform: translateX(-50%);
-  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom));
+  bottom: calc(var(--tabbar-h) + var(--sa-b));
   width: 100%; max-width: var(--frame); z-index: 45;
-  display: flex; gap: 8px; padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+  display: flex; gap: 8px; padding: 10px 16px calc(10px + var(--sa-b));
   background: var(--card); border-top: 1px solid var(--line); box-shadow: 0 -8px 20px rgba(0,0,0,.08);
 }
 .stickybar .btn-ghost { flex: none; width: auto; padding: 0 18px; min-height: 46px; }
@@ -872,12 +872,12 @@ label.f { display: block; margin-top: 12px; font-size: 12.5px; font-weight: 700;
    ① 안전영역(노치·상태바)만큼 내리고 ② 가운데를 비켜 오른쪽으로 옮긴다.
    하단 탭바는 이미 safe-area-inset-bottom을 쓰는데 상단만 빠져 있었다. */
 #homefab {
-  position: fixed; top: calc(env(safe-area-inset-top) + 10px); right: 14px; left: auto; transform: none; z-index: 60;
+  position: fixed; top: calc(var(--sa-t) + 10px); right: 14px; left: auto; transform: none; z-index: 60;
   width: 48px; height: 48px; border-radius: 50%; padding: 0; font-size: 23px;
   background: var(--card); border: 1px solid var(--line); box-shadow: 0 4px 14px rgba(0,0,0,.14);
 }
 /* 화면 안쪽 내용도 안전영역만큼 내려준다(제목이 상태바에 닿지 않게) */
-#screen { padding-top: calc(env(safe-area-inset-top) + 18px); }
+#screen { padding-top: calc(var(--sa-t) + 18px); }
 #homefab.hidden { display: none; }
 
 /* ── 상단 자녀 칩 (탭 화면 공통) ─────────── */
@@ -1249,7 +1249,7 @@ textarea {
 /* ── 화면 안 알림(토스트) ─────────────────── */
 .toast {
   position: fixed; left: 50%; transform: translateX(-50%);
-  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 16px); z-index: 95;
+  bottom: calc(var(--tabbar-h) + var(--sa-b) + 16px); z-index: 95;
   max-width: min(88%, 380px); background: #23262E; color: #fff;
   font-size: var(--fs-sm); line-height: 1.5; padding: 11px 16px; border-radius: 12px;
   box-shadow: 0 6px 20px rgba(0,0,0,.25);
@@ -1314,7 +1314,7 @@ button, .btn { min-height: 44px; }
    버튼도 아래에 모여야 «누르러 손을 위로 뻗는» 일이 없다. 층은 .modal 과 같은 300(L3). */
 .modal.sheetwrap { align-items: flex-end; padding: 0; }
 .sheet { width: 100%; max-width: var(--frame); background: var(--card); color: var(--ink);
-  border-radius: 22px 22px 0 0; padding: 10px 18px calc(20px + env(safe-area-inset-bottom));
+  border-radius: 22px 22px 0 0; padding: 10px 18px calc(20px + var(--sa-b));
   box-shadow: 0 -8px 32px rgba(24, 23, 21, .25); animation: sheetup .2s ease-out;
   max-height: 88vh; overflow-y: auto; }
 @keyframes sheetup { from { transform: translateY(18px); opacity: .7; } to { transform: none; opacity: 1; } }
@@ -1632,7 +1632,7 @@ button, .btn { min-height: 44px; }
 /* ── 크게 보기 (시안 16) — 사진이 전부, 글은 아래에만 ── */
 .vw-top { position: absolute; left: 0; right: 0; top: 0; z-index: 3;
   display: flex; align-items: center; justify-content: space-between;
-  padding: calc(14px + env(safe-area-inset-top)) 16px 40px;
+  padding: calc(14px + var(--sa-t)) 16px 40px;
   background: linear-gradient(to bottom, rgba(0,0,0,.6), rgba(0,0,0,0)); pointer-events: none; }
 .vw-btn { width: 36px; height: 36px; min-height: 0; padding: 0; border: none; background: none;
   color: #fff; font-size: 20px; font-weight: 300; pointer-events: auto; }
@@ -1660,7 +1660,7 @@ button, .btn { min-height: 44px; }
 /* 끝 장 — 흐리게 해서 «여기가 끝»을 눈으로 알린다(누르면 아무 일도 안 일어난다) */
 .vw-side.end i { opacity: .25; }
 .vw-foot { position: absolute; left: 0; right: 0; bottom: 0; z-index: 3;
-  padding: 60px 20px calc(30px + env(safe-area-inset-bottom));
+  padding: 60px 20px calc(30px + var(--sa-b));
   background: linear-gradient(to top, rgba(0,0,0,.68), rgba(0,0,0,0)); pointer-events: none; }
 .vw-title { font-size: 20px; font-weight: 500; line-height: 1.3; letter-spacing: -.01em; color: #fff; }
 .vw-meta { margin-top: 8px; font-size: 13px; line-height: 1.4; color: rgba(255,255,255,.58); }
@@ -1932,7 +1932,7 @@ button, .btn { min-height: 44px; }
 /* 하단 — 알약 버튼. ＋ 만 강조색이다. */
 .dw-fab { position: fixed; left: 50%; transform: translateX(-50%); bottom: 0; z-index: 40;
   width: 100%; max-width: var(--frame);
-  padding: 14px 16px calc(20px + env(safe-area-inset-bottom));
+  padding: 14px 16px calc(20px + var(--sa-b));
   background: linear-gradient(to top, var(--bg) 60%, transparent); pointer-events: none; }
 .dw-fab button { width: 100%; height: 48px; border: none; border-radius: 24px;
   background: var(--card); box-shadow: 0 0 0 1px var(--line);
@@ -2182,7 +2182,7 @@ button, .btn { min-height: 44px; }
    (2026-07-31 «도형이 중앙정렬 안 돼»). flex 로 가운데에 놓고 line-height:1 로 글자 여백을 없앤다. */
 /* ⚠ 탭바 부활(2026-08-02) 뒤 이 버튼이 탭바 밑에 깔렸다 — 탭바 높이만큼 올린다 */
 .gc-fab { position: fixed; right: 18px;
-  bottom: calc(var(--tabbar-h) + 16px + env(safe-area-inset-bottom)); z-index: 40;
+  bottom: calc(var(--tabbar-h) + 16px + var(--sa-b)); z-index: 40;
   width: 56px; height: 56px; border: none; border-radius: 18px;
   display: flex; align-items: center; justify-content: center; line-height: 1;
   background: var(--ink); color: var(--bg); font-size: 24px; font-weight: 300;
@@ -2590,12 +2590,12 @@ button, .btn { min-height: 44px; }
 
 /* ── 탭바가 돌아왔으므로 대화창은 그 위로 올라간다 ──
    둘 다 화면 맨 아래에 못 박혀 있어서, 그대로 두면 대화창이 탭바를 덮는다. */
-.chatbar { bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom)); padding-bottom: 10px; }
+.chatbar { bottom: calc(var(--tabbar-h) + var(--sa-b)); padding-bottom: 10px; }
 /* 그만큼 본문 아래 여백도 늘린다 — 안 늘리면 마지막 줄이 대화창 밑에 깔린다 */
-#screen { padding-bottom: calc(var(--tabbar-h) + 58px + env(safe-area-inset-bottom) + 24px); }
+#screen { padding-bottom: calc(var(--tabbar-h) + 58px + var(--sa-b) + 24px); }
 /* 탭바가 없는 화면(로그인·약관·자녀폰 연결·자녀 홈)은 그 144px 을 비워둘 이유가 없다.
    이것 때문에 로그인이 한 화면에 안 들어가고 소셜 버튼이 접혀 있었다(2026-08-02 에뮬 실기). */
-body:has(#tabbar.hidden) #screen { padding-bottom: calc(env(safe-area-inset-bottom) + 20px); }
+body:has(#tabbar.hidden) #screen { padding-bottom: calc(var(--sa-b) + 20px); }
 
 /* ── 홈 미션 도장판 (2026-08-02 메뉴 개편 — 미션이 홈의 주인공) ──
    도장 셋: 찍힘(on 초록 체크) · 사진 대기(wait 빨강 카메라) · 빈 칸(off 점선 +).
@@ -2661,7 +2661,7 @@ body:has(#tabbar.hidden) #screen { padding-bottom: calc(env(safe-area-inset-bott
 .hd-mini .hd-badge { top: -3px; right: -5px; border-color: var(--bg); }
 
 /* ── 대화 플로팅 바 — 한 줄로 얇게 (프로필 + 텍스트 + 뱃지만) ── */
-.chatbar { padding: 8px 14px calc(8px + env(safe-area-inset-bottom)); gap: 8px; box-shadow: none; }
+.chatbar { padding: 8px 14px calc(8px + var(--sa-b)); gap: 8px; box-shadow: none; }
 .chatbar .cb-ico { width: 28px; height: 28px; border-radius: 50%; font-size: 15px; }
 /* 이름과 마지막 말을 한 줄에 — 세로 두 줄이던 것을 눕힌다 */
 .chatbar .cb-txt { flex-direction: row; align-items: baseline; gap: 6px; }
@@ -3107,6 +3107,13 @@ div.kd2-day { cursor: default; }
 .ms-preview b { font-size: 14.5px; font-weight: 700; }
 /* 「확인해 주세요」가 맨 위로 왔을 때 — 카드보다 먼저 눈에 걸리게 밑줄 하나 */
 .vf-wrap.top { margin: 14px 0 4px; padding-bottom: 14px; border-bottom: 1.5px dashed var(--line); }
+/* 미션 세계(.gmw) 안에서는 세계 문법으로 — 흰 판 + 굵은 그림자 + 금색(2026-08-10 대표님: 「디자인이 안 맞어」).
+   부모 토큰(--card·--line) 그대로 두면 파란 세계에 베이지 조각이 뜬다. */
+.gmw .ms-actrow button, .gmw .ms-preview {
+  background: var(--g-panel); color: var(--g-ink);
+  border: none; border-radius: 18px; box-shadow: var(--g-shadow); }
+.gmw .ms-actrow button i, .gmw .ms-preview i { color: var(--g-gold-d); }
+.gmw .ms-actrow button[disabled] { opacity: .55; }
 
 /* ═══ 부모 월간 리포트 (2026-08-03) ═══════════════════════════
    일일 퀘스트가 쌓은 것을 한 장으로. 막대는 장식이 아니라 **표본 크기**를 눈으로 보여주는 것이라,
@@ -3745,7 +3752,7 @@ body { font-weight: 500; }
 .lw-p b { color: var(--ink); font-weight: 700; }
 
 /* 대화바가 홈 격자를 덮어 아이콘 라벨이 잘렸다(폰에서만 — 화면이 짧다) */
-#screen { padding-bottom: calc(var(--tabbar-h) + 58px + env(safe-area-inset-bottom) + 40px); }
+#screen { padding-bottom: calc(var(--tabbar-h) + 58px + var(--sa-b) + 40px); }
 
 /* 「다른 걸로 바꾸기」가 두 줄로 깨졌다(폰 실기) — 두 버튼이 같은 폭을 나눠 갖는데
    글자 수가 다르다. 긴 쪽에 폭을 더 주고 줄바꿈을 막는다. */
@@ -3839,7 +3846,7 @@ body { font-weight: 500; }
    본문 위에 배경색 띠를 고정으로 깔아 지나가는 글을 가린다. 팝업(300)보다는 아래. */
 body::before {
   content: ""; position: fixed; top: 0; left: 0; right: 0;
-  height: env(safe-area-inset-top, 0px); background: var(--bg); z-index: 200;
+  height: var(--sa-t); background: var(--bg); z-index: 200;
   pointer-events: none;
 }
 
@@ -4050,7 +4057,7 @@ body::before {
 /* ═══ 온보딩 4장 (2026-08-03) — 큰 그림·제목·한 줄·점·버튼 하나 ═══════ */
 .in-wrap { display: flex; flex-direction: column; align-items: center; min-height: 86vh;
   padding-top: 8vh; text-align: center; }
-.in-skip { position: absolute; top: calc(env(safe-area-inset-top) + 14px); right: 18px;
+.in-skip { position: absolute; top: calc(var(--sa-t) + 14px); right: 18px;
   background: none; border: none; color: var(--muted); font-size: 14px; font-family: inherit; }
 .in-art { width: 176px; height: 176px; border-radius: 50%; display: grid; place-items: center;
   font-size: 84px; margin-bottom: 34px;
@@ -4088,7 +4095,7 @@ body::before {
 
 /* 하단 3버튼 (2026-08-03 §1) — 좌 달력 · 가운데 큰 ＋ · 우 미션.
    가운데가 압도적으로 커야 «여기서 넣는다»가 읽힌다(마이다이어리 배치). */
-.hv3-cal, .hv3-star, .hv3-fab { position: fixed; bottom: calc(env(safe-area-inset-bottom) + 22px); z-index: 40;
+.hv3-cal, .hv3-star, .hv3-fab { position: fixed; bottom: calc(var(--sa-b) + 22px); z-index: 40;
   border: none; font-family: inherit; }
 .hv3-cal { left: 22px; width: 56px; height: 56px; border-radius: 50%;
   background: var(--card);  font-size: 24px;
@@ -4129,7 +4136,7 @@ body:has(#tabbar.hidden) #screen:has(.hv3-star),
   animation: hv3in .18s ease-out; display: flex; flex-direction: column; }
 @keyframes hv3in { from { transform: translateX(-30%); opacity: .5; } to { transform: none; opacity: 1; } }
 .hv3-drhd { background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 78%, #FFF), var(--accent-ink)); color: #FFF;
-  padding: calc(env(safe-area-inset-top) + 26px) 20px 20px; font-weight: 900; font-size: 17px;
+  padding: calc(var(--sa-t) + 26px) 20px 20px; font-weight: 900; font-size: 17px;
   display: flex; align-items: center; gap: 10px; }
 .hv3-drhd span { font-size: 22px; color: #FFC531; }
 /* ⚠ 드로어는 **진한 파생**이다(§6). 본문 글자색(--ink)을 그대로 쓰면 어두운 면 위 어두운 글씨가 된다.
@@ -4344,7 +4351,7 @@ body:has(.hv3-art)::before { background: var(--art-1); }   /* 상태바 가림�
    ⚠ **화면 위에 붙어 있어야 한다**(sticky). 급식 한 달치처럼 긴 화면에서
      스크롤을 내리면 ← 가 위로 사라져 또 갇힌다 — 그게 이 수정의 원인이었다. */
 .sub-top { position: sticky; top: 0; z-index: 50; display: flex; align-items: center; gap: 4px;
-  margin: 0 -16px 10px; padding: calc(env(safe-area-inset-top) + 6px) 8px 10px;
+  margin: 0 -16px 10px; padding: calc(var(--sa-t) + 6px) 8px 10px;
   background: var(--card-a); border-bottom: 1px solid var(--line); }
 .sub-back { width: 44px; height: 44px; flex: none; display: grid; place-items: center;
   background: none; border: none; color: var(--ink); font-size: 26px; }
@@ -4361,7 +4368,7 @@ body:has(.hv3-art)::before { background: var(--art-1); }   /* 상태바 가림�
    위→아래: 로고 띠 → 자녀명(전환) → 사용기한 → 테마 → 구분선 → 7항목 → 내 정보·설정.
    ⚠ 「오늘 하는 것들」 구역은 넣지 않는다(§4) — 그건 홈과 하단 3버튼이 이미 진다. 입구가 둘이면 미로다. */
 .hv3-drlogo { display: flex; align-items: center; gap: 9px;
-  padding: calc(env(safe-area-inset-top) + 20px) 20px 12px;
+  padding: calc(var(--sa-t) + 20px) 20px 12px;
   font-size: 18px; font-weight: 900; color: var(--dr-ink); letter-spacing: -.3px; }
 .hv3-drlogo span { font-size: 20px; color: #FFC531; }
 /* 사용기한 — 결제를 붙이기 전이라 **누를 수 없는 표시**다(§4) */
@@ -4428,7 +4435,7 @@ body:has(.hv3-art)::before { background: var(--art-1); }   /* 상태바 가림�
   background: none; color: var(--accent-ink); font-family: inherit; font-size: 14.5px; font-weight: 800; }
 /* 담기 버튼 — 아래 고정. 목록이 길어 위로 올라가면 못 찾는다 */
 .mk-bot { position: sticky; bottom: 0; margin-top: 18px;
-  padding: 10px 0 calc(env(safe-area-inset-bottom) + 10px); background: var(--bg); }
+  padding: 10px 0 calc(var(--sa-b) + 10px); background: var(--bg); }
 .mk-go { width: 100%; height: 54px; border: none; border-radius: 16px;
   background: var(--accent); color: var(--on-accent); font-family: inherit;
   font-size: 16px; font-weight: 800; }
@@ -4460,7 +4467,7 @@ body:has(.hv3-art)::before { background: var(--art-1); }   /* 상태바 가림�
 .th-item .ph-card i.s { top: 23px; width: 30%; height: 5px;
   background: color-mix(in srgb, var(--ink) 26%, transparent); }
 .th-item .ph-fab { position: absolute; left: 50%;  transform: translateX(-50%);  border-radius: 50%; background: var(--accent); }
-.th-act { position: sticky; bottom: 0; padding: 10px 0 calc(env(safe-area-inset-bottom) + 10px);
+.th-act { position: sticky; bottom: 0; padding: 10px 0 calc(var(--sa-b) + 10px);
   background: var(--bg); }
 .th-use { width: 100%; height: 54px; border: none; border-radius: 16px;
   background: var(--accent); color: var(--on-accent);
@@ -4474,7 +4481,7 @@ body:has(.hv3-art)::before { background: var(--art-1); }   /* 상태바 가림�
      문서 흐름에 넣으면 키보드가 올라올 때마다 목록이 출렁인다. */
 .ib { position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
   display: flex; align-items: center; gap: 8px;
-  padding: 10px 12px calc(env(safe-area-inset-bottom) + 10px);
+  padding: 10px 12px calc(var(--sa-b) + 10px);
   background: var(--card-a); border-top: 1px solid var(--line); }
 .ib-in { flex: 1; min-width: 0; height: 44px; padding: 0 14px; border-radius: 22px;
   border: 1px solid var(--line); background: var(--bg); color: var(--ink);
@@ -4488,7 +4495,7 @@ body:has(.hv3-art)::before { background: var(--art-1); }   /* 상태바 가림�
 /* ⚠ `body:has(#tabbar.hidden) #screen` 이 아래 여백을 20px 로 눕힌다(탭바는 늘 숨김이라 늘 이긴다).
    같은 무게로 써야 먹는다 — 안 그러면 **마지막 항목이 입력바 뒤에 숨는다**(2026-08-03 실측 20px). */
 body:has(#tabbar.hidden) #screen:has(.ib),
-#screen:has(.ib) { padding-bottom: calc(env(safe-area-inset-bottom) + 84px); }
+#screen:has(.ib) { padding-bottom: calc(var(--sa-b) + 84px); }
 
 /* ── ② 제대로 입력 = 전체 화면 편집기 ── */
 .ed-f { display: block; margin: 16px 2px 7px; font-size: 12.5px; font-weight: 800; color: var(--muted); }
@@ -4651,7 +4658,7 @@ body:has(#tabbar.hidden) #screen:has(.ib),
    바탕·글자색은 위 규칙(rgba(255,255,255,.10) + --dr-ink)에 맡기고 여기선 배치만 잡는다.
    (2026-08-03 실측 발견 — 모델이 아니라 브라우저가 칠한 픽셀을 재야 보인다) */
 .hv3-drwho { display: flex; align-items: center; gap: 12px; width: 100%; border: none;
-  padding: calc(env(safe-area-inset-top) + 22px) 18px 18px; text-align: left;
+  padding: calc(var(--sa-t) + 22px) 18px 18px; text-align: left;
   font-family: inherit; }
 .hv3-drwho .nm { flex: 1; min-width: 0; }
 .hv3-drwho .nm b { display: block;  font-weight: 900; }
@@ -4738,7 +4745,7 @@ body:has(#tabbar.hidden) #screen:has(.ib),
 .ob-foot { margin-top: 18px; }
 
 /* ── 온보딩 설문 §5 — 한 화면에 한 질문, 고르면 바로 다음 ── */
-.ob-wrap { padding-top: calc(env(safe-area-inset-top) + 30px); }
+.ob-wrap { padding-top: calc(var(--sa-t) + 30px); }
 .ob-bar { display: flex; gap: 6px; margin-bottom: 26px; }
 .ob-bar i { flex: 1; height: 4px; border-radius: 2px; background: var(--line); }
 .ob-bar i.on { background: var(--accent); }
@@ -4832,7 +4839,7 @@ body:has(#tabbar.hidden) #screen:has(.ib),
    ⚠ 항목 높이는 줄이되 **터치 최소 44px 은 지킨다** — 여기서 더 조이면 잘못 눌린다.
    ⚠ 폭을 줄이면 「내 정보 · 설정」 같은 긴 줄이 두 줄로 접힌다 → nowrap 으로 막는다. */
 .hv3-drawer { width: min(80vw, 300px); }
-.hv3-drlogo { padding: calc(env(safe-area-inset-top) + 14px) 18px 8px; font-size: 17px; }
+.hv3-drlogo { padding: calc(var(--sa-t) + 14px) 18px 8px; font-size: 17px; }
 .hv3-drwho { padding: 12px 18px 12px; gap: 10px; }
 .hv3-drwho .nm b { font-size: 15.5px; }
 .hv3-drwho .nm em { font-size: 12px; }
@@ -4841,7 +4848,7 @@ body:has(#tabbar.hidden) #screen:has(.ib),
 .hv3-dritem i { width: 30px; height: 30px; border-radius: 10px; font-size: 15px; }
 .hv3-drhr { margin: 5px 0; }
 .hv3-drscroll { padding: 2px 0; }
-.hv3-drfoot { padding: 4px 0 calc(env(safe-area-inset-bottom) + 4px); }
+.hv3-drfoot { padding: 4px 0 calc(var(--sa-b) + 4px); }
 /* 서랍 항목의 아이콘 «상자»를 없앤다(2026-08-04 지시) — 아이콘만 남긴다.
    ⚠ 폭은 그대로 둔다. 없애면 글자 시작점이 항목마다 달라져 줄이 삐뚤어 보인다. */
 .hv3-dritem i { background: none; width: 22px; height: 22px; border-radius: 0; font-size: 19px; }
@@ -4888,7 +4895,7 @@ body:has(#tabbar.hidden) #screen:has(.ib),
    «상단 높이가 너무 길다 · 글씨도 작게». 위아래 여백 6+10 → 2+6, 제목 19 → 16.5px.
    ⚠ ← 버튼은 **44px 을 지킨다** — 나가는 길이라 여기서 터치를 깎으면 안 된다.
      대신 줄 높이를 버튼에 맞춰 딱 붙인다(여백만 걷어낸 것). */
-.sub-top { padding: calc(env(safe-area-inset-top) + 2px) 8px 6px; margin-bottom: 8px; }
+.sub-top { padding: calc(var(--sa-t) + 2px) 8px 6px; margin-bottom: 8px; }
 .sub-t { font-size: 16.5px; }
 .sub-t em { font-size: 11.5px; }
 /* ⚠ 원형 버튼이 **38×44 타원**이던 진짜 원인 — 1266행의 전역 `button { min-height:44px }`.
@@ -5358,8 +5365,8 @@ body:has(#tabbar.hidden) #screen:has(.ib),
   --g-ink: #16203A; --g-sub: #5B6B8C;
   --g-gold: #FFC531; --g-gold-d: #E8930B; --g-gold-ink: #7A4E00;
   --g-lime: #38D46A; --g-pink: #FF6BAA; --g-shadow: 0 5px 0 rgba(0, 0, 0, .12);
-  min-height: 100vh; margin: calc(env(safe-area-inset-top) * -1 - 18px) -20px -24px;
-  padding: max(calc(env(safe-area-inset-top) + 8px), 30px) 14px calc(env(safe-area-inset-bottom) + 20px);
+  min-height: 100vh; margin: calc(var(--sa-t) * -1 - 18px) -20px -24px;
+  padding: max(calc(var(--sa-t) + 8px), 30px) 14px calc(var(--sa-b) + 20px);
   background: linear-gradient(180deg, #4A9BFF, #7C5CFF); color: var(--g-ink);
   /* ⚠ 전수검사에서 가로로 2px 이 새고 있었다 — 아이 세계는 가로로 흐를 것이 없다.
      넘치는 표·코드 같은 것은 각자 제 상자에서 스크롤한다(전역 규칙). */
@@ -5426,8 +5433,8 @@ body:has(#tabbar.hidden) #screen:has(.ib),
   --g-ink: #16203A; --g-sub: #5B6B8C;
   --g-gold: #FFC531; --g-gold-d: #E8930B; --g-gold-ink: #7A4E00;
   --g-lime: #38D46A; --g-shadow: 0 5px 0 rgba(0, 0, 0, .12);
-  min-height: 100vh; margin: calc(env(safe-area-inset-top) * -1 - 18px) -20px -24px;
-  padding: max(calc(env(safe-area-inset-top) + 8px), 30px) 14px calc(env(safe-area-inset-bottom) + 20px);
+  min-height: 100vh; margin: calc(var(--sa-t) * -1 - 18px) -20px -24px;
+  padding: max(calc(var(--sa-t) + 8px), 30px) 14px calc(var(--sa-b) + 20px);
   background: linear-gradient(180deg, #4A9BFF, #7C5CFF);
   /* ⚠ 토큰만 갈아입히고 **글자색을 안 주면** 부모 색이 그대로 상속된다 —
      기기에서 재 보니 실제 글자가 부모 --ink(#1A1A1F)였다(08-08).
@@ -5539,7 +5546,7 @@ body:has(#tabbar.hidden) #screen:has(.ib),
 
   /* ⚠ 위로 끌어올리지 않는다. 부모 홈은 위쪽에 그림이 꽉 차서 «상태바 밑까지» 밀어 올리지만,
      게임 화면은 맨 위가 캐릭터 줄이다 — 끌어올리면 **이름·레벨·지갑이 상태바에 먹힌다**.
-     노치가 없는 기기에서는 env(safe-area-inset-top) 가 0 이라 그대로 -18px 만큼 잘렸다(08-08 실기). */
+     노치가 없는 기기에서는 var(--sa-t) 가 0 이라 그대로 -18px 만큼 잘렸다(08-08 실기). */
   /* 게임 화면은 «화면 전체를 쓰는 다른 세계»다. #screen 의 안쪽 여백(위 18·아래 20)을
      타면 그만큼 넘쳐서 상점 바가 잘린다 — 음수 마진으로 상쇄하면 그 숫자가 바뀔 때 또 깨진다.
      그래서 부모 상자에서 아예 빠져나온다. 이러면 어느 기기에서도 딱 맞는다(08-08 실기).
@@ -5548,11 +5555,11 @@ body:has(#tabbar.hidden) #screen:has(.ib),
   /* ⚠ hidden 으로 두면 진열대처럼 줄이 늘어나는 화면이 **잘려서 겹쳐 보인다**(08-08 실기).
      홈은 flex 로 딱 맞게 짜여 있어 스크롤이 안 생기고, 넘치는 화면만 스크롤이 붙는다. */
   overflow-y: auto; overscroll-behavior: contain;
-  /* ⚠ 노치가 없는 안드로이드는 env(safe-area-inset-top) 가 0 이다. 그대로 두면
+  /* ⚠ 노치가 없는 안드로이드는 var(--sa-t) 가 0 이다. 그대로 두면
      캐릭터 줄이 상태바(약 24px) 밑에 깔린다 — 실기에서 이름·레벨이 안 보였다(08-08).
      그래서 «둘 중 큰 값»으로 최소 높이를 보장한다. */
-  padding: max(calc(env(safe-area-inset-top) + 8px), 30px) 14px
-           calc(env(safe-area-inset-bottom) + 14px);
+  padding: max(calc(var(--sa-t) + 8px), 30px) 14px
+           calc(var(--sa-b) + 14px);
   background: linear-gradient(180deg, var(--g-sky1), var(--g-sky2));
   color: var(--g-ink);
   display: flex; flex-direction: column;
@@ -5560,7 +5567,7 @@ body:has(#tabbar.hidden) #screen:has(.ib),
 /* 안쪽 화면 — 보통 문서처럼 흐른다(위 주석 참조). 바탕은 그대로 화면을 덮는다 */
 .gm.sc { position: static; inset: auto; height: auto; min-height: 100vh;
   display: block; overflow: visible;
-  margin: calc(env(safe-area-inset-top) * -1 - 18px) -20px -24px; }
+  margin: calc(var(--sa-t) * -1 - 18px) -20px -24px; }
 .gm.sc .gm-grid { display: grid; }
 .gm.sc .gm-shopwrap { margin-top: 16px; }
 
@@ -7022,16 +7029,16 @@ body {
    완전히 가려져** 있었다. 에뮬(1080×1920, 버튼 내비)에선 안 보이던 문제다.
 
    ⚠ **기기별로 맞추면 안 된다** — 폴드8 은 비율이 또 다르고, 접었을 때·폈을 때도 다르다.
-     `env(safe-area-inset-bottom)` 은 기기가 «여기까지는 가려진다»를 알려주는 값이라
+     `var(--sa-b)` 은 기기가 «여기까지는 가려진다»를 알려주는 값이라
      어떤 화면비가 와도 맞는다.
    ⚠ 파일에 이미 30곳이 이걸 쓰고 있었는데 **이 다섯 곳만 빠져 있었다.**
      화면 맨 아래에 붙는 요소(margin-top:auto · position:fixed bottom:0)는 **반드시** 준다.
    ══════════════════════════════════════════════════════════════════════ */
-:root .ob-bot { padding-bottom: calc(env(safe-area-inset-bottom) + 14px); }
-:root .kd3-go { margin-bottom: calc(env(safe-area-inset-bottom) + 10px); }
-:root .lg-wrap .lg-child { padding-bottom: calc(env(safe-area-inset-bottom) + 12px); }
-:root .gm-shopwrap { padding-bottom: calc(env(safe-area-inset-bottom) + 10px); }
-:root .page .stmt { padding-bottom: calc(env(safe-area-inset-bottom) + 8px); }
+:root .ob-bot { padding-bottom: calc(var(--sa-b) + 14px); }
+:root .kd3-go { margin-bottom: calc(var(--sa-b) + 10px); }
+:root .lg-wrap .lg-child { padding-bottom: calc(var(--sa-b) + 12px); }
+:root .gm-shopwrap { padding-bottom: calc(var(--sa-b) + 10px); }
+:root .page .stmt { padding-bottom: calc(var(--sa-b) + 8px); }
 
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -7044,8 +7051,8 @@ body {
    ⚠ 일러스트는 그대로 끝까지 간다(그게 디자인이다). **아이콘 줄만** 내린다.
    ⚠ 아래(내비게이션 바)를 고칠 때 위도 같이 봤어야 했다 — 잘림은 **위아래가 한 쌍**이다.
    ══════════════════════════════════════════════════════════════════════ */
-:root #screen:has(.hv3-art) .hd-top { padding-top: env(safe-area-inset-top); }
-:root #screen:has(.hv3-art) .hv3-art { margin-top: calc(env(safe-area-inset-top) * -1 - 6px); }
+:root #screen:has(.hv3-art) .hd-top { padding-top: var(--sa-t); }
+:root #screen:has(.hv3-art) .hv3-art { margin-top: calc(var(--sa-t) * -1 - 6px); }
 
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -7056,8 +7063,8 @@ body {
    ══════════════════════════════════════════════════════════════════════ */
 
 /* ① 상태 표시줄과 아이콘 사이에 숨 쉴 자리 */
-:root #screen:has(.hv3-art) .hd-top { padding-top: calc(env(safe-area-inset-top) + 12px); }
-:root #screen:has(.hv3-art) .hv3-art { margin-top: calc((env(safe-area-inset-top) + 12px) * -1 - 6px); }
+:root #screen:has(.hv3-art) .hd-top { padding-top: calc(var(--sa-t) + 12px); }
+:root #screen:has(.hv3-art) .hv3-art { margin-top: calc((var(--sa-t) + 12px) * -1 - 6px); }
 
 /* ② 초 — 시·분보다 작게. 콜론은 1초마다 깜빡인다(«살아 있다»는 신호) */
 :root .bd-time .tm u { text-decoration: none; font-size: .52em; font-weight: 800;
@@ -7117,10 +7124,10 @@ body {
      ③ 「계속」을 바닥에서 띄운다 — 화면 끝에 붙으면 엄지가 걸린다.
    ⚠ 짧은 폰(1920 이하)에서는 지금과 거의 같게 보여야 한다 — `min()` 으로 상한을 둔다.
    ══════════════════════════════════════════════════════════════════════ */
-:root .ob-wrap { padding-top: calc(env(safe-area-inset-top) + 16px); }
+:root .ob-wrap { padding-top: calc(var(--sa-t) + 16px); }
 :root .ob-bar { margin-bottom: 14px; }
 :root .ob-qbox { justify-content: flex-start; padding-top: min(8vh, 90px); }
-:root .ob-bot { padding-bottom: calc(env(safe-area-inset-bottom) + 26px); }
+:root .ob-bot { padding-bottom: calc(var(--sa-b) + 26px); }
 /* 「←」가 홀로 멀리 있었다 — 진행 막대 바로 아래로 */
 :root .ob-wrap .sub-back, :root .ob-wrap .ob-back { margin: -4px 0 6px -8px; }
 
@@ -7151,7 +7158,7 @@ body {
      탭바가 숨은 화면은 아래 여백이 20px 뿐이라 버튼 하나가 딱 걸린다.
    ══════════════════════════════════════════════════════════════════════ */
 :root body:has(#tabbar.hidden) #screen {
-  padding-bottom: calc(env(safe-area-inset-bottom) + 40px); }
+  padding-bottom: calc(var(--sa-b) + 40px); }
 
 /* ── 알약 «안»에 든 입력칸은 맨몸이어야 한다 (2026-08-10 대표님 지적) ─────────
    고객센터 검색칸이 바깥 알약과 높이가 안 맞았다.
@@ -7382,7 +7389,7 @@ body {
    ⚠ 안전영역을 못 주는 폰이 있어 max() 로 바닥값을 깐다(하단 3버튼에서 겪은 것과 같다). */
 :root .lg-close {
   position: absolute; left: 10px; z-index: 5;
-  top: max(calc(env(safe-area-inset-top) + 8px), 40px);
+  top: max(calc(var(--sa-t) + 8px), 40px);
   width: 44px; height: 44px; min-height: 44px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center; line-height: 0;
   background: var(--card-a); border: none; color: var(--ink); font-size: 20px;

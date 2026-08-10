@@ -7858,10 +7858,15 @@ const App = {
        ⚠ 부모가 볼 때는 감싸지 않는다 — 부모 앱은 테마 18종을 그대로 탄다. */
     /* «보상 구획»은 부모가 봐도 같은 세계다 — 미션 관리에서 상점·티켓으로 넘어가는데
        거기만 옛 부모 테마면 또 다른 앱이 된다(대표님 지적 08-08: 「부모페이지 작업 안 된 곳 많어」). */
-    const WORLD = ["tickets", "store", "mission"];
+    /* 🔴 missionpick·missionone 이 빠져 있었다(2026-08-10 대표님: 「미션모듈에서 왜 A모듈 테마가」).
+       미션(파랑)에서 「고르기」를 누르면 부모 베이지 화면이 떴다 — 세계를 오가는 꼴.
+       미션에서 타고 들어가는 화면은 **전부** 같은 세계를 입는다.
+       #edit(만들기 편집기)는 일정·준비물과 공용이라 **미션으로 들어왔을 때만** 입는다. */
+    const WORLD = ["tickets", "store", "mission", "missionpick", "missionone"];
     const KID_ONLY = ["childmealrate", "childfriend", "childsubject", "childtt"];
     const kidNow = isChildToken() || S.kidMode;
-    const asKid = WORLD.includes(name) || (kidNow && KID_ONLY.includes(name));
+    const asKid = WORLD.includes(name) || (kidNow && KID_ONLY.includes(name))
+      || (name === "edit" && S.edit && S.edit.kind === "mission");
     const body = Screens[name]();
     document.getElementById("screen").innerHTML =
       (asKid ? `<div class="gmw">${body}</div>` : body)

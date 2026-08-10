@@ -18,6 +18,18 @@ public class MainActivity extends BridgeActivity {
         // 위젯 데이터 통로. registerPlugin 은 super.onCreate 앞에서 불러야 브리지에 실린다.
         registerPlugin(WidgetPlugin.class);
         super.onCreate(savedInstanceState);
+        /* 🔴 엣지-투-엣지 (2026-08-10 대표님: 「전체 색상이 안 맞어」).
+           웹뷰가 상태바 **밑에서** 시작하고 그 위 띠는 네이티브 배경색(베이지)이었다.
+           베이지 화면에서는 안 보이는데 파란 미션 세계에서는 **베이지 띠**로 드러났다 —
+           화면 위 띠 색을 CSS 로는 못 바꾼다(웹 바깥이다).
+           → 웹뷰를 화면 끝까지 펴고 상태바·네비바를 투명으로. 콘텐츠 여백은
+             이미 있는 --sa-top/--sa-bottom 다리(bridgeSafeArea)가 책임진다. */
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
+        getWindow().setNavigationBarColor(android.graphics.Color.TRANSPARENT);
+        // 상태바 아이콘은 진하게 — 라이트 테마가 기본이고, 다크에서도 파스텔이라 읽힌다
+        new androidx.core.view.WindowInsetsControllerCompat(getWindow(), getWindow().getDecorView())
+            .setAppearanceLightStatusBars(true);
         bridgeSafeArea();
         handleWidget(getIntent());
     }
