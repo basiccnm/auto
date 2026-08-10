@@ -3090,6 +3090,24 @@ div.kd2-day { cursor: default; }
 .ms-mkbtn em { display: block; margin-top: 2px; font-size: 12.5px; font-style: normal; color: var(--muted); }
 .ms-fhint { margin: 8px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--muted); }
 
+/* 미션 액션바 (2026-08-10) — 바꾸기·고르기·만들기 세 입구를 한 줄로.
+   흩어져 있던 것을 나란히 두는 게 이 개편의 요점이라, 셋의 생김새가 똑같아야 한다. */
+.ms-actrow { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 14px; }
+.ms-actrow button { display: flex; flex-direction: column; align-items: center; gap: 5px;
+  padding: 13px 4px 11px; border: 1.5px solid var(--line); border-radius: 14px;
+  background: var(--card); color: var(--ink); font-size: 19px; }
+.ms-actrow button i { font-size: 20px; color: var(--accent); }
+.ms-actrow button b { font-size: 13.5px; font-weight: 700; }
+.ms-actrow button[disabled] { opacity: .45; }
+/* 아이 화면 미리보기 — 행동이 아니라 «구경»이라 액션바와 결이 달라야 한다: 꽉 찬 한 줄 */
+.ms-preview { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
+  margin-top: 10px; padding: 13px; border: 1.5px solid var(--line); border-radius: 14px;
+  background: var(--card-a); color: var(--ink); }
+.ms-preview i { font-size: 19px; color: var(--accent); }
+.ms-preview b { font-size: 14.5px; font-weight: 700; }
+/* 「확인해 주세요」가 맨 위로 왔을 때 — 카드보다 먼저 눈에 걸리게 밑줄 하나 */
+.vf-wrap.top { margin: 14px 0 4px; padding-bottom: 14px; border-bottom: 1.5px dashed var(--line); }
+
 /* ═══ 부모 월간 리포트 (2026-08-03) ═══════════════════════════
    일일 퀘스트가 쌓은 것을 한 장으로. 막대는 장식이 아니라 **표본 크기**를 눈으로 보여주는 것이라,
    숫자를 지우고 막대만 남기지 말 것. 「3번 중 2번」이 「67%」보다 정직하다. */
@@ -6361,15 +6379,7 @@ html:root[data-theme="charcoal"], html:root[data-theme="lavender"] {
 /* 「1장 기다리는 중」 2.65:1 — 밝은 분홍 위 흰 글씨. 분홍은 유지하고 톤만 내린다 */
 :root .gm-tkn { background: #D01B63; }
 
-/* 🎲 오늘 미션 바꾸기 — 미션 카드와 같은 유리 문법. 눌러도 되는 것처럼 «들려» 있다 */
-.ms-reroll { display: flex; align-items: center; gap: 10px; width: 100%; margin: 4px 0 12px;
-  padding: 12px 14px; border-radius: 16px; font-family: inherit; font-size: 17px; text-align: left;
-  background-color: rgba(255, 255, 255, .44); border: 1px solid rgba(255, 255, 255, .55);
-  -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .60), 0 2px 8px rgba(0, 0, 0, .05); color: var(--ink); }
-.ms-reroll b { display: block; font-size: 15px; font-weight: 900; }
-.ms-reroll em { display: block; margin-top: 2px; font-size: 12px; font-style: normal;
-  font-weight: 700; color: var(--muted); }
+/* 🎲 오늘 미션 바꾸기 — 전용 줄을 걷어냈다(2026-08-10). 바꾸기·고르기·만들기가 .ms-actrow 한 줄이 됐다 */
 
 
 /* ══════════════════════════════════════════════════════════════════════
