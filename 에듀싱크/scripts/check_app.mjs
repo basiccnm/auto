@@ -110,14 +110,25 @@ console.log("\n② 색이 테마를 따르나");
 // ── ③ 템플릿 문자열 안 역따옴표 주석 ────────────────────────────
 console.log("\n③ 주석이 템플릿 문자열을 깨지 않나");
 {
+  /* 🔴 2026-08-10: 「템플릿 안에서 조심하라」는 **그 주석 자체가** 역따옴표를 써서
+     템플릿을 끊었고 «내 정보·설정» 화면이 통째로 죽었다. 눌러도 아무 일이 없었다.
+     ⚠ 예전 검사는 <!-- 가 **같은 줄에 있을 때만** 봤다 —
+       여러 줄 HTML 주석의 **안쪽 줄**은 그냥 지나쳤다. 그래서 못 잡았다.
+       주석이 열린 상태를 따라가며 본다. */
   const hits = [];
-  js.split("\n").forEach((ln, i) => {
-    if (/<!--/.test(ln) || /^\s*(\/\/|\*|\/\*)/.test(ln)) {
-      const inHtmlComment = /<!--/.test(ln);
-      // 재는 것은 «주석 안»의 역따옴표다. 템플릿을 여는 것이 <!-- 앞이면 정상 (2026-08-08 오탐)
-      const after = ln.slice(ln.indexOf("<!--"));
-      if (inHtmlComment && after.includes("`")) hits.push(`${i + 1}행  ${ln.trim().slice(0, 70)}`);
+  const BT = String.fromCharCode(96);
+  let openC = false;
+  js.split(String.fromCharCode(10)).forEach((ln, i) => {
+    const opensHere = ln.includes("<!--");
+    const closesHere = ln.includes("-->");
+    if (openC || opensHere) {
+      // 같은 줄에 <!-- 가 있으면 그 뒤만 «주석 안»이다(그 앞은 템플릿을 여는 자리일 수 있다)
+      let seg = opensHere ? ln.slice(ln.indexOf("<!--")) : ln;
+      if (closesHere) seg = seg.slice(0, seg.indexOf("-->") + 3);
+      if (seg.includes(BT)) hits.push((i + 1) + "행  " + ln.trim().slice(0, 70));
     }
+    if (opensHere && !closesHere) openC = true;
+    if (closesHere) openC = false;
   });
   hits.length ? bad("HTML 주석 안에 역따옴표 — 템플릿 문자열이 그 자리에서 끊긴다", hits)
               : ok("역따옴표 주석 없음");
