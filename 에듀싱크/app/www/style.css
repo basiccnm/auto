@@ -7446,3 +7446,39 @@ body {
    버튼이 네비바 위에 놓여 터치를 뺏긴다. 하단 3버튼·상단 ☰ 와 **같은 원인, 같은 처방**이다.
    ⚠ env() 만 믿으면 안 된다 — 안 주는 폰이 있다. 언제나 max() 로 바닥값을 깐다. */
 :root .hv3-drfoot { padding: 4px 0 max(calc(env(safe-area-inset-bottom) + 4px), 56px); }
+
+/* ══ 안전영역을 «안 주는 폰»을 위한 바닥값 (2026-08-10) ═══════════════════════
+   🔴 이 폰(갤럭시 Z 폴드6 웹뷰)은 `env(safe-area-inset-*)` 를 **0 으로 준다.**
+      그러면 「+10px」 같은 여백만 남아 떠 있는 요소가 상태바·네비바 밑에 깔리고,
+      **보이는데 터치를 시스템이 가져간다.** 하루에 네 번 같은 원인으로 버튼이 죽었다 —
+      하단 3버튼 · 상단 ☰ · 로그인 ✕ · 서랍 바닥 「내 정보·설정」.
+   ⚠ 여기 아래는 `scripts/check_safearea.mjs` 가 찾아낸 나머지다.
+     **원래 규칙은 안 건드리고** 바닥값만 덧댄다 — 안전영역을 제대로 주는 폰에서는
+     max() 가 원래 값을 고르므로 아무것도 달라지지 않는다.
+   ⚠ 새로 화면 가장자리에 무언가를 붙이면 그 검사기를 돌릴 것. */
+
+/* 아래에 붙는 것 — 네비게이션 바를 피한다 */
+:root #tabbar        { height: calc(var(--tabbar-h) + max(env(safe-area-inset-bottom), 48px));
+                       padding-bottom: max(env(safe-area-inset-bottom), 48px); }
+:root .chatbar       { padding-bottom: max(calc(10px + env(safe-area-inset-bottom)), 56px); }
+:root .chatsheet     { padding-bottom: max(env(safe-area-inset-bottom), 48px); }
+:root .stickybar     { padding-bottom: max(calc(10px + env(safe-area-inset-bottom)), 56px); }
+:root .viewer-meta   { padding-bottom: max(calc(14px + env(safe-area-inset-bottom)), 58px); }
+:root .viewer-menu   { padding-bottom: max(env(safe-area-inset-bottom), 48px); }
+:root .vw-foot       { padding-bottom: max(calc(30px + env(safe-area-inset-bottom)), 62px); }
+:root .mk-bot        { padding-bottom: max(calc(env(safe-area-inset-bottom) + 10px), 56px); }
+:root .th-act        { padding-bottom: max(calc(env(safe-area-inset-bottom) + 10px), 56px); }
+:root .ib            { padding-bottom: max(calc(env(safe-area-inset-bottom) + 10px), 56px); }
+:root #homefab       { bottom: max(calc(env(safe-area-inset-bottom) + 16px), 62px); }
+:root .dw-fab        { bottom: max(calc(env(safe-area-inset-bottom) + 16px), 62px); }
+:root .gc-fab        { bottom: max(calc(env(safe-area-inset-bottom) + 16px), 62px); }
+/* 토스트는 눌리지 않지만 네비바에 가리면 읽을 수가 없다 */
+:root .toast         { bottom: max(calc(env(safe-area-inset-bottom) + 16px), 62px); }
+
+/* 위에 붙는 것 — 상태바를 피한다 */
+:root .viewer-top    { padding-top: max(calc(12px + env(safe-area-inset-top)), 52px); }
+:root .vw-top        { padding-top: max(calc(14px + env(safe-area-inset-top)), 54px); }
+:root .in-skip       { top: max(calc(env(safe-area-inset-top) + 14px), 54px); }
+:root .sub-top       { padding-top: max(calc(env(safe-area-inset-top) + 2px), 46px); }
+/* 상태바 가림막 — 0 이면 막이 없는 것과 같다 */
+:root body::before   { height: max(env(safe-area-inset-top, 0px), 40px); }
