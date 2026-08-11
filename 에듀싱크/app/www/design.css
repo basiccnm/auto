@@ -33,11 +33,16 @@
   --ns-off:#c5221f;
 
   /* 간격 · 모서리 */
-  --ns-4:4px; --ns-8:8px; --ns-16:16px; --ns-24:24px;
+  /* 폭에 비례한다 — px 로 못 박으면 기기가 바뀔 때마다 어긋난다.
+     clamp 로 위아래를 막아 극단으로는 안 간다.   368→8/15   412→9/17 */
+  --ns-4:4px;
+  --ns-8:  clamp(6px,  2.1vw, 11px);
+  --ns-16: clamp(12px, 4.2vw, 22px);
+  --ns-24: clamp(18px, 6.3vw, 32px);
   --ns-r-band:4px; --ns-r:8px; --ns-r-pill:1000px;
 
   /* 크기 */
-  --ns-clock:64px; --ns-h-nav:48px; --ns-h-row:54px; --ns-h-band:42px; --ns-h-dday:48px;
+  --ns-clock: clamp(48px, 15.5vw, 74px);  --ns-h-nav:48px; --ns-h-row:54px; --ns-h-band:42px; --ns-h-dday:48px;
 
   --ns-sh:0 1px 2px rgba(0,0,0,.05), 0 2px 10px rgba(0,0,0,.05);
 }
@@ -69,6 +74,8 @@
 
 /* ── 화면 껍데기 ──────────────────────────────────────────────────── */
 body:has(.ns-home), body:has(.ns-drawer){ background:var(--ns-bg); }
+/* 상태바 자리 띠 — 옛 토큰(--bg, 베이지)을 칠하고 있었다. 회색으로 고정 */
+body:has(.ns-home)::before, body:has(.ns-drawer)::before{ background:var(--ns-bg); }
 #screen:has(.ns-home){
   padding:0 var(--ns-16) calc(var(--sa-b) + var(--ns-8));
   background:var(--ns-bg); min-height:100vh;
@@ -132,15 +139,16 @@ body:has(.ns-home), body:has(.ns-drawer){ background:var(--ns-bg); }
 .ns-row{ display:flex; align-items:center; gap:12px; width:100%;
   background:var(--ns-canvas); border:1px solid var(--ns-line); border-radius:6px;
   padding:20px 12px 14px; position:relative; text-align:left; font:inherit;
-  color:var(--ns-ink); box-shadow:0 2px 0 rgba(32,33,36,.08); }
+  color:var(--ns-ink); box-shadow:0 2px 0 rgba(32,33,36,.08); min-height:80px; }
 .ns-row::before{ content:""; position:absolute; top:6px; left:50%; transform:translateX(-50%);
   width:28px; height:4px; border-radius:2px; background:#d3d7dd; }   /* 손잡이 */
-.ns-row .chip{ width:32px; height:32px; flex:none; border-radius:var(--ns-r);
+/* align-self 를 안 주면 부모 높이만큼 늘어난다(flex 기본 stretch) — 32×44 로 쟀다 */
+.ns-row .ns-c{ width:32px; height:32px; flex:none; align-self:center; border-radius:var(--ns-r);
   display:grid; place-items:center; }
-.ns-row .chip.b{ background:var(--t-tint); color:var(--t-ink); }
-.ns-row .chip.p{ background:var(--ns-plum-tint); color:var(--ns-plum-tx); }
-.ns-row .chip.nt{ background:#f1f3f4; color:var(--ns-muted); }  /* ⚠ n 은 이름칸 클래스라 충돌 — nt */
-.ns-row .chip .ti{ font-size:17px; }
+.ns-row .ns-c.b{ background:var(--t-tint); color:var(--t-ink); }
+.ns-row .ns-c.p{ background:var(--ns-plum-tint); color:var(--ns-plum-tx); }
+.ns-row .ns-c.nt{ background:#f1f3f4; color:var(--ns-muted); }  /* ⚠ n 은 이름칸 클래스라 충돌 — nt */
+.ns-row .ns-c .ti{ font-size:17px; }
 .ns-row .n{ flex:1; min-width:0; font-weight:600; }
 .ns-row .n em{ display:block; font-style:normal; font-size:13px; font-weight:500;
   color:var(--ns-muted); margin-top:1px; }
@@ -155,7 +163,8 @@ body:has(.ns-home), body:has(.ns-drawer){ background:var(--ns-bg); }
    ⚠ ＋ 는 글자가 아니라 CSS 막대 둘이다 — 글자는 자기 여백이 있어 가운데가 안 맞는다. */
 .ns-bar{ display:grid; grid-template-columns:1fr var(--ns-h-nav) 1fr; align-items:center;
   margin-top:auto; padding:var(--ns-8) var(--ns-16);
-  background:var(--t-bar); border-radius:var(--ns-r); }
+  background:var(--t-bar); border-radius:var(--ns-r);
+  position:sticky; bottom:0; z-index:2; }   /* 내용이 길어져도 화면 밖으로 안 밀린다 */
 .ns-bar button{ border:none; background:rgba(255,255,255,.14); color:#fff; font-family:inherit;
   height:56px; border-radius:var(--ns-r); width:auto; padding:0 24px; justify-self:center;
   display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; }
@@ -173,7 +182,7 @@ body:has(.ns-home), body:has(.ns-drawer){ background:var(--ns-bg); }
 .ns-dim{ position:fixed; inset:0; background:rgba(32,33,36,.32); z-index:80; }
 .ns-drawer{ position:fixed; top:var(--sa-t); bottom:0; left:0; width:min(304px,84vw);
   background:var(--ns-canvas); z-index:81; display:flex; flex-direction:column;
-  padding:var(--ns-16) var(--ns-8) calc(var(--sa-b) + var(--ns-8)); overflow-y:auto; }
+  padding:var(--ns-16) var(--ns-16) calc(var(--sa-b) + var(--ns-8)); overflow-y:auto; }
 /* 프로필 — 테마 면. 이름은 오른쪽, 서랍 바로가기는 그 옆 */
 .ns-me{ display:flex; flex-direction:column; gap:10px; padding:14px var(--ns-16);
   margin-bottom:var(--ns-8); background:var(--t-bar); border-radius:var(--ns-r); }
@@ -185,47 +194,36 @@ body:has(.ns-home), body:has(.ns-drawer){ background:var(--ns-bg); }
   border:none; border-radius:var(--ns-r-pill); background:rgba(255,255,255,.18);
   color:#fff; font-size:18px; }
 .ns-me .stats{ display:flex; flex-direction:column; gap:5px; }
-.ns-me .stats .s{ display:flex; align-items:center; justify-content:space-between;
+/* ⚠ 라벨(「학교」)이 세로로 쪼개져 «학/교» 로 보였다 — flex:none 로 못 박고 값은 말줄임 */
+.ns-me .stats .s{ display:flex; align-items:center; justify-content:space-between; gap:10px;
   background:rgba(255,255,255,.14); border-radius:6px; padding:8px 12px;
   font-size:13px; font-weight:600; color:rgba(255,255,255,.92); }
-.ns-me .stats .s b{ font-weight:700; color:#fff; font-variant-numeric:tabular-nums; }
+.ns-me .stats .s > :first-child{ flex:none; white-space:nowrap; }
+.ns-me .stats .s b{ flex:1; text-align:right; font-weight:700; color:#fff;
+  font-variant-numeric:tabular-nums; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 /* 테마 — 프로필 바로 아래. 19벌이라 «지금 뭘 쓰는지»가 보여야 한다 */
-.ns-thm{ display:flex; align-items:center; gap:12px; width:100%; height:46px; padding:0 10px;
+.ns-thm{ display:flex; align-items:center; gap:12px; width:100%; height:46px; padding:0 var(--ns-8);
   margin-bottom:2px; border:none; border-radius:var(--ns-r-band); background:var(--t-tint);
   color:var(--t-ink); font:inherit; font-size:14px; font-weight:700; text-align:left; }
 .ns-thm .nm{ flex:1; }
 .ns-thm .cur{ font-weight:600; opacity:.85; }
 .ns-thm .ar{ font-size:13px; opacity:.7; }
 /* 묶음 · 항목 */
-.ns-sec{ padding:20px 10px 6px; font-size:13px; font-weight:700; color:var(--ns-muted); }
+.ns-sec{ padding:20px var(--ns-8) 6px; font-size:13px; font-weight:700; color:var(--ns-muted); }
 .ns-item{ display:flex; align-items:center; gap:12px; width:100%; height:var(--ns-h-row);
   padding:0 10px; margin-bottom:2px; border:none; background:none; text-align:left;
   border-radius:var(--ns-r-band); color:var(--ns-ink); font:inherit;
   font-size:14px; font-weight:600; }
 .ns-item.on{ background:var(--t-tint); color:var(--t-ink); font-weight:700; }
-.ns-item .chip{ width:32px; height:32px; flex:none; border-radius:var(--ns-r);
+.ns-item .ns-c{ width:32px; height:32px; flex:none; align-self:center; border-radius:var(--ns-r);
   display:grid; place-items:center; }
-.ns-item .chip.b{ background:var(--t-tint); color:var(--t-ink); }
-.ns-item .chip.p{ background:var(--ns-plum-tint); color:var(--ns-plum-tx); }
-.ns-item .chip .ti{ font-size:16px; }
+.ns-item .ns-c.b{ background:var(--t-tint); color:var(--t-ink); }
+.ns-item .ns-c.p{ background:var(--ns-plum-tint); color:var(--ns-plum-tx); }
+.ns-item .ns-c .ti{ font-size:16px; }
 .ns-item .cnt{ margin-left:auto; min-width:20px; height:20px; padding:0 6px;
   border-radius:var(--ns-r-pill); background:var(--ns-off); color:#fff;
   font-size:11px; font-weight:800; display:grid; place-items:center; }
 /* 바닥 — 틴트 판. 위(프로필)와 아래(여기)가 가운데 흰 메뉴를 감싼다 */
 .ns-foot{ margin-top:auto; background:var(--t-tint); border-radius:var(--ns-r); padding:var(--ns-8); }
 .ns-foot .ns-item{ color:var(--t-ink); font-weight:700; margin:0; }
-.ns-foot .ns-item .chip{ background:var(--ns-canvas); }
-
-/* ── 상태바 자리 · 하단 잘림 방지 (2026-08-11 폴드6 실측) ─────────────
-   🔴 상태바 띠(body::before)가 **옛 토큰 --bg**(베이지)를 칠하고 있었다.
-      새 화면에서는 회색 바탕으로 확실하게 고정한다(대표님: 「그냥 회색으로 확실하게」).
-   🔴 하단 바가 «화면 밖으로 밀려 잘리는» 것을 막는다. 내용이 길어지면 margin-top:auto
-      만으로는 부족하다 — sticky 로 붙여 두면 어떤 기기 높이에서도 항상 보인다. */
-body:has(.ns-home)::before, body:has(.ns-drawer)::before{ background:var(--ns-bg); }
-.ns-bar{ position:sticky; bottom:0; z-index:2; }
-
-/* 프로필 정보 줄 — 라벨은 줄바꿈 금지, 값이 길면 줄인다.
-   ⚠ 「학교」가 세로로 쪼개져 «학/교» 로 보였다(2026-08-11 실기). 라벨을 flex:none 로 못 박는다. */
-.ns-me .stats .s{ gap:10px; }
-.ns-me .stats .s > :first-child{ flex:none; white-space:nowrap; }
-.ns-me .stats .s b{ flex:1; text-align:right; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ns-foot .ns-item .ns-c{ background:var(--ns-canvas); }

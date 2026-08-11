@@ -2654,7 +2654,7 @@ const Screens = {
     /* 서랍 앞판 한 칸 — [칩][이름·부제][값][›] */
     const drw = (chip, icon, name, sub, val, cls, go) => `
       <button class="ns-row" onclick="${go}">
-        <span class="chip ${chip}"><i aria-hidden="true" class="ti ${icon}"></i></span>
+        <span class="ns-c ${chip}"><i aria-hidden="true" class="ti ${icon}"></i></span>
         <span class="n">${name}${sub ? `<em>${sub}</em>` : ""}</span>
         <span class="v ${cls || ""}">${val}</span>
         <i aria-hidden="true" class="ti ti-chevron-right ar"></i>
@@ -4388,7 +4388,7 @@ const Screens = {
 
         <label class="f">결석 종류 *</label>
         <div class="chips">${kinds.map(([v, n]) =>
-          `<button class="chip ${t === v ? "on" : ""}" onclick="App.docSet('absKind','${v}')">${n}</button>`).join("")}</div>
+          `<button class="ns-c ${t === v ? "on" : ""}" onclick="App.docSet('absKind','${v}')">${n}</button>`).join("")}</div>
 
         ${t === "sick" ? `
           <p class="${needCert ? "warnline" : "sub"}">${needCert
@@ -6006,7 +6006,7 @@ function drawerView(c) {
 
   const item = (chip, icon, name, go, badge) => `
     <button class="ns-item" onclick="App.drawerClose();${go}">
-      <span class="chip ${chip}"><i aria-hidden="true" class="ti ${icon}"></i></span>${name}
+      <span class="ns-c ${chip}"><i aria-hidden="true" class="ti ${icon}"></i></span>${name}
       ${badge ? `<span class="cnt">${badge}</span>` : ""}
     </button>`;
 
@@ -6526,7 +6526,7 @@ function mealTab() {
     <div class="ml-algbox">
       <div class="chips">
         ${Object.entries(ALLERGEN_KO).map(([code, name]) =>
-          `<button class="chip ${S.myAllergens.includes(+code) ? "on" : ""}" onclick="App.toggleAllergen(${code})">${name}</button>`).join("")}
+          `<button class="ns-c ${S.myAllergens.includes(+code) ? "on" : ""}" onclick="App.toggleAllergen(${code})">${name}</button>`).join("")}
       </div>
     </div>` : ""}
 
