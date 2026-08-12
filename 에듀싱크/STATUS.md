@@ -23,7 +23,9 @@
 
 - 로컬 D1 실측 전부 통과: 다이얼 10~35 배정(2~8개), 즉시통과, 사진은 부모확인 유지,
   상한 깎임(9/10에서 ★3→+1), 깎인 뒤 되돌려도 1만 회수, add/drop/swap, 도장 보호.
-- ⚠ **원격 D1 에 `migrate_starline` 아직 안 들어감** — 배포 전 필수(배포는 대표님 승인).
+- ✅ **배포 완료(08-12 저녁, 대표님 «커밋하고 배포해»)** — 커밋 57eed21 푸시,
+  원격 D1 `migrate_starline` 적용(children 12명, 백업 `.backup/children_before_starline_20260812.json`),
+  워커 `eduthink-site-renderer` 배포. 실서버 검증: /app 200 · econ/star-line 라우트 살아있음 · kid.css 새판.
 - 카탈로그 재고가 벽: (밴드×시즌) 15~21개뿐, 고학년 주말 비사진 2개. 라인 최대 35 인 이유.
 
 ### 화면 (kid.css 가 정본, `kd-` 만 쓴다)
