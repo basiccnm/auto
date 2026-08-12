@@ -2188,13 +2188,12 @@ const Screens = {
     const row = (x) => {
       const done = x.status === "done";
       const wait = x.status === "waiting";
-      const tag = done ? `＋★${x.got || x.stars}`
+      const tag = done ? `★${x.got || x.stars}`
         : wait ? (kid ? "보냄" : "확인")
         : x.status === "skipped" ? "쉬어감" : `★${x.stars}`;
-      /* 아이는 줄을 눌러 **해낸다** — 즉시형은 그 자리에서 별, 사진형은 카메라로 */
-      const go = kid && !done && !wait
-        ? (x.verify === "review" ? `S.kidShootId=${x.id};location.hash='#childshoot'` : `App.missionDone(${x.id})`)
-        : `App.msOpen(${x.id})`;
+      /* 아이도 **상세에서 확정한다**(2026-08-12 대표님: 「누르면 바로 완성이 된다고???」).
+         목록 한 탭에 완료되면 실수로 스친 것도 별이 나간다 — 상세의 큰 「다 했어요!」가 확정이다. */
+      const go = `App.msOpen(${x.id})`;
       return `
       <button class="kd-q ${done ? "done" : ""} ${wait ? "wait" : ""}" onclick="${go}">
         <span class="bx">${done ? "✓" : wait ? "📷" : ""}</span>
@@ -2211,7 +2210,7 @@ const Screens = {
       return `
       <div class="kd-scr">
         <div class="kd-hd">
-          <button class="kd-bk" onclick="App.goBack()" aria-label="뒤로">‹</button>
+          <button class="kd-bk" onclick="location.hash='#game'" aria-label="뒤로">‹</button>
           <span class="ti">오늘의 미션</span>
           <span class="kd-pill star">★ ${(S.coin && S.coin.stars) || 0}</span>
         </div>
@@ -2265,7 +2264,9 @@ const Screens = {
     return `
     <div class="kd-scr">
       <div class="kd-hd">
-        <button class="kd-bk" onclick="App.goBack()" aria-label="뒤로">‹</button>
+        <!-- ⚠ goBack(발자국 되감기) 금지 — 미션↔상세 발자국이 쌓이면 ‹ 가 그 사이를 무한히 돈다
+             (2026-08-12 대표님: 「왜 계속 같은 곳 무한루프 돌지」). 목록의 ‹ 는 홈이다. -->
+        <button class="kd-bk" onclick="App.goHome()" aria-label="뒤로">‹</button>
         <span class="ti">미션</span>
         <span class="kd-pill star">★ ${S.missionStars}</span>
       </div>
@@ -2432,12 +2433,14 @@ const Screens = {
        아이는 «고장»으로 읽는다 — 왜 안 되는지가 화면에 있어야 한다. */
   store: () => {
     const c = cur();
-    const kid = isChildToken() || S.childView || S.kidMode;
+    /* 미리보기(gamePreview)도 «아이 눈»이다(2026-08-12 대표님: 「진열대 올리기가 아이 화면에서
+       나오면 어떡해」) — 부모 관리 단추는 부모 눈일 때만. */
+    const kid = isChildToken() || S.childView || S.kidMode || S.gamePreview;
     /* ══ 2026-08-12 «오후 4시의 운동장» — 상점도 미션과 같은 세계다.
        머리(kd-hd)·카드 문법은 미션 화면과 한 벌. st- 부품은 style.css 정의 자리에서 kd 값으로. */
     const hd = `
       <div class="kd-hd">
-        <button class="kd-bk" onclick="App.goBack()" aria-label="뒤로">‹</button>
+        <button class="kd-bk" onclick="${kid ? "location.hash='#game'" : "location.hash='#mission'"}" aria-label="뒤로">‹</button>
         <span class="ti">스타코인 상점</span>
         <span class="kd-pill star">★ ${S.missionStars || 0}</span>
       </div>`;
@@ -2456,8 +2459,9 @@ const Screens = {
 
     ${!S.store.length ? `
       <div class="ms-empty">
-        <b>진열대가 비어 있어요</b>
-        ${kid ? "" : `<button class="kd-btn" onclick="App.storeAddOpen()">진열대에 올리기</button>`}
+        <b>${kid ? "아직 준비된 보상이 없어요" : "진열대가 비어 있어요"}</b>
+        ${kid ? `<p class="sub" style="margin-top:6px">엄마아빠에게 부탁해봐!</p>`
+              : `<button class="kd-btn" onclick="App.storeAddOpen()">진열대에 올리기</button>`}
       </div>` : `
       <ul class="st-list">
         ${S.store.map((it) => {
@@ -2502,7 +2506,7 @@ const Screens = {
      ⚠ 「바꿔줬어요」는 부모만 누른다 — 아이가 스스로 받았다고 처리하면 그건 기록이 아니다. */
   tickets: () => {
     const c = cur();
-    const kid = isChildToken() || S.childView || S.kidMode;
+    const kid = isChildToken() || S.childView || S.kidMode || S.gamePreview;
     /* 2026-08-12 듀오링고 캐논 — 상점과 같은 세계, 같은 머리 */
     const hd = `
       <div class="kd-hd">
@@ -4793,11 +4797,29 @@ const Screens = {
      → 메뉴 목록은 **고르는 카드 하나로 합치고**, 순위는 1등만 받는다. */
   childmealrate: () => {
     const meal = mealsOf().find((m) => m.date === TODAY && m.type === "중식");
-    // 조용히 되돌리면 «눌렀는데 아무 일도 없는» 고장으로 읽힌다 — 이유를 말한다.
-    if (!meal) { toast("오늘은 급식이 없어요"); location.hash = "#game"; return ""; }
+    /* 급식이 없는 날(방학·주말) — 튕기지 말고 **쉬는 날이라고 말한다**(2026-08-12 대표님:
+       「아직 급식이 안 나와서 안 되면 방학중 미션 없음 이런 느낌 줘야」). */
+    if (!meal) return `
+    <div class="kd-scr">
+      <div class="kd-hd">
+        <button class="kd-bk" onclick="location.hash='#game'" aria-label="뒤로">‹</button>
+        <span class="ti">오늘 급식</span>
+      </div>
+      <div class="kd-hero">
+        <span class="bem" aria-hidden="true">🏖️</span>
+        <h2>오늘은 급식이 없는 날!</h2>
+      </div>
+      <div class="kd-why" style="text-align:center">방학이나 주말엔 이 미션이 쉬어요.<br>학교 가는 날 다시 만나!</div>
+      <div style="flex:1"></div>
+      <div class="kd-act"><button class="kd-btn" onclick="location.hash='#game'">돌아가기</button></div>
+    </div>`;
     const d = S.mealDraft;
     return `
-    <a class="back" href="#game" aria-label="뒤로"><i aria-hidden="true" class="ti ti-chevron-left"></i></a>
+    <div class="kd-scr">
+    <div class="kd-hd">
+      <button class="kd-bk" onclick="location.hash='#game'" aria-label="뒤로">‹</button>
+      <span class="ti">오늘 급식</span>
+    </div>
     <h1 class="kd2-h1">오늘 급식 어땠어?</h1>
 
     <p class="kd2-starhint">${d.stars ? "" : "별을 눌러서 골라줘"}</p>
@@ -4817,7 +4839,8 @@ const Screens = {
     </div>
 
     <button class="kd2-cta" ${d.stars && !S.mealBusy ? "" : "disabled"} onclick="App.mealRateSubmit()">
-      ${S.mealBusy ? "보내는 중…" : `<i aria-hidden="true" class="ti ti-send"></i>보내기`}</button>`;
+      ${S.mealBusy ? "보내는 중…" : `<i aria-hidden="true" class="ti ti-send"></i>보내기`}</button>
+    </div>`;
   },
 
   /* ── 자녀: 오늘 제일 재밌었던 과목? (2026-08-02) ────────────────
@@ -4826,9 +4849,26 @@ const Screens = {
      성적표가 알려주지 않는 것이다. 과목은 주 단위로 반복돼서 한 달이면 표본이 충분하다. */
   childsubject: () => {
     const subs = todaySubjects();
-    if (!subs.length) { toast("오늘은 수업이 없어요"); location.hash = "#game"; return ""; }
+    if (!subs.length) return `
+    <div class="kd-scr">
+      <div class="kd-hd">
+        <button class="kd-bk" onclick="location.hash='#game'" aria-label="뒤로">‹</button>
+        <span class="ti">재밌던 수업</span>
+      </div>
+      <div class="kd-hero">
+        <span class="bem" aria-hidden="true">🏖️</span>
+        <h2>오늘은 수업이 없는 날!</h2>
+      </div>
+      <div class="kd-why" style="text-align:center">방학이나 주말엔 이 미션이 쉬어요.<br>학교 가는 날 다시 만나!</div>
+      <div style="flex:1"></div>
+      <div class="kd-act"><button class="kd-btn" onclick="location.hash='#game'">돌아가기</button></div>
+    </div>`;
     return `
-    <a class="back" href="#game" aria-label="뒤로"><i aria-hidden="true" class="ti ti-chevron-left"></i></a>
+    <div class="kd-scr">
+    <div class="kd-hd">
+      <button class="kd-bk" onclick="location.hash='#game'" aria-label="뒤로">‹</button>
+      <span class="ti">재밌던 수업</span>
+    </div>
     <h1 class="kd2-h1">오늘 제일 재밌었던 건?</h1>
 
     <div class="kd2-pick1" style="margin-top:22px">
@@ -4840,7 +4880,8 @@ const Screens = {
     </div>
 
     <button class="kd2-cta" ${S.subjectBest && !S.subjectBusy ? "" : "disabled"}
-      onclick="App.subjectSubmit()">${S.subjectBusy ? "보내는 중…" : `<i aria-hidden="true" class="ti ti-send"></i>보내기`}</button>`;
+      onclick="App.subjectSubmit()">${S.subjectBusy ? "보내는 중…" : `<i aria-hidden="true" class="ti ti-send"></i>보내기`}</button>
+    </div>`;
   },
 
   /* ── 자녀: 오늘 누구랑 놀았어? (2026-08-02) ─────────────────────
@@ -4853,7 +4894,11 @@ const Screens = {
   childfriend: () => {
     const d = S.friendDraft;
     return `
-    <a class="back" href="#game" aria-label="뒤로"><i aria-hidden="true" class="ti ti-chevron-left"></i></a>
+    <div class="kd-scr">
+    <div class="kd-hd">
+      <button class="kd-bk" onclick="location.hash='#game'" aria-label="뒤로">‹</button>
+      <span class="ti">오늘 누구랑</span>
+    </div>
     <h1 class="kd2-h1">오늘 누구랑 놀았어?</h1>
     <p class="kd2-sub">여러 명 골라도 돼요</p>
 
@@ -4883,7 +4928,8 @@ const Screens = {
     </div>`}
 
     <button class="kd2-cta" ${(d.picked.length || d.alone) && !S.friendBusy ? "" : "disabled"}
-      onclick="App.friendSubmit()">${S.friendBusy ? "보내는 중…" : `<i aria-hidden="true" class="ti ti-send"></i>보내기`}</button>`;
+      onclick="App.friendSubmit()">${S.friendBusy ? "보내는 중…" : `<i aria-hidden="true" class="ti ti-send"></i>보내기`}</button>
+    </div>`;
   },
 
   /* ── 자녀: 화면 고르기 (첫 실행 + 「화면 바꾸기」) ────────────
@@ -5467,28 +5513,29 @@ function parentMissionAdmin(c, coin) {
         <span class="pm-n">${all ? `${d} / ${all}` : "오늘 없음"}</span>
         ${d >= all && all > 0 ? `<span class="pm-ok">완료</span>` : ""}${extra || ""}
       </div>`;
-    /* 🔴 개수만 보여주면 부모는 **뭘 했는지** 모른다(2026-08-12 대표님: 「오늘 아이가 한 미션
-       확인도 안 됨」). 해낸 미션은 이름을 그대로 나열하고, 확인 기다리는 것은 눌러서 바로 간다. */
-    const doneRows = done.map((x) => `
-      <div class="pm-row">
-        <span class="pm-i">✅</span><b>${esc(x.title)}</b>
-        <span class="pm-ok">＋★${x.got || x.stars}</span>
-      </div>`).join("");
-    const waitRows = (S.missions || []).filter((x) => x.status === "waiting").map((x) => `
-      <button class="pm-row" style="width:100%;text-align:left;font-family:inherit"
-        onclick="App.msOpen(${x.id})">
-        <span class="pm-i">🙋</span><b>${esc(x.title)}</b>
-        <span class="pm-n">확인하기 ›</span>
-      </button>`).join("");
+    /* 🔴 소속별로 묶는다(2026-08-12 대표님: 「아침 미션이면 아침 미션에 소속되어져 이거 완료
+       이런 식으로」). 카테고리 줄 밑에 그 미션들이 붙고, 한 것은 완료·별, 기다리는 것은 눌러서 확인. */
+    const sub = (x) => x.status === "done"
+      ? `<div class="pm-row pm-in"><span class="pm-i">✅</span><b>${esc(x.title)}</b><span class="pm-ok">완료 ★${x.got || x.stars}</span></div>`
+      : x.status === "waiting"
+      ? `<button class="pm-row pm-in" style="width:100%;text-align:left;font-family:inherit" onclick="App.msOpen(${x.id})">
+           <span class="pm-i">🙋</span><b>${esc(x.title)}</b><span class="pm-n">확인하기 ›</span></button>`
+      : `<div class="pm-row pm-in"><span class="pm-i">·</span><b>${esc(x.title)}</b><span class="pm-n">아직 · ★${x.stars}</span></div>`;
+    const ms = S.missions || [];
+    const mor = ms.filter((x) => x.slot === "morning");
+    const aft = ms.filter((x) => x.slot !== "morning");
+    const scRows = (sc?.items || []).map((m) => `
+      <div class="pm-row pm-in"><span class="pm-i">${m.icon || "🏫"}</span><b>${esc(m.name)}</b>
+        <span class="${m.done ? "pm-ok" : "pm-n"}">${m.done ? "완료 ★" + (m.stars || 1) : "아직 · ★" + (m.stars || 1)}</span></div>`).join("");
     return `<div class="gmp">${head("오늘 아이가 한 것", "모은 스탬프 ★" + coin.stars)}
       ${row("🌅", "아침 미션", sets.morning?.done || 0, sets.morning?.all || 0)}
+      ${mor.map(sub).join("")}
       ${sc && sc.available === false ? "" : row("🏫", "학교 미션", sc?.done || 0, sc?.all || 0)}
+      ${scRows}
       ${row("📚", "방과후 미션", sets.after?.done || 0, sets.after?.all || 0)}
+      ${aft.map(sub).join("")}
       ${row("⚔️", "오늘의 미션", q?.done ? 1 : 0, 1,
             q?.done ? `<span class="pm-sub">${q.correct} / ${q.total} 맞힘</span>` : "")}
-      ${waitRows ? `<p class="pm-fine" style="margin-top:14px">확인을 기다려요</p>${waitRows}` : ""}
-      ${doneRows ? `<p class="pm-fine" style="margin-top:14px">오늘 해냈어요</p>${doneRows}`
-                 : `<p class="pm-none">아직 해낸 미션이 없어요</p>`}
     </div>`;
   }
 
@@ -7151,7 +7198,9 @@ function diaryTab() {
   const cell = (key, i) => {
     if (!key) return `<div class="gc-cell empty"></div>`;
     const d = +key.slice(6);
-    const wd = (first + d - 1) % 7;
+    /* ⚠ 빨강(일요일)은 **진짜 요일**로 칠한다 — 칸 위치(wd)로 칠하면 월요일 시작 설정에서
+       한 칸 밀려 월요일이 빨개진다(2026-08-12 대표님 스샷: 「날짜 정렬 안 맞고」). */
+    const dowReal = new Date(+key.slice(0, 4), +key.slice(4, 6) - 1, d).getDay();
     const sc = schoolOf(key), mine = mineOf(key);
     const holi = holiOn(key);
     // 점 하나만 — 공휴일 danger · 내 일정 accent · 학교 회색
@@ -7163,7 +7212,7 @@ function diaryTab() {
     const trace = !mk ? "" : `<i class="gc-trace">${mk.stamp ? "★" : ""}${mk.meal ? "🍚" : ""}</i>`;
     return `
     <button class="gc-cell ${key === pick ? "on" : ""} ${key === TODAY ? "today" : ""}" onclick="if(!App.holdGuard())App.calPick('${key}')" onpointerdown="App.holdDay(event, '${key}')">
-      <span class="gc-num ${holi || wd === 0 ? "sun" : ""} ${inVac(key) ? "vac" : ""}">${d}</span>
+      <span class="gc-num ${holi || dowReal === 0 ? "sun" : ""} ${inVac(key) ? "vac" : ""}">${d}</span>
       <i class="gc-dot ${dot}"></i>
       ${trace}
     </button>`;
@@ -7966,7 +8015,8 @@ const App = {
        감싸면 그 그라데이션이 kd 바탕을 덮는다(에뮬 실측으로 잡음). 이제 감싸지 않는다.
        ⚠ edit(만들기)는 일정·준비물과 공용 폼이라 일단 A캐논 그대로 둔다 — STATUS ⓪ 남은 일. */
     const WORLD = [];
-    const KID_ONLY = ["childmealrate", "childfriend", "childsubject", "childtt"];
+    /* 급식·누구랑·수업 3종은 kd 세계로 이사(2026-08-12) — childtt(시간표 보기)만 옛 세계에 남는다 */
+    const KID_ONLY = ["childtt"];
     const kidNow = isChildToken() || S.kidMode;
     const asKid = WORLD.includes(name) || (kidNow && KID_ONLY.includes(name))
       ;
@@ -12105,7 +12155,8 @@ function deckCards() {
   (S.missions || []).filter((x) => x.status === "open").forEach((x) => out.push({
     key: "m" + x.id, id: x.id, title: x.title, stars: x.stars, now: false,
     sub: [x.minutes ? x.minutes + "분" : "", x.caution || ""].filter(Boolean).join(" · "),
-    go: x.verify === "review" ? `S.kidShootId=${x.id};location.hash='#childshoot'` : `App.missionDone(${x.id})`,
+    /* 한 탭 완료 금지(2026-08-12) — 카드를 눌러도 상세에서 「다 했어요!」로 확정한다 */
+    go: `App.msOpen(${x.id})`,
     goLabel: x.verify === "review" ? "사진 찍기"
            : x.verify === "endday" ? "오늘 지킬게요" : "완료 보고",
     skip: `App.missionSkip(${x.id})`,
