@@ -2120,7 +2120,8 @@ const Screens = {
           <label class="mk"><input type="checkbox" ${r[k] !== false ? "checked" : ""} onchange="App.regSet('${k}', this.checked)">${nm}</label>`).join("")}
       </div>` : ""}
       <!-- 가입 다음은 곧바로 자녀 등록이다. 자녀가 없으면 앱이 보여줄 게 없다(2026-07-24 확정). -->
-      <div style="margin-top:16px"><button class="btn-primary" onclick="App.registerDone()">
+      <!-- 필수가 다 차기 전엔 잠근다(2026-08-12) — 눌리는데 안 되는 버튼은 고장으로 읽힌다 -->
+      <div style="margin-top:16px"><button class="btn-primary" ${regValid() && !S.regBusy ? "" : "disabled"} onclick="App.registerDone()">
         ${S.regBusy ? "확인 중…" : "가입하고 자녀 등록하기"}</button></div>
       ${S.regServerErr._ ? `<p class="fielderr" style="text-align:center">${S.regServerErr._}</p>` : ""}
     </div>`;
@@ -5682,8 +5683,9 @@ function schoolMissionList() {
   const noSub = !todaySubjects().length;
   return s.items.map((x) => {
     const none = x.key === "meal" ? noMeal : x.key === "subject" ? noSub : false;
+    /* 2026-08-12 대표님: 「클리어처럼 비활성화된 느낌으로 방학중 써놓으라」 */
     return { ...x, none, go: none ? "" : "#" + x.go,
-      note: none ? (x.key === "meal" ? "오늘은 급식이 없어요" : "오늘은 수업이 없어요") : x.note };
+      note: none ? "학교 가는 날 다시 열려요" : x.note };
   });
 }
 
@@ -5692,7 +5694,7 @@ function gameTile(t) {
   const pct = t.all ? Math.round((t.done / t.all) * 100) : 0;
   const clear = t.all > 0 && t.done >= t.all;
   return `
-  <button class="gm-tile c-${t.c}${clear ? " clear" : t.done < t.all ? " todo" : ""}${t.boss ? " boss" : ""}"
+  <button class="gm-tile c-${t.c}${clear ? " clear" : t.done < t.all ? " todo" : ""}${t.boss ? " boss" : ""}${t.dim ? " vac" : ""}"
     ${t.act ? `onclick="${t.act}"`
     : t.go ? `onclick="location.hash='${t.go}'"`
     : t.tap ? `onclick="App.missionDone(${t.tap})"`
@@ -5727,7 +5729,7 @@ function gameCard(catKey) {
     stars = list.reduce((a, x) => a + x.stars, 0);
     tiles = list.map((x) => gameTile({ leaf: true, key: x.key, icon: x.icon, name: x.name, note: x.note,
       c: "cyan", done: x.done ? 1 : 0, all: 1, stars: x.stars, go: x.go,
-      foot: x.done ? "했어요" : x.none ? "오늘은 쉬어요" : "30초면 끝" })).join("");
+      foot: x.done ? "했어요" : x.none ? "방학중" : "30초면 끝", dim: x.none })).join("");
   } else {
     const list = (S.missions || []).filter((x) => slots.indexOf(x.slot || "any") >= 0);
     all = list.length; done = list.filter((x) => x.status === "done").length;
@@ -7832,8 +7834,15 @@ const App = {
       const h = location.hash || "#home";
       if (NAV.back) { NAV.back = false; NAV.last = h; }
       else if (NAV.last && NAV.last !== h) {
-        NAV.stack.push(NAV.last);
-        if (NAV.stack.length > 40) NAV.stack.shift();
+        /* 🔴 «온 곳으로 되돌아온» 직행 이동(href·location.hash)은 발자국을 **지운다**, 안 쌓는다.
+           안 그러면 A→B→(B의 ‹가 href 로 A 직행)→A 에서 스택이 [A,B]가 되어
+           A 의 ‹(goBack)가 B 로 «되돌아가» A↔B 무한 핑퐁이 된다
+           (2026-08-12 대표님: 내정보↔자녀편집 무한루프 — 미션↔상세도 같은 뿌리였다). */
+        if (NAV.stack[NAV.stack.length - 1] === h) NAV.stack.pop();
+        else {
+          NAV.stack.push(NAV.last);
+          if (NAV.stack.length > 40) NAV.stack.shift();
+        }
         NAV.last = h;
       } else if (!NAV.last) NAV.last = h;
     }
