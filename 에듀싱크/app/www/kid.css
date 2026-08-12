@@ -1,0 +1,201 @@
+/* ══════════════════════════════════════════════════════════════════════
+   B모듈(자녀앱) 디자인 정본 — «오후 4시의 운동장»      확정 2026-08-12
+   시각 정본: mockups/main-B-v2.html   ·   글꼴: 메이플스토리체
+
+   🔴 A모듈에서 **실제로 터졌던 사고**를 여기서 처음부터 막는다.
+      아래 다섯 줄이 그 목록이다 — 하나라도 어기면 같은 일이 그대로 다시 난다.
+
+   ① 상태바에 머리가 깔렸다 — 네이티브 인셋(--sa-top)이 «안 올 수 있다».
+      3대 중 2대에서 빈 값이었다. → 위쪽은 `--sa-t`(바닥값 24px 이 style.css 에 박혀 있다)만 쓴다.
+   ② 하단 바가 3버튼 내비바에 깔렸다 — `bottom:0` 금지.
+      떠 있는 것은 `calc(var(--sa-b) + var(--kd-8))` 위에 앉힌다. 아래엔 바닥값을 깔지 않는다
+      (제스처 폰은 0 이 정답이라 깔면 붕 뜬다).
+   ③ 화면이 넘치면 sticky 바가 **내용 위를 덮었다** → 홈은 «한 화면»(height:100dvh, overflow:hidden)
+      으로 못 박고, 넘치는 것은 **가운데 목록만** 구른다. 바는 flex:none 으로 제자리.
+   ④ 크기를 vh 로 재서 인셋 큰 폰에서 넘쳤다 → **가용 높이**(`--kd-ah`)를 기준으로 잰다.
+   ⑤ 이름이 겹쳐서 옛 CSS 가 새어 들어왔다(.chip·.stats·.cm-card·전역 button).
+      → 이 파일의 클래스는 전부 **kd-** 로 시작한다. 전역 button 은 규칙마다 직접 끊는다.
+
+   🔴 값은 여기서만 정한다. 화면 CSS 에 색·간격·모서리를 손으로 적지 않는다.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* 메이플스토리체 — 넥슨 상업용 무료. 자녀앱에서만 쓴다(부모앱은 시스템 글꼴 그대로) */
+@font-face{ font-family:"Maple"; src:url(fonts/Maplestory-Bold.woff2) format("woff2");
+  font-weight:700; font-display:swap; }
+@font-face{ font-family:"Maple"; src:url(fonts/Maplestory-Light.woff2) format("woff2");
+  font-weight:400; font-display:swap; }
+
+:root{
+  /* ── 팔레트 «오후 4시의 운동장» (목업 확정값) ── */
+  --kd-sky:#E8F4FF; --kd-cream:#FFFDF6;
+  --kd-ink:#33404F; --kd-sub:#8A93A6; --kd-canvas:#FFFFFF;
+  --kd-grass:#58CC02;  --kd-grass-lip:#46A302; --kd-grass-tint:#F0FAE4; --kd-grass-line:#B7E88C;
+  --kd-sun:#FFC800;    --kd-sun-tint:#FFF4D1;  --kd-sun-ink:#8A5B00;
+  --kd-dawn:#FF9600;   --kd-dawn-tint:#FFF4E3; --kd-dawn-line:#FFD9A0; --kd-dawn-ink:#A85E00;
+  --kd-mint:#22C39A;   --kd-mint-tint:#E6F9F3; --kd-mint-line:#A6E9D5; --kd-mint-ink:#0E7A5F;
+  --kd-pool:#1CB0F6;   --kd-pool-tint:#E9F6FF; --kd-pool-line:#A6DFFF; --kd-pool-ink:#0E7DB8;
+  --kd-grape:#CE82FF;  --kd-grape-tint:#F7EFFF;--kd-grape-line:#E3C6FF;--kd-grape-ink:#8A4DBF;
+  --kd-fire:#D14B1F;
+  --kd-r-sm:10px; --kd-r-md:14px; --kd-r-lg:18px; --kd-r-full:999px;
+
+  /* ── ④ 가용 높이 — 화면 전체가 아니라 «쓸 수 있는 높이»가 기준이다 ──
+     A모듈에서 vh 로 쟀다가 인셋 48px 짜리 폰에서 넘쳤다(실측). 같은 실수 금지. */
+  --kd-ah:calc(100vh - var(--sa-t, 0px) - var(--sa-b, 0px));
+  --kd-4:4px;
+  --kd-8:clamp(6px,  2.04vw, 10px);
+  --kd-12:clamp(9px, 3.05vw, 14px);
+  --kd-16:clamp(12px,4.07vw, 18px);
+  /* 글자 — 320 폭에서 하한, 393 에서 목업값, 큰 화면은 상한에서 멈춘다(요소 대신 여백이 는다) */
+  --kd-fs-12:clamp(11px,   calc(7.3px  + 1.19vw), 12.5px);
+  --kd-fs-13:clamp(12px,   calc(7.6px  + 1.37vw), 13.5px);
+  --kd-fs-14:clamp(13px,   calc(8.6px  + 1.37vw), 14.5px);
+  --kd-fs-15:clamp(14px,   calc(9.6px  + 1.37vw), 15.5px);
+  --kd-fs-19:clamp(17px,   calc(9.9px  + 2.32vw), 19.5px);
+  --kd-fs-21:clamp(18.5px, calc(10.4px + 2.6vw),  21.5px);
+  /* 세로 — (가용 616 → 하한) · (가용 837 → 목업값) 두 점을 지나는 1차식 */
+  --kd-tile-h:clamp(74px,  calc(19.4px + 0.08597*var(--kd-ah)), 93px);
+  --kd-row-h:clamp(40px,   calc(3.8px  + 0.05882*var(--kd-ah)), 53px);
+  --kd-btn-h:clamp(46px,   calc(23.7px + 0.03620*var(--kd-ah)), 54px);
+  --kd-av:clamp(38px,      calc(24.4px + 0.02208*var(--kd-ah)), 46px);
+}
+
+/* ══ ③ 자녀앱 화면 껍데기 — 홈은 «한 화면» ══════════════════════════
+   ⚠ .gmw 는 옛 세계 래퍼다. 이름을 바꾸지 않고 **여기서 규칙만 새로 준다** —
+     A모듈에서 배운 대로 «정의 자리»를 옮기지 않고 값을 갈아끼운다. */
+#screen:has(.kd-home){
+  height:100vh; height:100dvh; min-height:0; overflow:hidden;
+  padding:var(--sa-t) var(--kd-16) calc(var(--sa-b) + var(--kd-8));
+  display:flex; flex-direction:column;
+  background:linear-gradient(180deg,var(--kd-sky) 0%,var(--kd-sky) 18%,var(--kd-cream) 42%);
+}
+body:has(.kd-home){ background:var(--kd-sky); }
+body:has(.kd-home)::before{ background:var(--kd-sky); }   /* 상태바 자리 띠 */
+.kd-home{
+  display:flex; flex-direction:column; flex:1; min-height:0;
+  font-family:"Maple",system-ui,"Malgun Gothic",sans-serif;
+  color:var(--kd-ink); font-size:var(--kd-fs-15); line-height:1.5;
+}
+/* 구르는 것은 «가운데»뿐이다 — 머리와 발판은 제자리에 못 박는다 */
+.kd-scroll{ flex:1 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch; }
+.kd-fixtop, .kd-fixbot{ flex:none; }
+
+/* ══ 머리 — 아바타 + 이름 + 사탕 알약 ══ */
+.kd-top{ display:flex; align-items:center; gap:var(--kd-8); padding:var(--kd-8) 2px var(--kd-4); }
+.kd-top .kd-av{ width:var(--kd-av); height:var(--kd-av); flex:none; min-height:0; padding:0;
+  border-radius:var(--kd-r-full); background:var(--kd-canvas);
+  border:2.5px solid var(--kd-grass-line); display:grid; place-items:center;
+  font-size:calc(var(--kd-av) * .52); }
+.kd-top .kd-who{ font-size:var(--kd-fs-21); font-weight:700; letter-spacing:.5px; min-width:0; }
+.kd-top .kd-who em{ display:block; font-style:normal; font-size:var(--kd-fs-12);
+  color:var(--kd-sub); letter-spacing:0; }
+.kd-pill{ margin-left:auto; display:flex; align-items:center; gap:4px; height:34px; min-height:0;
+  padding:0 12px; border-radius:var(--kd-r-full); background:var(--kd-canvas);
+  font-family:inherit; font-size:var(--kd-fs-14); font-weight:700; font-variant-numeric:tabular-nums; }
+.kd-pill + .kd-pill{ margin-left:0; }
+.kd-pill.fire{ color:var(--kd-fire); border:2px solid #FFC9AE; box-shadow:0 3px 0 #FFD9C6; }
+.kd-pill.star{ color:var(--kd-sun-ink); border:2px solid #FFE08A; box-shadow:0 3px 0 #FFE9AE; }
+
+/* ══ 오늘의 길 — 통통한 진행 리본 ══ */
+.kd-path{ position:relative; margin:var(--kd-12) 2px var(--kd-16); }
+.kd-path .bar{ height:18px; border-radius:var(--kd-r-full); background:#EAEFE2;
+  border:2px solid #DDE6D2; overflow:hidden; }
+.kd-path .bar i{ display:block; height:100%; border-radius:var(--kd-r-full);
+  background:linear-gradient(180deg,#7CDC3A 0%,var(--kd-grass) 55%);
+  box-shadow:inset 0 -4px 0 rgba(0,0,0,.12); transition:width .3s ease; }
+.kd-path .flag{ position:absolute; right:-2px; top:-14px; font-size:20px; }
+.kd-path .lb{ display:flex; justify-content:space-between; margin-top:6px;
+  font-size:var(--kd-fs-13); font-weight:700; color:var(--kd-sub); font-variant-numeric:tabular-nums; }
+.kd-path .lb b{ color:var(--kd-grass-lip); }
+
+/* ══ 구획 이름 ══ */
+.kd-sec{ display:flex; align-items:baseline; gap:8px; margin:2px 2px var(--kd-8);
+  font-size:var(--kd-fs-15); font-weight:700; }
+.kd-sec b{ margin-left:auto; font-size:var(--kd-fs-14); color:var(--kd-sub);
+  font-variant-numeric:tabular-nums; }
+
+/* ══ 세 갈래 타일 — 아침·학교·방과후 ══ */
+.kd-tiles{ display:grid; grid-template-columns:repeat(3,1fr); gap:var(--kd-8);
+  margin-bottom:var(--kd-12); }
+.kd-tile{ min-height:var(--kd-tile-h); padding:var(--kd-12) 6px var(--kd-8);
+  border:2.5px solid var(--kd-grass-line); border-radius:var(--kd-r-lg);
+  background:var(--kd-canvas); box-shadow:0 3px 0 var(--kd-grass-line);
+  font-family:inherit; color:inherit;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; }
+.kd-tile .em{ font-size:26px; line-height:1; }
+.kd-tile .nm{ font-size:var(--kd-fs-14); font-weight:700; }
+.kd-tile .vv{ font-size:var(--kd-fs-12); font-weight:700; color:var(--kd-sub);
+  font-variant-numeric:tabular-nums; }
+.kd-tile:active{ transform:translateY(2px); box-shadow:0 1px 0 var(--kd-grass-line); }
+.kd-tile.dawn{ border-color:var(--kd-dawn-line); box-shadow:0 3px 0 var(--kd-dawn-line);
+  background:linear-gradient(180deg,var(--kd-dawn-tint) 0%,var(--kd-canvas) 70%); }
+.kd-tile.dawn .nm{ color:var(--kd-dawn-ink); }
+.kd-tile.mint{ border-color:var(--kd-mint-line); box-shadow:0 3px 0 var(--kd-mint-line);
+  background:linear-gradient(180deg,var(--kd-mint-tint) 0%,var(--kd-canvas) 70%); }
+.kd-tile.mint .nm{ color:var(--kd-mint-ink); }
+.kd-tile.pool{ border-color:var(--kd-pool-line); box-shadow:0 3px 0 var(--kd-pool-line);
+  background:linear-gradient(180deg,var(--kd-pool-tint) 0%,var(--kd-canvas) 70%); }
+.kd-tile.pool .nm{ color:var(--kd-pool-ink); }
+
+/* ══ 카드 — 2px 테두리가 곧 «떠 있음». 그림자 대신 아래 입술 ══ */
+.kd-card{ background:var(--kd-canvas); border:2.5px solid var(--kd-grass-line);
+  border-radius:var(--kd-r-lg); padding:var(--kd-12) var(--kd-16); margin-bottom:var(--kd-12);
+  box-shadow:0 3px 0 var(--kd-grass-line); }
+.kd-card .h{ display:flex; align-items:center; gap:10px; font-size:var(--kd-fs-19); font-weight:700; }
+.kd-card .h .em{ width:40px; height:40px; flex:none; display:grid; place-items:center; font-size:22px;
+  background:var(--kd-sun-tint); border-radius:var(--kd-r-md); }
+.kd-card .h .cnt{ margin-left:auto; font-size:var(--kd-fs-13); color:var(--kd-sub);
+  font-variant-numeric:tabular-nums; }
+
+/* 퀘스트 줄 */
+.kd-q{ display:flex; align-items:center; gap:10px; width:100%; min-height:var(--kd-row-h);
+  padding:var(--kd-8) 0; border:none; border-top:2px dashed #EDF3E3; background:none;
+  text-align:left; font-family:inherit; font-size:var(--kd-fs-15); font-weight:700; color:inherit; }
+.kd-q:first-of-type{ border-top:none; }
+.kd-q .bx{ width:26px; height:26px; flex:none; border:2.5px solid var(--kd-grass-line);
+  border-radius:9px; background:var(--kd-canvas); display:grid; place-items:center;
+  color:#fff; font-size:15px; }
+.kd-q.done .bx{ background:var(--kd-grass); border-color:var(--kd-grass); }
+.kd-q.done .n{ color:var(--kd-sub); text-decoration:line-through; }
+.kd-q .n{ flex:1; min-width:0; }
+.kd-q .st{ flex:none; color:var(--kd-sun-ink); background:var(--kd-sun-tint);
+  border-radius:var(--kd-r-full); padding:2px 9px; font-size:var(--kd-fs-13);
+  font-variant-numeric:tabular-nums; }
+
+/* 상점 줄 */
+.kd-card.shop{ display:flex; align-items:center; gap:10px; width:100%; text-align:left;
+  border-color:var(--kd-grape-line); box-shadow:0 3px 0 var(--kd-grape-line);
+  background:linear-gradient(90deg,var(--kd-grape-tint) 0%,var(--kd-canvas) 60%);
+  font-family:inherit; color:inherit; }
+.kd-card.shop .em{ width:40px; height:40px; flex:none; display:grid; place-items:center; font-size:22px;
+  background:#fff; border-radius:var(--kd-r-md); border:2px solid var(--kd-grape-line); }
+.kd-card.shop .t{ flex:1; min-width:0; font-size:var(--kd-fs-15); font-weight:700; }
+.kd-card.shop .t em{ display:block; font-style:normal; font-size:var(--kd-fs-12);
+  color:var(--kd-grape-ink); }
+.kd-card.shop .ar{ color:var(--kd-grape-ink); font-weight:700; }
+
+/* ══ ② 발판 CTA — 내비바 위에 앉는다. bottom:0 금지 ══ */
+.kd-act{ flex:none; padding:var(--kd-8) 0 0;
+  background:linear-gradient(180deg,transparent,#EAF7DC 55%); }
+.kd-btn{ display:block; width:100%; min-height:var(--kd-btn-h); border:none;
+  border-radius:var(--kd-r-lg); background:var(--kd-grass); color:#fff;
+  box-shadow:0 5px 0 var(--kd-grass-lip);
+  font-family:inherit; font-size:var(--kd-fs-15); font-weight:700; letter-spacing:1px; }
+.kd-btn:active{ transform:translateY(3px); box-shadow:0 2px 0 var(--kd-grass-lip); }
+.kd-btn[disabled]{ background:#DDE3D6; color:#9AA394; box-shadow:0 5px 0 #C9D1C0; }
+
+/* 구름 — 하늘에 두 점. 장식은 여기까지.
+   ⚠ **글자 뒤로 보낸다**(z-index:0 + 머리 z-index:1). 실기에서 이름·레벨을 덮었다(2026-08-12).
+     그리고 아바타·알약을 피해 «가운데 위»에만 띄운다. */
+.kd-cloud{ position:absolute; z-index:0; background:#fff; border-radius:var(--kd-r-full);
+  opacity:.55; pointer-events:none; }
+.kd-cloud.c1{ width:54px; height:16px; left:42%; top:calc(var(--sa-t) + 6px); }
+.kd-cloud.c1::after{ content:''; position:absolute; width:24px; height:24px; border-radius:50%;
+  background:#fff; left:10px; top:-10px; }
+.kd-cloud.c2{ width:36px; height:13px; right:34%; top:calc(var(--sa-t) + 30px); opacity:.4; }
+.kd-fixtop, .kd-scroll, .kd-act{ position:relative; z-index:1; }
+
+@media (prefers-reduced-motion:reduce){
+  .kd-path .bar i{ transition:none; }
+  .kd-tile:active, .kd-btn:active{ transform:none; }
+}
