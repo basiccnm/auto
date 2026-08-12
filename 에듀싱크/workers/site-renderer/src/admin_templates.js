@@ -385,7 +385,18 @@ export function adminMembersPage(groups, subscriber = false, maxChildren = 3, ba
     })),
   }));
 
+  /* 결과 배너 (2026-08-12) — 이용권 조정이 사유 미달로 조용히 무시되면
+     «분명 넣었는데 안 들어간» 것이 된다(대표님 실제 겪음). 성공·실패를 눈에 보이게 말한다. */
+  const notice = filter.ok === "adjust"
+      ? `<div style="margin-bottom:12px;padding:11px 14px;border-radius:10px;background:#e7f6ec;color:#166534;font-weight:700">✓ 이용기간을 조정했습니다 — 아래 목록의 만료일이 바뀌었는지 확인하세요</div>`
+    : filter.err === "reason"
+      ? `<div style="margin-bottom:12px;padding:11px 14px;border-radius:10px;background:#fdecec;color:#991b1b;font-weight:700">✕ 조정이 저장되지 않았습니다 — 사유를 2자 이상 적어야 합니다</div>`
+    : filter.err === "bad"
+      ? `<div style="margin-bottom:12px;padding:11px 14px;border-radius:10px;background:#fdecec;color:#991b1b;font-weight:700">✕ 조정이 저장되지 않았습니다 — 값이 잘못 넘어왔습니다. 다시 시도해 주세요</div>`
+    : "";
+
   const body = `
+    ${notice}
     <div class="hrow"><div class="hleft"><h2 class="h2">유료 회원</h2><span class="sub">부모 1명 = 1행 · ${gs.length}명 · 행을 누르면 자녀·결제·계정 전체</span></div>
       <div style="display:flex;gap:8px;align-items:center">
         <!-- 유료/무료 걸러 보기 (2026-08-10 대표님 요구 §7) — 「별도 표시」만으로는 못 찾는다. 걸러야 찾는다. -->

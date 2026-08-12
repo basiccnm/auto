@@ -2071,6 +2071,8 @@ async function handleAdminMembers(db, request, url) {
   const badges = await getAdminBadges(db);
   return html(adminMembersPage(shown, isSubscriber(request), MAX_CHILDREN, badges, {
     pay, nPaid: groups.filter(isPaid).length, nFree: groups.filter((g) => !isPaid(g)).length,
+    /* 결과 배너 (2026-08-12) — 조정이 조용히 무시돼도 성공처럼 보였다(«30일 넣었는데 왜 안 들어가») */
+    ok: (url && url.searchParams.get("ok")) || "", err: (url && url.searchParams.get("err")) || "",
   }));
 }
 
@@ -2613,6 +2615,15 @@ export default {
     // 로컬 개발 전용 QA 도구 — 이중 게이트(DEV_TOOLS + localhost) 통과 시에만 살아난다. 배포엔 미노출.
     if (path === "/dev/login-as" && isDevToolsEnabled(env, url)) return handleDevLoginAs(url);
 
+    /* ── 앱을 웹으로 — /app/ 밑에 www 를 그대로 (2026-08-12) ──
+       같은 출처라 앱의 /api/v1 호출이 그대로 먹는다. 사이트 라우팅은 안 건드린다. */
+    if (path === "/app") return Response.redirect(url.origin + "/app/", 301);
+    if (path.startsWith("/app/") && env.APP_ASSETS) {
+      const sub = path.slice("/app".length);
+      const assetUrl = url.origin + (sub === "/" ? "/index.html" : sub);
+      return env.APP_ASSETS.fetch(new Request(assetUrl, request));
+    }
+
     // ── 앱 API (계약 v1) — HTML 라우트와 완전 분리. 웹은 안 깨진다.
     // 앱은 다른 출처(https://localhost 등)에서 부르므로 여기서 CORS를 한 번에 씌운다.
     // 개별 핸들러는 CORS를 몰라도 된다 — 응답에 헤더만 덧입힌다.
@@ -2834,7 +2845,8 @@ export default {
       // ?tab= 변형 주소는 크롤 금지 — 급식·시간표 탭은 온디맨드라 크롤러가 열 때마다 NEIS를 호출한다.
       // 12,563개교를 봇이 돌면 NEIS 대량 호출(키·IP 차단 위험) + D1 용량 증가. 학교 기본 페이지만 수집시킨다.
       // 개학 후 급식을 전국 적재하면(=DB에 이미 존재) 그때 이 줄을 빼서 급식 색인을 열면 된다.
-      const blocks = "Disallow: /mypage/\nDisallow: /api/\nDisallow: /admin\nDisallow: /forms\nDisallow: /login\nDisallow: /subscribe\nDisallow: /pay\nDisallow: /*?tab=\n";
+      // /app 은 부모앱 웹 버전(2026-08-12) — 검색에 나올 물건이 아니다. 항상 차단.
+      const blocks = "Disallow: /mypage/\nDisallow: /api/\nDisallow: /admin\nDisallow: /forms\nDisallow: /login\nDisallow: /subscribe\nDisallow: /pay\nDisallow: /app\nDisallow: /*?tab=\n";
       const sitemap = indexable ? `\nSitemap: ${url.origin}/sitemap.xml\n` : "";
       return new Response(`${base}${blocks}${sitemap}`, {
         headers: { "Content-Type": "text/plain; charset=utf-8" },
