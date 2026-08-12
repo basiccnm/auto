@@ -1,0 +1,298 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>학교퀘스트 — 미션 (듀오링고)</title>
+<link rel="stylesheet" href="maple.css">
+<!--
+  미션 화면 v2 (2026-08-12) — 대표님: 「설명 많이 없애고」
+  듀오링고는 말을 안 한다. 큰 그림 + 숫자 + 버튼. 문장은 화면당 0~1개.
+  캐논은 main-B-v2.html 그대로: 2.5px 테두리·아래 입술·그림자 없음·메이플체·하늘→크림.
+-->
+<style>
+:root{
+  --sky:#E8F4FF; --cream:#FFFDF6;
+  --ink:#33404F; --sub:#8A93A6; --canvas:#FFFFFF;
+  --grass:#58CC02;  --grass-lip:#46A302;  --grass-tint:#F0FAE4;  --grass-line:#B7E88C;
+  --sun:#FFC800;    --sun-lip:#E5A500;    --sun-ink:#8A5B00;     --sun-tint:#FFF4D1;
+  --dawn:#FF9600;   --dawn-tint:#FFF4E3;  --dawn-line:#FFD9A0;   --dawn-ink:#A85E00;
+  --pool:#1CB0F6;   --pool-tint:#E9F6FF;  --pool-line:#A6DFFF;   --pool-ink:#0E7DB8;
+  --grape:#CE82FF;  --grape-tint:#F7EFFF; --grape-line:#E3C6FF;  --grape-ink:#8A4DBF;
+  --r-sm:10px; --r-md:14px; --r-lg:18px; --r-full:999px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#3f3f3f;padding:24px;display:flex;gap:28px;flex-wrap:wrap;justify-content:center;
+  align-items:flex-start}
+.wrap{width:393px}
+.cap{color:#fff;font-size:13px;font-weight:700;margin-bottom:6px;
+  font-family:system-ui,"Malgun Gothic",sans-serif}
+.phone{width:393px;height:852px;overflow:hidden;display:flex;flex-direction:column;position:relative;
+  font-family:"Maple",system-ui,"Malgun Gothic",sans-serif;color:var(--ink);
+  background:linear-gradient(180deg,var(--sky) 0%,var(--sky) 18%,var(--cream) 42%)}
+.sb{height:44px;flex:none;display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;font-size:13px;font-weight:600}
+.nb{height:20px;flex:none}
+.body{flex:1;overflow:hidden;padding:0 16px}
+.cloud{position:absolute;background:#fff;border-radius:var(--r-full);opacity:.55;z-index:0}
+.cloud.c1{width:54px;height:16px;left:42%;top:50px}
+.cloud.c1::after{content:'';position:absolute;width:24px;height:24px;border-radius:50%;
+  background:#fff;left:10px;top:-10px}
+.cloud.c2{width:36px;height:13px;right:34%;top:74px;opacity:.4}
+.body,.act{position:relative;z-index:1}
+
+/* 머리 — 뒤로 + 제목 + ★알약. 끝. */
+.hd{display:flex;align-items:center;gap:10px;padding:10px 2px 8px}
+.hd .bk{width:38px;height:38px;flex:none;border:2.5px solid var(--grass-line);border-radius:var(--r-full);
+  background:var(--canvas);display:grid;place-items:center;font-size:17px;font-weight:700;
+  color:var(--grass-lip);box-shadow:0 3px 0 var(--grass-line);font-family:inherit}
+.hd .ti{font-size:21px;font-weight:700}
+.pill{margin-left:auto;display:flex;align-items:center;gap:4px;height:34px;padding:0 12px;
+  border-radius:var(--r-full);background:var(--canvas);font-size:14px;font-weight:700;
+  font-variant-numeric:tabular-nums;color:var(--sun-ink);border:2px solid #FFE08A;
+  box-shadow:0 3px 0 #FFE9AE}
+
+/* ⭐ 오늘의 길 — 리본 하나. 부모 판은 양끝에 −/＋ 만 붙는다. 글 없음. */
+.path{position:relative;margin:6px 2px 16px}
+.path .row{display:flex;align-items:center;gap:11px}
+.path .kn{width:44px;height:44px;flex:none;border:2.5px solid var(--sun-lip);border-radius:var(--r-full);
+  background:var(--canvas);color:var(--sun-ink);font-family:inherit;font-size:24px;font-weight:700;
+  line-height:1;display:grid;place-items:center;box-shadow:0 4px 0 var(--sun-lip)}
+.path .kn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--sun-lip)}
+.ribbon{flex:1;position:relative;display:block;min-width:0}
+.ribbon .bar{display:block;height:22px;border-radius:var(--r-full);background:#EAEFE2;
+  border:2px solid #DDE6D2;overflow:hidden}
+.ribbon .bar i{display:block;height:100%;border-radius:var(--r-full);
+  background:linear-gradient(180deg,#7CDC3A 0%,var(--grass) 55%);
+  box-shadow:inset 0 -5px 0 rgba(0,0,0,.12)}
+.ribbon .flag{position:absolute;right:-4px;top:-17px;font-size:22px}
+.path .lb{display:flex;justify-content:space-between;margin-top:7px;padding:0 2px;
+  font-size:13px;font-weight:700;color:var(--sub);font-variant-numeric:tabular-nums}
+.path .lb b{color:var(--sun-ink);font-size:16px}
+
+/* 퀘스트 카드 */
+.card{background:var(--canvas);border:2.5px solid var(--grass-line);border-radius:var(--r-lg);
+  padding:11px 15px;margin-bottom:12px;box-shadow:0 3px 0 var(--grass-line)}
+.card .h{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:700}
+.card .h .em{width:40px;height:40px;flex:none;display:grid;place-items:center;font-size:22px;
+  background:var(--sun-tint);border-radius:var(--r-md)}
+.card .h .cnt{margin-left:auto;font-size:13px;color:var(--sub);font-variant-numeric:tabular-nums}
+.card.dawn{border-color:var(--dawn-line);box-shadow:0 3px 0 var(--dawn-line);
+  background:linear-gradient(180deg,var(--dawn-tint) 0%,var(--canvas) 42%)}
+.card.dawn .h .em{background:#fff;border:2px solid var(--dawn-line)}
+.q{display:flex;align-items:center;gap:10px;width:100%;min-height:52px;padding:8px 0;
+  border:none;border-top:2px dashed #EDF3E3;background:none;text-align:left;font-family:inherit;
+  font-size:15px;font-weight:700;color:inherit}
+.q:first-of-type{border-top:none}
+.q .bx{width:28px;height:28px;flex:none;border:2.5px solid var(--grass-line);border-radius:9px;
+  background:var(--canvas);display:grid;place-items:center;color:#fff;font-size:16px}
+.q.done .bx{background:var(--grass);border-color:var(--grass)}
+.q.done .n{color:var(--sub);text-decoration:line-through}
+.q .n{flex:1;min-width:0}
+.q .st{flex:none;color:var(--sun-ink);background:var(--sun-tint);border-radius:var(--r-full);
+  padding:3px 10px;font-size:13px;font-variant-numeric:tabular-nums}
+.q.wait .bx{border-color:var(--dawn-line);background:var(--dawn-tint);font-size:14px}
+.q.wait .st{color:var(--dawn-ink);background:var(--dawn-tint)}
+
+/* 세 타일 */
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.tile{min-height:78px;padding:12px 6px 9px;border:2.5px solid var(--grass-line);
+  border-radius:var(--r-lg);background:var(--canvas);box-shadow:0 3px 0 var(--grass-line);
+  font-family:inherit;color:inherit;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;gap:4px}
+.tile .em2{font-size:26px;line-height:1}
+.tile .nm{font-size:14px;font-weight:700}
+.tile:active{transform:translateY(2px);box-shadow:0 1px 0 var(--grass-line)}
+.tile.pool{border-color:var(--pool-line);box-shadow:0 3px 0 var(--pool-line);
+  background:linear-gradient(180deg,var(--pool-tint) 0%,var(--canvas) 70%)}
+.tile.pool .nm{color:var(--pool-ink)}
+.tile.grape{border-color:var(--grape-line);box-shadow:0 3px 0 var(--grape-line);
+  background:linear-gradient(180deg,var(--grape-tint) 0%,var(--canvas) 70%)}
+.tile.grape .nm{color:var(--grape-ink)}
+
+/* 상점 줄 */
+.card.shop{display:flex;align-items:center;gap:10px;border-color:var(--grape-line);
+  box-shadow:0 3px 0 var(--grape-line);
+  background:linear-gradient(90deg,var(--grape-tint) 0%,var(--canvas) 60%)}
+.card.shop .em{width:40px;height:40px;flex:none;display:grid;place-items:center;font-size:22px;
+  background:#fff;border-radius:var(--r-md);border:2px solid var(--grape-line)}
+.card.shop .t{flex:1;font-size:15px;font-weight:700}
+.card.shop .ar{color:var(--grape-ink);font-weight:700}
+
+/* 발판 */
+.act{padding:10px 16px 14px;background:linear-gradient(180deg,transparent,#EAF7DC 55%)}
+.btn{display:block;width:100%;min-height:54px;border:none;border-radius:var(--r-lg);
+  background:var(--grass);color:#fff;box-shadow:0 5px 0 var(--grass-lip);
+  font-family:inherit;font-size:17px;font-weight:700;letter-spacing:1px}
+.btn:active{transform:translateY(3px);box-shadow:0 2px 0 var(--grass-lip)}
+.btn.sub{background:var(--canvas);color:var(--sub);border:2.5px solid #DDE6D2;
+  box-shadow:0 3px 0 #DDE6D2;min-height:48px;font-size:15px;letter-spacing:0;margin-top:9px}
+
+/* 미션 하나 */
+.one .hero{margin:14px 2px 6px;text-align:center}
+.one .hero .big-em{display:grid;place-items:center;width:88px;height:88px;margin:0 auto 12px;
+  font-size:46px;background:var(--canvas);border:2.5px solid var(--grass-line);
+  border-radius:24px;box-shadow:0 4px 0 var(--grass-line)}
+.one .hero h2{font-size:23px;font-weight:700;line-height:1.35;word-break:keep-all}
+.chips{display:flex;justify-content:center;flex-wrap:wrap;gap:6px;margin:12px 0 18px}
+.chips span{border:2px solid var(--grass-line);background:var(--canvas);border-radius:var(--r-full);
+  padding:4px 12px;font-size:13px;font-weight:700}
+.chips span.star{border-color:#FFE08A;background:var(--sun-tint);color:var(--sun-ink)}
+.week{border:2.5px solid var(--grass-line);border-radius:var(--r-lg);background:var(--canvas);
+  box-shadow:0 3px 0 var(--grass-line);padding:12px 14px}
+.week .dots{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.week .d{text-align:center;font-size:11px;color:var(--sub);font-weight:700}
+.week .d i{display:grid;place-items:center;height:32px;margin-bottom:4px;border-radius:var(--r-sm);
+  border:2px solid #E4EBDA;background:#F6F8F2;font-style:normal;font-size:15px;color:#C6CEBB}
+.week .d.on i{border-color:var(--grass);background:var(--grass);color:#fff}
+.week .d.miss i{border-color:#F0D8CE;background:#FDF1EC;color:#D99C80}
+.week .d.today{color:var(--grass-lip)}
+</style>
+</head>
+<body>
+
+<!-- ① 부모 · 미션 -->
+<div class="wrap">
+  <div class="cap">① 부모</div>
+  <div class="phone">
+    <div class="cloud c1"></div><div class="cloud c2"></div>
+    <div class="sb"><span>9:41</span><span>▲ ▮</span></div>
+    <div class="body">
+
+      <div class="hd">
+        <button class="bk">‹</button>
+        <span class="ti">미션</span>
+        <span class="pill">★ 12</span>
+      </div>
+
+      <div class="path">
+        <div class="row">
+          <button class="kn">−</button>
+          <span class="ribbon"><span class="bar"><i style="width:48%"></i></span><span class="flag">🚩</span></span>
+          <button class="kn">＋</button>
+        </div>
+        <div class="lb"><span>오늘의 길</span><span><b>12</b> / 25</span></div>
+      </div>
+
+      <div class="card">
+        <div class="h"><span class="em">🗺️</span><span>오늘 준 미션</span><span class="cnt">2 / 5</span></div>
+        <button class="q done"><span class="bx">✓</span>
+          <span class="n">책 십오 분 자리 지키기</span><span class="st">★3</span></button>
+        <button class="q done"><span class="bx">✓</span>
+          <span class="n">숙제 오 분 시작하기</span><span class="st">★2</span></button>
+        <button class="q wait"><span class="bx">📷</span>
+          <span class="n">알림장 보고 준비물 챙기기</span><span class="st">확인</span></button>
+        <button class="q"><span class="bx"></span>
+          <span class="n">내일 배울 곳 훑어보기</span><span class="st">★2</span></button>
+        <button class="q"><span class="bx"></span>
+          <span class="n">나올 때 방 불 끄기</span><span class="st">★1</span></button>
+      </div>
+
+      <div class="grid3">
+        <button class="tile"><span class="em2">🎲</span><span class="nm">바꾸기</span></button>
+        <button class="tile pool"><span class="em2">🎯</span><span class="nm">고르기</span></button>
+        <button class="tile grape"><span class="em2">✏️</span><span class="nm">만들기</span></button>
+      </div>
+
+    </div>
+    <div class="act"><button class="btn">아이 화면으로 보기</button></div>
+    <div class="nb"></div>
+  </div>
+</div>
+
+<!-- ② 아이 · 오늘의 미션 -->
+<div class="wrap">
+  <div class="cap">② 아이</div>
+  <div class="phone">
+    <div class="cloud c1"></div><div class="cloud c2"></div>
+    <div class="sb"><span>9:41</span><span>▲ ▮</span></div>
+    <div class="body">
+
+      <div class="hd">
+        <button class="bk">‹</button>
+        <span class="ti">오늘의 미션</span>
+        <span class="pill">★ 12</span>
+      </div>
+
+      <div class="path">
+        <div class="row">
+          <span class="ribbon"><span class="bar"><i style="width:48%"></i></span><span class="flag">🚩</span></span>
+        </div>
+        <div class="lb"><span>오늘의 길</span><span><b>12</b> / 25</span></div>
+      </div>
+
+      <div class="card dawn">
+        <div class="h"><span class="em">🌅</span><span>아침</span><span class="cnt">1 / 1</span></div>
+        <button class="q done"><span class="bx">✓</span>
+          <span class="n">일어나서 물 한 컵 마시기</span><span class="st">＋★1</span></button>
+      </div>
+
+      <div class="card">
+        <div class="h"><span class="em">📚</span><span>방과후</span><span class="cnt">1 / 4</span></div>
+        <button class="q done"><span class="bx">✓</span>
+          <span class="n">책 십오 분 자리 지키기</span><span class="st">＋★3</span></button>
+        <button class="q"><span class="bx"></span>
+          <span class="n">숙제 오 분 시작하기</span><span class="st">★2</span></button>
+        <button class="q"><span class="bx"></span>
+          <span class="n">내일 배울 곳 훑어보기</span><span class="st">★2</span></button>
+        <button class="q wait"><span class="bx">📷</span>
+          <span class="n">알림장 보고 준비물 챙기기</span><span class="st">보냄</span></button>
+      </div>
+
+      <div class="card shop">
+        <span class="em">🏪</span>
+        <span class="t">스타코인 상점</span>
+        <span class="ar">›</span>
+      </div>
+
+    </div>
+    <div class="act"><button class="btn">오늘의 퀴즈 풀기</button></div>
+    <div class="nb"></div>
+  </div>
+</div>
+
+<!-- ③ 미션 하나 -->
+<div class="wrap">
+  <div class="cap">③ 미션 하나</div>
+  <div class="phone">
+    <div class="cloud c1"></div><div class="cloud c2"></div>
+    <div class="sb"><span>9:41</span><span>▲ ▮</span></div>
+    <div class="body one">
+
+      <div class="hd">
+        <button class="bk">‹</button>
+        <span class="ti">미션</span>
+      </div>
+
+      <div class="hero">
+        <span class="big-em">📖</span>
+        <h2>내일 배울 곳 훑어보기</h2>
+      </div>
+      <div class="chips">
+        <span>공부</span><span>5분</span><span class="star">★2</span>
+      </div>
+
+      <div class="week">
+        <div class="dots">
+          <span class="d on"><i>✓</i>수</span>
+          <span class="d miss"><i>·</i>목</span>
+          <span class="d miss"><i>·</i>금</span>
+          <span class="d"><i>—</i>토</span>
+          <span class="d"><i>—</i>일</span>
+          <span class="d on"><i>✓</i>월</span>
+          <span class="d today"><i>·</i>오늘</span>
+        </div>
+      </div>
+
+    </div>
+    <div class="act">
+      <button class="btn">이것만 바꾸기</button>
+      <button class="btn sub">오늘은 빼기</button>
+      <button class="btn sub">직접 고르기</button>
+    </div>
+    <div class="nb"></div>
+  </div>
+</div>
+
+</body>
+</html>

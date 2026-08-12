@@ -2676,6 +2676,10 @@ export default {
   /^\/api\/v1\/children\/\d+\/rewards\/?$/,
         /* 2단계 검증 — 1차(아이가 냄)는 아이 것이다. 보너스(2차)는 부모 것이라 gate 가 막는다 */
         /^\/api\/v1\/children\/\d+\/verify\/?$/,
+        /* ⚙️ 경제 설정 읽기 (2026-08-12) — 아이 화면도 「오늘 18/30」을 그려야 한다.
+           읽기만 연다. **정하는 것(PUT /star-line)은 여기 없다** — 부모 것이고,
+           그게 「무조건 통과」를 막는 유일한 손잡이라 아이가 쥐면 의미가 없다. */
+        /^\/api\/v1\/children\/\d+\/econ\/?$/,
       ];
       let res = null;
       if (path === "/api/v1/auth/child-claim" && request.method === "POST") {

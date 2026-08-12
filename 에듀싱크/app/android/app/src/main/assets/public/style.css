@@ -3113,6 +3113,8 @@ div.kd2-day { cursor: default; }
 .ms-mkbtn em { display: block; margin-top: 2px; font-size: 12.5px; font-style: normal; color: var(--muted); }
 .ms-fhint { margin: 8px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--muted); }
 
+/* (2026-08-12) 별 라인 카드는 듀오링고 캐논(kid.css .kd-path 다이얼)으로 옮겨 갔다 */
+
 /* 미션 액션바 (2026-08-10) — 바꾸기·고르기·만들기 세 입구를 한 줄로.
    흩어져 있던 것을 나란히 두는 게 이 개편의 요점이라, 셋의 생김새가 똑같아야 한다. */
 .ms-actrow { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 14px; }
@@ -3887,7 +3889,13 @@ body::before {
 }
 /* 아이 세계 화면에서는 세계 색으로. 그라데이션의 «맨 윗 색»이라 이어져 보인다 */
 body:has(#screen > .gmw)::before, body:has(#screen > .gmp)::before,
-body:has(#screen > .gm)::before { background: #4A9BFF; }
+body:has(#screen > .gm)::before { background: #6FAEF2; }
+/* 테마·보스전마다 띠 색을 따라 붙인다 — 안 그러면 상태바 자리만 하늘색으로 뜬다(2026-08-12 실측) */
+body:has(#screen > .gm.gt-lime)::before   { background: #6FD693; }
+body:has(#screen > .gm.gt-lav)::before    { background: #B9A3F2; }
+body:has(#screen > .gm.gt-sunset)::before { background: #F5B06E; }
+body:has(#screen > .gm.gt-mint)::before   { background: #67CFCB; }
+body:has(#screen > .gm.qzp)::before       { background: #F7A45C; }
 
 /* ═══ 고객센터 갈래 제목 — 새 정본(2026-08-11) ══════════════════════
    면색(--accent)을 글씨로 쓰면 흰 카드 위에서 4.5 를 못 넘는다(실측 4.38·3.77).
@@ -4444,44 +4452,50 @@ body:has(.hv3-art)::before { background: var(--art-1); }   /* 상태바 가림�
   background: color-mix(in srgb, #E0A93E 22%, transparent); color: #7A5200; }
 :root[data-theme="dark"] .bk-pro { color: #FFD54A; }
 
-/* ═══ 미션 고르기 화면 (2026-08-03) ═══════════════════════════════
-   학년대 탭 → 추천 3개 → 영역별 묶음 → 하단 「n개 담기」. */
+/* ═══ 미션 고르기 화면 (2026-08-03 · 2026-08-12 듀오링고 캐논으로 갈아입힘) ═══
+   학년대 탭 → 추천 3개 → 영역별 묶음 → 하단 「n개 담기」.
+   ⚠ 이 화면은 kd-scr 껍데기 안에서 그려진다 — 색·글꼴은 kid.css 토큰을 그대로 받는다. */
 .mk-bands { display: flex; gap: 8px; margin: 2px 0 6px; }
-.mk-bands button { flex: 1; height: 42px; border-radius: var(--ns-r); border: 1px solid var(--line);
-  background: var(--card-a); color: var(--muted); font-family: inherit; font-size: 14.5px; font-weight: 800; }
-.mk-bands button.on { border-color: transparent; background: var(--accent); color: var(--on-accent); }
+.mk-bands button { flex: 1; height: 44px; min-height: 0; border-radius: var(--kd-r-lg);
+  border: 2.5px solid #DDE6D2; box-shadow: 0 3px 0 #DDE6D2;
+  background: var(--kd-canvas); color: var(--kd-sub); font-family: inherit; font-size: 14.5px; font-weight: 700; }
+.mk-bands button.on { border-color: var(--kd-grass); box-shadow: 0 3px 0 var(--kd-grass-lip);
+  background: var(--kd-grass); color: #fff; }
 .mk-sec { margin-top: 18px; }
 .mk-st { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; padding: 0 2px; }
-.mk-st b { font-size: 14px; font-weight: 900; color: var(--accent-ink); }
-.mk-st em { font-style: normal; font-size: 12px; font-weight: 700; color: var(--muted); }
+.mk-st b { font-size: 14px; font-weight: 700; color: var(--kd-ink); }
+.mk-st em { font-style: normal; font-size: 12px; font-weight: 700; color: var(--kd-sub); }
 .mk-row { display: flex; align-items: center; gap: 10px; width: 100%; margin-bottom: 8px;
-  padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--ns-r); background: var(--card-a);
-  text-align: left; font-family: inherit; color: var(--ink); }
+  padding: 12px 14px; min-height: 0; border: 2.5px solid var(--kd-grass-line); border-radius: var(--kd-r-lg);
+  box-shadow: 0 3px 0 var(--kd-grass-line);
+  background: var(--kd-canvas); text-align: left; font-family: inherit; color: var(--kd-ink); }
+.mk-row:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--kd-grass-line); }
 .mk-row .bd { flex: 1; min-width: 0; }
 .mk-row .bd b { display: block; font-size: 15px; font-weight: 700; }
 .mk-row .bd em { display: block; font-style: normal; font-size: 12.5px; font-weight: 700;
-  color: var(--muted-card); margin-top: 2px; }
-.mk-mine { font-style: normal; font-size: 11px; font-weight: 900; color: var(--accent-ink);
-  background: color-mix(in srgb, var(--accent) 14%, transparent);
-  border-radius: 6px; padding: 1px 6px; margin-right: 6px; }
+  color: var(--kd-sub); margin-top: 2px; }
+.mk-mine { font-style: normal; font-size: 11px; font-weight: 700; color: var(--kd-grape-ink);
+  background: var(--kd-grape-tint); border-radius: 6px; padding: 1px 6px; margin-right: 6px; }
 .mk-row .mk-add { flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid;
-  place-items: center; background: color-mix(in srgb, var(--accent) 12%, transparent);
-  color: var(--accent-ink); font-size: 17px; font-weight: 900; }
+  place-items: center; border: 2px solid #FFE08A; background: var(--kd-sun-tint);
+  color: var(--kd-sun-ink); font-size: 17px; font-weight: 700; }
 /* 이미 담은 것 — 흐리게 + 「담김」. 지우지 않는다(어디 있었는지 알아야 다시 뺀다) */
-.mk-row.on { opacity: .55; border-color: transparent; background: var(--card-b); }
+.mk-row.on { opacity: .6; border-color: #E4EBDA; box-shadow: 0 3px 0 #E4EBDA; background: #F6F8F2; }
 .mk-row .mk-in { flex: none; padding: 4px 10px; border-radius: 999px;
-  background: color-mix(in srgb, var(--done) 18%, transparent); color: var(--done-ink);
-  font-size: 12px; font-weight: 900; }
+  background: var(--kd-grass); color: #fff; font-size: 12px; font-weight: 700; }
 .mk-make { display: flex; align-items: center; justify-content: center; gap: 7px; width: 100%;
-  margin-top: 18px; padding: 15px; border: 1px dashed var(--line); border-radius: var(--ns-r);
-  background: none; color: var(--accent-ink); font-family: inherit; font-size: 14.5px; font-weight: 800; }
+  margin-top: 18px; padding: 14px; min-height: 0; border: 2.5px dashed var(--kd-grape-line);
+  border-radius: var(--kd-r-lg); background: var(--kd-grape-tint); color: var(--kd-grape-ink);
+  font-family: inherit; font-size: 14.5px; font-weight: 700; }
 /* 담기 버튼 — 아래 고정. 목록이 길어 위로 올라가면 못 찾는다 */
 .mk-bot { position: sticky; bottom: 0; margin-top: 18px;
-  padding: 10px 0 calc(var(--sa-b) + 10px); background: var(--bg); }
-.mk-go { width: 100%; height: 54px; border: none; border-radius: var(--ns-r);
-  background: var(--accent); color: var(--on-accent); font-family: inherit;
-  font-size: 16px; font-weight: 800; }
-.mk-go:disabled { background: var(--chip); color: var(--muted); }
+  padding: 10px 0 calc(var(--sa-b) + 10px);
+  background: linear-gradient(180deg, transparent, var(--kd-cream) 40%); }
+.mk-go { width: 100%; height: 54px; min-height: 0; border: none; border-radius: var(--kd-r-lg);
+  background: var(--kd-grass); color: #fff; box-shadow: 0 5px 0 var(--kd-grass-lip);
+  font-family: inherit; font-size: 16px; font-weight: 700; letter-spacing: 1px; }
+.mk-go:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--kd-grass-lip); }
+.mk-go:disabled { background: #DDE3D6; color: #9AA394; box-shadow: 0 5px 0 #C9D1C0; }
 
 /* ═══ 테마 화면 §4·§6 ═══════════════════════════════════════════ */
 .th-mode { display: flex; gap: 8px; margin: 4px 0 16px; }
@@ -5163,74 +5177,79 @@ body:has(#tabbar.hidden) #screen:has(.ib),
    ⚠ 누르는 것은 전부 44px 이상. 상점은 **아이가 쓰는 화면**이라 여기서 깎으면 안 된다.
    ═══════════════════════════════════════════════════════════════════════ */
 
-/* ── 지갑 줄 — «지금 얼마나 있나»가 언제나 맨 위 ── */
+/* ── (2026-08-12 듀오링고 캐논) 지갑 줄 — «지금 얼마나 있나»가 언제나 맨 위 ──
+   상점·티켓은 kd-scr 껍데기 안에서 그려진다. 색·글꼴은 kid.css 토큰. */
 .st-purse { display: flex; align-items: center; gap: 8px; margin-top: 4px;
-  padding: 14px 18px; border-radius: 20px; background: var(--card-a);
-  box-shadow: 0 8px 22px rgba(40, 80, 140, .10); }
-.st-purse i { font-style: normal; font-size: 22px; color: var(--card-ink); }
-.st-purse b { font-size: 28px; font-weight: 900; color: var(--card-ink); letter-spacing: -1px; }
+  padding: 13px 16px; border-radius: var(--kd-r-lg); background: var(--kd-canvas);
+  border: 2.5px solid #FFE08A; box-shadow: 0 3px 0 #FFE9AE; }
+.st-purse i { font-style: normal; font-size: 22px; color: var(--kd-sun-ink); }
+.st-purse b { font-size: 26px; font-weight: 700; color: var(--kd-sun-ink); letter-spacing: -1px;
+  font-variant-numeric: tabular-nums; }
 .st-purse em { font-style: normal; margin-left: auto; font-size: 12.5px;
-  font-weight: 700; color: var(--card-sub); }
+  font-weight: 700; color: var(--kd-sub); }
 
 /* ── 진열대 ── */
 .st-list { list-style: none; margin: 14px 0 0; padding: 0; }
 .st-item { display: flex; align-items: center; flex-wrap: wrap; gap: 10px;
-  margin-top: 11px; padding: 15px 18px;  background: var(--card-a);  }
+  margin-top: 11px; padding: 13px 15px; background: var(--kd-canvas);
+  border: 2.5px solid var(--kd-grape-line); border-radius: var(--kd-r-lg);
+  box-shadow: 0 3px 0 var(--kd-grape-line); }
+.st-item.off { border-color: #E4EBDA; box-shadow: 0 3px 0 #E4EBDA; }
 .st-bd { flex: 1; min-width: 0; }
-.st-bd > b { display: block; font-size: 15.5px; font-weight: 800; color: var(--card-ink); }
+.st-bd > b { display: block; font-size: 15.5px; font-weight: 700; color: var(--kd-ink); }
 .st-lim { display: block; margin-top: 3px; font-style: normal;
-  font-size: 12.5px; font-weight: 700; color: var(--card-sub); }
+  font-size: 12.5px; font-weight: 700; color: var(--kd-sub); }
 .st-act { display: flex; align-items: center; gap: 10px; flex: none; }
-.st-need { font-size: 15px; font-weight: 900; color: var(--card-ink); }
-.st-buy { min-height: 44px; padding: 0 18px; border: none; border-radius: 999px;
-  background: var(--accent); color: var(--on-accent);
-  font-family: inherit; font-size: 14.5px; font-weight: 900; }
-/* 못 사는 상태 — 흐리게만 두면 «고장»으로 읽힌다. 이유는 아래 .st-why 가 말한다.
-   ⚠ 처음엔 반투명 회색 + --card-sub 였는데 **3.48:1**(다크)·3.73:1(라이트) 로 미달이었다.
-     끈 버튼이라 WCAG 상 예외이긴 하지만, 아이가 보는 화면에서 「바꾸기」가 안 읽히면
-     그건 접근성 이전에 «왜 못 사는지»를 못 읽는 것이다.
-   → **투명을 걷고 카드 면에 섞는다**(불투명). 글씨는 --card-ink 로 올린다.
-     켠 버튼은 강조 면(--accent)+흰 글씨라 둘은 여전히 한눈에 갈린다. */
-.st-buy[disabled] { background: color-mix(in srgb, var(--card-ink) 14%, var(--card-a));
-  color: var(--card-ink); }
-.st-del { width: 44px; height: 44px; display: grid; place-items: center;
-  border: none; border-radius: 50%; background: none; color: var(--danger); font-size: 20px; }
+.st-need { font-size: 15px; font-weight: 700; color: var(--kd-sun-ink);
+  background: var(--kd-sun-tint); border: 2px solid #FFE08A; border-radius: var(--kd-r-full);
+  padding: 3px 10px; font-variant-numeric: tabular-nums; }
+.st-buy { min-height: 44px; padding: 0 18px; border: none; border-radius: var(--kd-r-full);
+  background: var(--kd-grass); color: #fff; box-shadow: 0 3px 0 var(--kd-grass-lip);
+  font-family: inherit; font-size: 14.5px; font-weight: 700; }
+.st-buy:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--kd-grass-lip); }
+/* 못 사는 상태 — 흐리게만 두면 «고장»으로 읽힌다. 이유는 아래 .st-why 가 말한다. */
+.st-buy[disabled] { background: #DDE3D6; color: #6C7566; box-shadow: 0 3px 0 #C9D1C0; }
+.st-del { width: 44px; height: 44px; display: grid; place-items: center; min-height: 0; padding: 0;
+  border: 2px solid #F0D8CE; border-radius: 50%; background: #FDF1EC; color: var(--kd-fire); font-size: 19px; }
 .st-why { flex-basis: 100%; margin: 2px 0 0; font-size: 12.5px;
-  font-weight: 700; color: var(--card-sub); }
+  font-weight: 700; color: var(--kd-sub); }
 .st-tools { margin-top: 14px; }
 
-/* 올리기 시트 */
+/* 올리기 시트 — 시트는 흰 판이라 kd 잉크만 입힌다 */
 .st-f { display: block; margin-top: 14px; }
 .st-f > span { display: block; margin-bottom: 6px; font-size: 13px;
-  font-weight: 800; color: var(--muted); }
+  font-weight: 700; color: var(--kd-sub); }
 .st-f input { width: 100%; min-height: 48px; padding: 0 14px; box-sizing: border-box;
-  border: 1px solid color-mix(in srgb, var(--ink) 16%, transparent); border-radius: var(--ns-r);
-  background: var(--card); color: var(--ink); font-family: inherit; font-size: 15.5px; }
+  border: 2px solid #DDE6D2; border-radius: var(--kd-r-md);
+  background: #fff; color: var(--kd-ink); font-family: inherit; font-size: 15.5px; }
 .st-lims { display: flex; gap: 8px; }
-.st-lim-b { flex: 1; min-height: 44px; border: 1px solid color-mix(in srgb, var(--ink) 16%, transparent);
-  border-radius: var(--ns-r); background: var(--card); color: var(--ink);
-  font-family: inherit; font-size: 13.5px; font-weight: 800; }
-.st-lim-b.on { background: var(--accent); color: var(--on-accent); border-color: transparent; }
+.st-lim-b { flex: 1; min-height: 44px; border: 2px solid #DDE6D2;
+  border-radius: var(--kd-r-md); background: #fff; color: var(--kd-sub);
+  font-family: inherit; font-size: 13.5px; font-weight: 700; }
+.st-lim-b.on { background: var(--kd-grass); color: #fff; border-color: var(--kd-grass); }
 .st-cnt { width: 100%; min-height: 48px; margin-top: 8px; padding: 0 14px; box-sizing: border-box;
-  border: 1px solid color-mix(in srgb, var(--ink) 16%, transparent); border-radius: var(--ns-r);
-  background: var(--card); color: var(--ink); font-family: inherit; font-size: 15.5px; }
+  border: 2px solid #DDE6D2; border-radius: var(--kd-r-md);
+  background: #fff; color: var(--kd-ink); font-family: inherit; font-size: 15.5px; }
 
 /* ── 내 티켓 ── */
 .tk-list { list-style: none; margin: 4px 0 0; padding: 0; }
 .tk { display: flex; align-items: center; gap: 12px; margin-top: 11px;
-  padding: 14px 16px;  background: var(--card-a);  }
+  padding: 13px 15px; background: var(--kd-canvas);
+  border: 2.5px solid var(--kd-pool-line); border-radius: var(--kd-r-lg);
+  box-shadow: 0 3px 0 var(--kd-pool-line); }
 .tk-ic { flex: none; font-size: 24px; }
 .tk-bd { flex: 1; min-width: 0; }
-.tk-bd > b { display: block; font-size: 15.5px; font-weight: 800; color: var(--card-ink); }
+.tk-bd > b { display: block; font-size: 15.5px; font-weight: 700; color: var(--kd-ink); }
 .tk-bd > em { display: block; margin-top: 2px; font-style: normal;
-  font-size: 12.5px; font-weight: 700; color: var(--card-sub); }
-.tk-st { flex: none; font-size: 13px; font-weight: 800; color: var(--card-sub); }
-.tk-st.done { color: var(--card-ink); }
-.tk-give { flex: none; min-height: 44px; padding: 0 16px; border: none; border-radius: 999px;
-  background: var(--accent); color: var(--on-accent);
-  font-family: inherit; font-size: 13.5px; font-weight: 900; }
+  font-size: 12.5px; font-weight: 700; color: var(--kd-sub); }
+.tk-st { flex: none; font-size: 13px; font-weight: 700; color: var(--kd-sub); }
+.tk-st.done { color: var(--kd-mint-ink); }
+.tk-give { flex: none; min-height: 44px; padding: 0 16px; border: none; border-radius: var(--kd-r-full);
+  background: var(--kd-grass); color: #fff; box-shadow: 0 3px 0 var(--kd-grass-lip);
+  font-family: inherit; font-size: 13.5px; font-weight: 700; }
+.tk-give:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--kd-grass-lip); }
 /* 이미 받은 티켓은 한 톤 가라앉힌다 — 지난 것과 기다리는 것이 한눈에 갈려야 한다 */
-.tk.done { opacity: .72; }
+.tk.done { opacity: .72; border-color: #E4EBDA; box-shadow: 0 3px 0 #E4EBDA; }
 
 /* ── 확인해 주세요 (2단계 «2차») ── */
 .vf-wrap { margin-top: 18px; }
@@ -5426,7 +5445,7 @@ body:has(#tabbar.hidden) #screen:has(.ib),
 /* ⚠ html 에도 같이 준다 — 화면 바탕(canvas)을 칠하는 건 html 이다.
    body 만 주면 body 상자가 끝나는 지점 아래(네비바 자리)가 부모 테마색으로 남는다(폴드6 실측). */
 html:has(#screen > .gmw), html:has(#screen > .gmp), html:has(#screen > .gm),
-body:has(#screen > .gmw) { background: linear-gradient(180deg, #4A9BFF, #7C5CFF) fixed; }
+body:has(#screen > .gmw) { background: linear-gradient(180deg, #6FAEF2, #9A87E8) fixed; }
 
 .gmw { --g-panel: #FFFFFF; --g-panel2: #F2F6FF;
   --g-ink: #16203A; --g-sub: #5B6B8C;
@@ -5444,7 +5463,7 @@ body:has(#screen > .gmw) { background: linear-gradient(180deg, #4A9BFF, #7C5CFF)
      sa-b + 20 으로는 실제 여백이 44px 밖에 안 남아 **마지막 카드가 네비바에 깔렸다**
      (폴드6 실측 5px). 넉넉히 둔다 — 세계 화면은 아래가 그라데이션이라 남아도 표가 안 난다. */
   padding: calc(var(--sa-t) + 22px) 14px calc(var(--sa-b) + 52px);
-  background: linear-gradient(180deg, #4A9BFF, #7C5CFF); color: var(--g-ink);
+  background: linear-gradient(180deg, #6FAEF2, #9A87E8); color: var(--g-ink);
   /* ⚠ 전수검사에서 가로로 2px 이 새고 있었다 — 아이 세계는 가로로 흐를 것이 없다.
      넘치는 표·코드 같은 것은 각자 제 상자에서 스크롤한다(전역 규칙). */
   overflow-x: hidden; }
@@ -5526,7 +5545,7 @@ body:has(#screen > .gmw) { background: linear-gradient(180deg, #4A9BFF, #7C5CFF)
      sa-b + 20 으로는 실제 여백이 44px 밖에 안 남아 **마지막 카드가 네비바에 깔렸다**
      (폴드6 실측 5px). 넉넉히 둔다 — 세계 화면은 아래가 그라데이션이라 남아도 표가 안 난다. */
   padding: calc(var(--sa-t) + 22px) 14px calc(var(--sa-b) + 52px);
-  background: linear-gradient(180deg, #4A9BFF, #7C5CFF);
+  background: linear-gradient(180deg, #6FAEF2, #9A87E8);
   /* ⚠ 토큰만 갈아입히고 **글자색을 안 주면** 부모 색이 그대로 상속된다 —
      기기에서 재 보니 실제 글자가 부모 --ink(#1A1A1F)였다(08-08).
      바깥은 그라데이션 위라 흰색, 카드 안은 각 규칙이 --g-ink 를 명시한다. */
@@ -5626,7 +5645,7 @@ body:has(#screen > .gmw) { background: linear-gradient(180deg, #4A9BFF, #7C5CFF)
    ═══════════════════════════════════════════════════════════════════════ */
 
 .gm {
-  --g-sky1: #4A9BFF; --g-sky2: #7C5CFF;      /* ← 테마로 바뀌는 것은 이 둘뿐 */
+  --g-sky1: #6FAEF2; --g-sky2: #9A87E8;      /* ← 테마로 바뀌는 것은 이 둘뿐 */
   --g-panel: #FFFFFF; --g-panel2: #F2F6FF;
   --g-ink: #16203A; --g-sub: #5B6B8C;
   --g-gold: #FFC531; --g-gold-d: #E8930B; --g-gold-ink: #7A4E00;
@@ -5668,10 +5687,10 @@ body:has(#screen > .gmw) { background: linear-gradient(180deg, #4A9BFF, #7C5CFF)
 .gm.sc .gm-shopwrap { margin-top: 16px; }
 
 /* 배경 5종 — 실제로 갈리는 것은 이 두 줄이 전부다 */
-.gm.gt-lime   { --g-sky1: #4ED07A; --g-sky2: #12A5A0; }
-.gm.gt-lav    { --g-sky1: #A98BFF; --g-sky2: #F06BC0; }
-.gm.gt-sunset { --g-sky1: #FF9F4A; --g-sky2: #F0517A; }
-.gm.gt-mint   { --g-sky1: #3ED6D2; --g-sky2: #3A79E8; }
+.gm.gt-lime   { --g-sky1: #6FD693; --g-sky2: #3BB1AC; }
+.gm.gt-lav    { --g-sky1: #B9A3F2; --g-sky2: #E893C7; }
+.gm.gt-sunset { --g-sky1: #F5B06E; --g-sky2: #E87D9B; }
+.gm.gt-mint   { --g-sky1: #67CFCB; --g-sky2: #6693E8; }
 
 /* ── 캐릭터 시트 ── */
 .gm-hero { display: flex; align-items: center; gap: 10px; flex: none; }
@@ -5917,14 +5936,15 @@ body:has(#screen > .gmw) { background: linear-gradient(180deg, #4A9BFF, #7C5CFF)
 .gm-bg2.off { background: rgba(255, 255, 255, .26); box-shadow: none; }
 .gm-bg2.off em { color: rgba(255, 255, 255, .82); }
 
-.sw-sky    { background: linear-gradient(160deg, #4A9BFF, #7C5CFF); }
-.sw-lime   { background: linear-gradient(160deg, #4ED07A, #12A5A0); }
-.sw-lav    { background: linear-gradient(160deg, #A98BFF, #F06BC0); }
-.sw-sunset { background: linear-gradient(160deg, #FF9F4A, #F0517A); }
-.sw-mint   { background: linear-gradient(160deg, #3ED6D2, #3A79E8); }
+.sw-sky    { background: linear-gradient(160deg, #6FAEF2, #9A87E8); }
+.sw-lime   { background: linear-gradient(160deg, #6FD693, #3BB1AC); }
+.sw-lav    { background: linear-gradient(160deg, #B9A3F2, #E893C7); }
+.sw-sunset { background: linear-gradient(160deg, #F5B06E, #E87D9B); }
+.sw-mint   { background: linear-gradient(160deg, #67CFCB, #6693E8); }
 
 /* 푸는 동안은 붉은 «보스전» 배경 — 배경색 5종과 무관하게 이 순간만은 같다 */
-.gm.qzp { background: linear-gradient(180deg, #FF8A3D, #FF4E7A); }
+/* 2026-08-12 B안 — 원색(#FF8A3D→#FF4E7A)이 너무 쨍해서 채도를 낮추고 한 단 밝게 */
+.gm.qzp { background: linear-gradient(180deg, #F7A45C, #EE7292); }
 /* 그림·문제·보기를 **한 덩어리로 묶어 세로 가운데**에 둔다.
    보기를 바닥에 붙였더니 문제와 보기 사이가 텅 비어 보였다 — 답을 위로 올린다(지시 08-08). */
 .qz-play { flex: 1; display: flex; flex-direction: column; }
@@ -5935,7 +5955,14 @@ body:has(#screen > .gmw) { background: linear-gradient(180deg, #4A9BFF, #7C5CFF)
 .qz-play .qz-opts { margin: 0 0 auto; }
 
 /* ══ 오늘의 미션(퀴즈) ══ */
-.qz-intro { margin-top: 30px; text-align: center; }
+/* 시작 전 — 아래가 텅 비어 보였다(2026-08-12 대표님 「빈공간 채워라」).
+   내용을 늘리는 대신 **화면 가운데**로 모은다. 큰 칼 이모지가 무게중심을 잡는다. */
+.gm:has(.qz-intro) { display: flex; flex-direction: column; }   /* 가운데 모으기의 발판 */
+.gm-body:has(.qz-intro) { flex: 1; display: flex; flex-direction: column; justify-content: center;
+  padding-bottom: 12vh; }
+.qz-intro { text-align: center; }
+.qz-intro::before { content: "⚔️"; display: block; font-size: 64px; margin-bottom: 14px;
+  filter: drop-shadow(0 6px 0 rgba(0, 0, 0, .14)); }
 .qz-intro b { display: block; font-size: 21px; font-weight: 900; color: #fff;
   text-shadow: 0 2px 8px rgba(0, 0, 0, .22); }
 .qz-intro p { margin: 6px 0 0; font-size: 14px; font-weight: 800;
@@ -5946,6 +5973,11 @@ body:has(#screen > .gmw) { background: linear-gradient(180deg, #4A9BFF, #7C5CFF)
 .qz-no { font-size: 13px; font-weight: 900; font-variant-numeric: tabular-nums; }
 .qz-field { margin-left: auto; padding: 4px 11px; border-radius: 9px;
   background: rgba(255, 255, 255, .28); font-size: 11.5px; font-weight: 900; }
+/* 중간 나가기 (2026-08-12 대표님) — 반투명 동그라미. 44px 터치 목표는 지킨다 */
+.qz-quit { flex: none; width: 40px; height: 40px; min-height: 0; padding: 0; margin: -4px -4px -4px 0;
+  display: grid; place-items: center; border: none; border-radius: 50%;
+  background: rgba(255, 255, 255, .22); color: #fff;
+  font-family: inherit; font-size: 17px; font-weight: 900; }
 .qz-timer { height: 12px; margin-top: 10px; padding: 3px; border-radius: 7px;
   background: rgba(0, 0, 0, .2); }
 .qz-timer span { display: block; height: 100%; border-radius: 5px; background: #fff;

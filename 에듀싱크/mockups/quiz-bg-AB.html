@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>퀴즈 바탕 5테마 — A안(지금) / B안(부드럽게)</title>
+<link rel="stylesheet" href="maple.css">
+<!--
+  퀴즈(전투) 세계 바탕 비교 (2026-08-12 대표님: 「바탕 색상을 조금 변경하는 게 좋지 않을까」)
+  A안 = 지금 값 그대로. 원색이 세서 흰 카드·미션 세계(파스텔)와 공기가 세게 부딪친다.
+  B안 = 같은 색 정체성, 채도만 낮추고 한 단 밝게 — «오후 4시» 세계와 형제로 보이게.
+  바뀌는 것은 테마마다 두 값(--g-sky1/--g-sky2)뿐이라, 고르면 그 두 줄만 갈아끼운다.
+-->
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#3f3f3f;padding:22px;font-family:"Maple",system-ui,"Malgun Gothic",sans-serif}
+h1{color:#fff;font-size:15px;margin-bottom:14px;font-weight:700}
+.row{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:20px;align-items:flex-start}
+.cap{width:86px;color:#fff;font-size:13px;font-weight:700;padding-top:60px}
+.ph{width:220px;height:340px;border-radius:18px;overflow:hidden;position:relative;
+  display:flex;flex-direction:column;padding:14px;color:#fff}
+.tag{position:absolute;top:8px;right:10px;font-size:11px;font-weight:700;opacity:.85}
+.qno{font-size:11px;font-weight:700;opacity:.9}
+.tm{height:9px;margin-top:8px;border-radius:6px;background:rgba(255,255,255,.3);overflow:hidden}
+.tm i{display:block;height:100%;width:62%;background:#fff;border-radius:6px}
+.q{margin:26px 0 14px;font-size:15px;font-weight:700;line-height:1.4}
+.op{background:#fff;color:#33404F;border-radius:12px;padding:9px 12px;margin-top:8px;
+  font-size:12.5px;font-weight:700;box-shadow:0 2px 0 rgba(0,0,0,.10)}
+</style>
+</head>
+<body>
+<h1>퀴즈 바탕 — 위 A안(지금) · 아래 B안(부드럽게). 테마 5종 전부</h1>
+
+<div class="row">
+  <div class="cap">A안<br>지금</div>
+  <div class="ph" style="background:linear-gradient(180deg,#4A9BFF,#7C5CFF)"><span class="tag">하늘</span>
+    <span class="qno">3 / 10</span><div class="tm"><i></i></div>
+    <p class="q">1) «사과»를 영어로 하면?</p>
+    <div class="op">1&nbsp; apple</div><div class="op">2&nbsp; banana</div></div>
+  <div class="ph" style="background:linear-gradient(180deg,#4ED07A,#12A5A0)"><span class="tag">라임</span>
+    <span class="qno">3 / 10</span><div class="tm"><i></i></div>
+    <p class="q">1) «사과»를 영어로 하면?</p>
+    <div class="op">1&nbsp; apple</div><div class="op">2&nbsp; banana</div></div>
+  <div class="ph" style="background:linear-gradient(180deg,#A98BFF,#F06BC0)"><span class="tag">라벤더</span>
+    <span class="qno">3 / 10</span><div class="tm"><i></i></div>
+    <p class="q">1) «사과»를 영어로 하면?</p>
+    <div class="op">1&nbsp; apple</div><div class="op">2&nbsp; banana</div></div>
+  <div class="ph" style="background:linear-gradient(180deg,#FF9F4A,#F0517A)"><span class="tag">선셋</span>
+    <span class="qno">3 / 10</span><div class="tm"><i></i></div>
+    <p class="q">1) «사과»를 영어로 하면?</p>
+    <div class="op">1&nbsp; apple</div><div class="op">2&nbsp; banana</div></div>
+  <div class="ph" style="background:linear-gradient(180deg,#3ED6D2,#3A79E8)"><span class="tag">민트</span>
+    <span class="qno">3 / 10</span><div class="tm"><i></i></div>
+    <p class="q">1) «사과»를 영어로 하면?</p>
+    <div class="op">1&nbsp; apple</div><div class="op">2&nbsp; banana</div></div>
+</div>
+
+<div class="row">
+  <div class="cap">B안<br>부드럽게</div>
+  <div class="ph" style="background:linear-gradient(180deg,#6FAEF2,#9A87E8)"><span class="tag">하늘</span>
+    <span class="qno">3 / 10</span><div class="tm"><i></i></div>
+    <p class="q">1) «사과»를 영어로 하면?</p>
+    <div class="op">1&nbsp; apple</div><div class="op">2&nbsp; banana</div></div>
+  <div class="ph" style="background:linear-gradient(180deg,#6FD693,#3BB1AC)"><span class="tag">라임</span>
+    <span class="qno">3 / 10</span><div class="tm"><i></i></div>
+    <p class="q">1) «사과»를 영어로 하면?</p>
+    <div class="op">1&nbsp; apple</div><div class="op">2&nbsp; banana</div></div>
+  <div class="ph" style="background:linear-gradient(180deg,#B9A3F2,#E893C7)"><span class="tag">라벤더</span>
+    <span class="qno">3 / 10</span><div class="tm"><i></i></div>
+    <p class="q">1) «사과»를 영어로 하면?</p>
+    <div class="op">1&nbsp; apple</div><div class="op">2&nbsp; banana</div></div>
+  <div class="ph" style="background:linear-gradient(180deg,#F5B06E,#E87D9B)"><span class="tag">선셋</span>
+    <span class="qno">3 / 10</span><div class="tm"><i></i></div>
+    <p class="q">1) «사과»를 영어로 하면?</p>
+    <div class="op">1&nbsp; apple</div><div class="op">2&nbsp; banana</div></div>
+  <div class="ph" style="background:linear-gradient(180deg,#67CFCB,#6693E8)"><span class="tag">민트</span>
+    <span class="qno">3 / 10</span><div class="tm"><i></i></div>
+    <p class="q">1) «사과»를 영어로 하면?</p>
+    <div class="op">1&nbsp; apple</div><div class="op">2&nbsp; banana</div></div>
+</div>
+
+</body>
+</html>

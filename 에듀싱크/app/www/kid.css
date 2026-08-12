@@ -98,7 +98,9 @@ body:has(.kd-home)::before{ background:var(--kd-sky); }   /* 상태바 자리 �
 
 /* ══ 오늘의 길 — 통통한 진행 리본 ══ */
 .kd-path{ position:relative; margin:var(--kd-12) 2px var(--kd-16); }
-.kd-path .bar{ height:18px; border-radius:var(--kd-r-full); background:#EAEFE2;
+/* ⚠ display:block 필수 — span 으로 쓰면 inline 이라 height 가 안 먹는다
+   (목업에서 한 번, 앱 미션 화면에서 또 한 번 실측으로 잡았다. div/span 가리지 않게 여기서 못 박는다) */
+.kd-path .bar{ display:block; height:18px; border-radius:var(--kd-r-full); background:#EAEFE2;
   border:2px solid #DDE6D2; overflow:hidden; }
 .kd-path .bar i{ display:block; height:100%; border-radius:var(--kd-r-full);
   background:linear-gradient(180deg,#7CDC3A 0%,var(--kd-grass) 55%);
@@ -195,7 +197,122 @@ body:has(.kd-home)::before{ background:var(--kd-sky); }   /* 상태바 자리 �
 .kd-cloud.c2{ width:36px; height:13px; right:34%; top:calc(var(--sa-t) + 30px); opacity:.4; }
 .kd-fixtop, .kd-scroll, .kd-act{ position:relative; z-index:1; }
 
+/* ══════════════════════════════════════════════════════════════════════
+   미션 화면 (2026-08-12, 시각 정본 mockups/mission-B.html v2)
+   부모의 미션 관리(#mission·#missionone)도 **이 세계의 언어**로 말한다 —
+   대표님 확정: 미션 = 듀오링고. 부모 화면만 구글이면 리본·별이 두 말을 하게 된다.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── 껍데기 — 홈과 달리 **구른다**(목록이 길다). 인셋 규칙은 홈과 동일 ── */
+#screen:has(.kd-scr){
+  min-height:100dvh;
+  padding:var(--sa-t) var(--kd-16) calc(var(--sa-b) + var(--kd-8));
+  display:flex; flex-direction:column;
+  background:linear-gradient(180deg,var(--kd-sky) 0%,var(--kd-sky) 18%,var(--kd-cream) 42%);
+}
+body:has(.kd-scr){ background:var(--kd-sky); }
+body:has(.kd-scr)::before{ background:var(--kd-sky); }
+.kd-scr{ display:flex; flex-direction:column; flex:1; min-height:0;
+  font-family:"Maple",system-ui,"Malgun Gothic",sans-serif;
+  color:var(--kd-ink); font-size:var(--kd-fs-15); line-height:1.5; }
+
+/* ── 머리 — 뒤로 사탕알 + 제목 + ★알약. 끝. ── */
+.kd-hd{ display:flex; align-items:center; gap:10px; padding:var(--kd-8) 2px; }
+.kd-bk{ width:38px; height:38px; flex:none; min-height:0; padding:0;
+  border:2.5px solid var(--kd-grass-line); border-radius:var(--kd-r-full);
+  background:var(--kd-canvas); display:grid; place-items:center;
+  font-family:inherit; font-size:17px; font-weight:700; color:var(--kd-grass-lip);
+  box-shadow:0 3px 0 var(--kd-grass-line); }
+.kd-bk:active{ transform:translateY(2px); box-shadow:0 1px 0 var(--kd-grass-line); }
+.kd-hd .ti{ font-size:var(--kd-fs-21); font-weight:700; }
+
+/* ── ⭐ 오늘의 길 — 부모 판은 양끝에 −/＋ 사탕 버튼이 붙는다. 글 없음. ── */
+.kd-dial{ display:flex; align-items:center; gap:11px; }
+.kd-kn{ width:44px; height:44px; flex:none; min-height:0; padding:0;
+  border:2.5px solid var(--kd-sun); border-radius:var(--kd-r-full);
+  background:var(--kd-canvas); color:var(--kd-sun-ink);
+  font-family:inherit; font-size:24px; font-weight:700; line-height:1;
+  display:grid; place-items:center; box-shadow:0 4px 0 #E5A500; }
+.kd-kn:active{ transform:translateY(2px); box-shadow:0 1px 0 #E5A500; }
+.kd-kn[disabled]{ border-color:#E2E6DC; color:#B6BCB0; box-shadow:0 3px 0 #E2E6DC; }
+/* 리본 자체는 .kd-path 의 bar/flag/lb 를 그대로 쓴다 — 홈과 같은 그림이어야 한다 */
+.kd-path .rb{ flex:1; position:relative; display:block; min-width:0; }
+.kd-path .lb b.sun{ color:var(--kd-sun-ink); font-size:var(--kd-fs-15); }
+
+/* ── 퀘스트 줄 — 홈의 kd-q 에 «기다림» 한 벌만 얹는다 ── */
+.kd-q.wait .bx{ border-color:var(--kd-dawn-line); background:var(--kd-dawn-tint); font-size:14px; }
+.kd-q.wait .st{ color:var(--kd-dawn-ink); background:var(--kd-dawn-tint); }
+.kd-q .st.plus{ color:var(--kd-sun-ink); }
+
+/* 타일 — 포도(만들기)와 2칸 줄(칭찬·리포트) */
+.kd-tile.grape{ border-color:var(--kd-grape-line); box-shadow:0 3px 0 var(--kd-grape-line);
+  background:linear-gradient(180deg,var(--kd-grape-tint) 0%,var(--kd-canvas) 70%); }
+.kd-tile.grape .nm{ color:var(--kd-grape-ink); }
+.kd-tiles.two{ grid-template-columns:1fr 1fr; }
+
+/* ── 미션 하나 — 큰 아이콘 + 이름 + 칩. 문장 금지. ── */
+.kd-hero{ margin:var(--kd-12) 2px var(--kd-4); text-align:center; }
+.kd-hero .bem{ display:grid; place-items:center; width:88px; height:88px; margin:0 auto var(--kd-12);
+  font-size:46px; background:var(--kd-canvas); border:2.5px solid var(--kd-grass-line);
+  border-radius:24px; box-shadow:0 4px 0 var(--kd-grass-line); }
+.kd-hero h2{ font-size:var(--kd-fs-21); font-weight:700; line-height:1.35; word-break:keep-all; margin:0; }
+.kd-chips{ display:flex; justify-content:center; flex-wrap:wrap; gap:6px; margin:var(--kd-12) 0 var(--kd-16); }
+.kd-chips span{ border:2px solid var(--kd-grass-line); background:var(--kd-canvas);
+  border-radius:var(--kd-r-full); padding:4px 12px; font-size:var(--kd-fs-13); font-weight:700; }
+.kd-chips span.star{ border-color:#FFE08A; background:var(--kd-sun-tint); color:var(--kd-sun-ink); }
+.kd-chips span.dawn{ border-color:var(--kd-dawn-line); background:var(--kd-dawn-tint); color:var(--kd-dawn-ink); }
+
+/* 왜 이 미션인가요 — 점선 카드. 시드의 why 를 그대로 보여준다(빈 화면 금지, 2026-08-12) */
+.kd-why{ border:2.5px dashed var(--kd-grass-line); border-radius:var(--kd-r-lg);
+  background:var(--kd-grass-tint); padding:var(--kd-12) var(--kd-16);
+  margin-bottom:var(--kd-12); font-size:var(--kd-fs-14); line-height:1.6; word-break:keep-all; }
+.kd-why b{ display:block; font-size:var(--kd-fs-12); color:var(--kd-grass-lip); margin-bottom:3px; }
+.kd-why.dawn{ border-color:var(--kd-dawn-line); background:var(--kd-dawn-tint); }
+.kd-why.dawn b{ color:var(--kd-dawn-ink); }
+
+/* 요일 도장판 — 지난 이레. 초록=했다 · 살구=놓쳤다 · 회색=그날 없었다 */
+.kd-week{ border:2.5px solid var(--kd-grass-line); border-radius:var(--kd-r-lg);
+  background:var(--kd-canvas); box-shadow:0 3px 0 var(--kd-grass-line);
+  padding:var(--kd-12) var(--kd-16); }
+.kd-week .dots{ display:grid; grid-template-columns:repeat(7,1fr); gap:6px; }
+.kd-week .d{ text-align:center; font-size:11px; color:var(--kd-sub); font-weight:700; }
+.kd-week .d i{ display:grid; place-items:center; height:32px; margin-bottom:4px;
+  border-radius:var(--kd-r-sm); border:2px solid #E4EBDA; background:#F6F8F2;
+  font-style:normal; font-size:15px; color:#C6CEBB; }
+.kd-week .d.on i{ border-color:var(--kd-grass); background:var(--kd-grass); color:#fff; }
+.kd-week .d.miss i{ border-color:#F0D8CE; background:#FDF1EC; color:#D99C80; }
+.kd-week .d.today{ color:var(--kd-grass-lip); }
+
+/* 사진 확인 — 아이가 보낸 것. 사진이 주인공이라 테두리만 입힌다 */
+.kd-photo{ display:block; width:100%; border-radius:var(--kd-r-lg);
+  border:2.5px solid var(--kd-dawn-line); box-shadow:0 3px 0 var(--kd-dawn-line);
+  margin-bottom:var(--kd-12); }
+
+/* 발판 버튼 — 잔디 CTA 는 kd-btn 그대로, 조용한 것 한 벌 추가 */
+.kd-btn.sub{ background:var(--kd-canvas); color:var(--kd-sub);
+  border:2.5px solid #DDE6D2; box-shadow:0 3px 0 #DDE6D2;
+  min-height:46px; font-size:var(--kd-fs-15); letter-spacing:0; margin-top:9px; }
+.kd-btn.sub:active{ transform:translateY(2px); box-shadow:0 1px 0 #DDE6D2; }
+.kd-btn + .kd-btn{ margin-top:9px; }
+.kd-btn.dawn{ background:var(--kd-dawn); box-shadow:0 5px 0 #C77300; }
+.kd-btn.dawn:active{ box-shadow:0 2px 0 #C77300; }
+
+/* 확인해 주세요(2단계 보너스) — 노을색 카드 한 장, 별 버튼은 사탕알 */
+.kd-vf{ display:flex; align-items:center; gap:8px; padding:var(--kd-8) 0;
+  border-top:2px dashed #F4E3CE; }
+.kd-vf:first-of-type{ border-top:none; }
+.kd-vf .bd{ flex:1; min-width:0; font-size:var(--kd-fs-14); font-weight:700; }
+.kd-vf .bd em{ display:block; font-style:normal; font-size:var(--kd-fs-12);
+  color:var(--kd-sub); font-weight:400; }
+.kd-vf button{ flex:none; min-height:0; height:34px; padding:0 10px;
+  border:2px solid #FFE08A; border-radius:var(--kd-r-full); background:var(--kd-sun-tint);
+  color:var(--kd-sun-ink); font-family:inherit; font-size:var(--kd-fs-13); font-weight:700;
+  box-shadow:0 2px 0 #FFE9AE; }
+.kd-vf button:active{ transform:translateY(1px); box-shadow:none; }
+.kd-vf button.none{ border-color:#DDE6D2; background:var(--kd-canvas);
+  color:var(--kd-sub); box-shadow:0 2px 0 #DDE6D2; }
+
 @media (prefers-reduced-motion:reduce){
   .kd-path .bar i{ transition:none; }
-  .kd-tile:active, .kd-btn:active{ transform:none; }
+  .kd-tile:active, .kd-btn:active, .kd-bk:active, .kd-kn:active{ transform:none; }
 }

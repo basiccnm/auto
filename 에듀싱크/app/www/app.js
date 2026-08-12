@@ -880,6 +880,11 @@ const S = {
      하단 ★ 를 누르면 부모 앱이 아니라 **아이의 세계**로 들어간다.
      이 묶음이 그대로 모듈 B(글로벌 단독 앱)의 얼굴이 된다 — 부모 화면 상태와 섞지 말 것. */
   coin: null,             // {stars, earned_today, limit, room} — 서버가 계산한다. 화면이 세지 않는다
+  /* ⚙️ 경제 설정 — `GET /children/{id}/econ` 이 통째로 준다(별 라인·상한·보너스·재도전 값…).
+     🔴 **여기 있는 숫자를 앱에 상수로 옮겨 적지 마라.** 서버(star_core.js ECON)가 정본이라
+        값을 고치면 워커 배포 한 번으로 반영된다 — 앱을 다시 만들 필요가 없다(2026-08-12). */
+  econ: null,
+  lineBusy: false,        // 별 라인을 옮기는 중
   quiz: null,             // 오늘 세트 {items, done, correct, ...}
   quizIdx: 0,             // 몇 번째 문제
   quizPick: {},           // {code: 1~4}
@@ -2143,136 +2148,155 @@ const Screens = {
       </div>`;
     if (list === null) return `${subHeader("미션")}<p class="sub">불러오는 중…</p>`;
 
-    const done = list.filter((x) => x.status === "done").length;
-    const waiting = list.filter((x) => x.status === "waiting");
-    const ST = {
-      open:    { ko: "아직", cls: "ms-open" },
-      waiting: { ko: "확인 기다림", cls: "ms-wait" },
-      done:    { ko: "완료", cls: "ms-done" },
-      skipped: { ko: "못 했어요", cls: "ms-skip" },
+    /* ══ 2026-08-12 «오후 4시의 운동장»으로 전면 교체 (시각 정본 mockups/mission-B.html v2)
+       대표님 확정: **미션 = 듀오링고.** 부모 화면만 구글이면 같은 리본이 두 말을 한다.
+       그리고 「설명 많이 없애고」 — 문장은 화면당 0~1개. 리본·숫자·버튼으로만 말한다. */
+    const kid = isChildToken() || S.childView || S.kidMode;
+    const coin = S.coin || { earned_today: 0, limit: COIN_LIMIT };
+    const pct = coin.limit ? Math.min(100, Math.round((coin.earned_today / coin.limit) * 100)) : 0;
+
+    /* 오늘의 길 — 아이 홈(.kd-path)과 **같은 그림**. 부모 판만 양끝에 −/＋ 사탕알이 붙는다.
+       ⚠ 눈금·범위는 전부 서버가 준 값(S.econ)이다. 여기에 숫자를 박지 마라. */
+    const e = S.econ;
+    const dial = (() => {
+      if (kid || !e) return "";
+      const busy = S.lineBusy ? "disabled" : "";
+      return `
+      <button class="kd-kn" ${e.star_line <= e.line_min ? "disabled" : busy} aria-label="줄이기"
+        onclick="App.starLineSet(${Math.max(e.line_min, e.star_line - e.line_step)})">−</button>`;
+    })();
+    const dial2 = (() => {
+      if (kid || !e) return "";
+      const busy = S.lineBusy ? "disabled" : "";
+      return `
+      <button class="kd-kn" ${e.star_line >= e.line_max ? "disabled" : busy} aria-label="늘리기"
+        onclick="App.starLineSet(${Math.min(e.line_max, e.star_line + e.line_step)})">＋</button>`;
+    })();
+    const ribbon = `
+    <div class="kd-path">
+      <div class="kd-dial">
+        ${dial}
+        <span class="rb"><span class="bar"><i style="width:${pct}%"></i></span>
+          <span class="flag" aria-hidden="true">🚩</span></span>
+        ${dial2}
+      </div>
+      <div class="lb"><span>오늘의 길</span>
+        <span><b class="sun">${coin.earned_today}</b> / ${coin.limit}</span></div>
+    </div>`;
+
+    /* 퀘스트 한 줄 — 홈의 kd-q 그대로. 상태는 상자와 알약이 말한다(문장 금지) */
+    const row = (x) => {
+      const done = x.status === "done";
+      const wait = x.status === "waiting";
+      const tag = done ? `＋★${x.got || x.stars}`
+        : wait ? (kid ? "보냄" : "확인")
+        : x.status === "skipped" ? "쉬어감" : `★${x.stars}`;
+      /* 아이는 줄을 눌러 **해낸다** — 즉시형은 그 자리에서 별, 사진형은 카메라로 */
+      const go = kid && !done && !wait
+        ? (x.verify === "review" ? `S.kidShootId=${x.id};location.hash='#childshoot'` : `App.missionDone(${x.id})`)
+        : `App.msOpen(${x.id})`;
+      return `
+      <button class="kd-q ${done ? "done" : ""} ${wait ? "wait" : ""}" onclick="${go}">
+        <span class="bx">${done ? "✓" : wait ? "📷" : ""}</span>
+        <span class="n">${esc(x.title)}</span>
+        <span class="st ${done ? "plus" : ""}">${tag}</span>
+      </button>`;
     };
 
-    /* 미션 첫 방문 안내(2026-08-10 대표님: 「처음 사용자는 안내를 알려줘야」) —
-       화면이 먼저 그려진 다음에 띄운다. 같은 렌더에서 켜면 구멍(spot)을 낼 요소가 아직 DOM에 없다. */
-    if (!S._msCoachQueued && !localStorage.getItem(MS_COACH_KEY) && !isChildToken() && !S.kidMode && list.length) {
+    /* ── 아이 화면 — 아침 / 방과후 두 카드 + 상점 한 줄 (목업 ②) ── */
+    if (kid) {
+      const mor = list.filter((x) => x.slot === "morning");
+      const aft = list.filter((x) => x.slot !== "morning");
+      const cnt = (a) => `${a.filter((x) => x.status === "done").length} / ${a.length}`;
+      return `
+      <div class="kd-scr">
+        <div class="kd-hd">
+          <button class="kd-bk" onclick="App.goBack()" aria-label="뒤로">‹</button>
+          <span class="ti">오늘의 미션</span>
+          <span class="kd-pill star">★ ${(S.coin && S.coin.stars) || 0}</span>
+        </div>
+        ${ribbon}
+        ${!mor.length ? "" : `
+        <div class="kd-card" style="border-color:var(--kd-dawn-line);box-shadow:0 3px 0 var(--kd-dawn-line);background:linear-gradient(180deg,var(--kd-dawn-tint) 0%,var(--kd-canvas) 42%)">
+          <div class="h"><span class="em" aria-hidden="true">🌅</span><span>아침</span><span class="cnt">${cnt(mor)}</span></div>
+          ${mor.map(row).join("")}
+        </div>`}
+        <div class="kd-card">
+          <div class="h"><span class="em" aria-hidden="true">📚</span><span>방과후</span><span class="cnt">${cnt(aft)}</span></div>
+          ${aft.length ? aft.map(row).join("") : `<p class="kd-q" style="border:none;color:var(--kd-sub)">오늘은 다 했어요!</p>`}
+        </div>
+        <button class="kd-card shop" onclick="location.hash='#store'">
+          <span class="em" aria-hidden="true">🏪</span>
+          <span class="t">스타코인 상점</span>
+          <span class="ar">›</span>
+        </button>
+        <div class="kd-act">
+          <button class="kd-btn" onclick="location.hash='#game';App.gameTab('today')">오늘의 퀴즈 풀기</button>
+        </div>
+      </div>
+      ${stickerView()}`;
+    }
+
+    /* ── 부모 화면 (목업 ①) ── */
+    const done = list.filter((x) => x.status === "done").length;
+
+    /* 미션 첫 방문 안내 — 화면이 먼저 그려진 다음에 띄운다(같은 렌더에서 켜면 spot 요소가 아직 없다) */
+    if (!S._msCoachQueued && !localStorage.getItem(MS_COACH_KEY) && list.length) {
       S._msCoachQueued = true;
       setTimeout(() => { if (!localStorage.getItem(MS_COACH_KEY)) { S.msCoach = 0; App.render(); } }, 400);
     }
 
+    /* 2단계 «확인해 주세요» — 아이가 낸 것이 있을 때만 노을색 카드로 맨 위(2026-08-10 대표님) */
+    const pend = S.verifyPending || [];
+    const verifyCard = !pend.length ? "" : `
+    <div class="kd-card" style="border-color:var(--kd-dawn-line);box-shadow:0 3px 0 var(--kd-dawn-line);background:linear-gradient(180deg,var(--kd-dawn-tint) 0%,var(--kd-canvas) 42%)">
+      <div class="h"><span class="em" aria-hidden="true">🙋</span><span>확인해 주세요</span><span class="cnt">${pend.length}</span></div>
+      ${pend.map((v) => {
+        const busy = S.verifyBusy === v.verify_id ? "disabled" : "";
+        return `
+        <div class="kd-vf">
+          <span class="bd">${esc(v.mission_code)}${v.step1_data ? `<em>${esc(v.step1_data)}</em>` : ""}</span>
+          ${[1, 2, 3].map((n) => `<button ${busy} onclick="App.verifyBonus('${v.verify_id}', ${n})">★${n}</button>`).join("")}
+          <button class="none" ${busy} onclick="App.verifyBonus('${v.verify_id}', 0)">확인만</button>
+        </div>`;
+      }).join("")}
+    </div>`;
+
     return `
-    ${subHeader("미션")}
-    <p class="sub">오늘 <b>${esc(c.nickname)}</b>에게 준 것 · 모은 도장 <b class="ms-star">★ ${S.missionStars}</b></p>
-    ${childLinkWarn()}
-
-    <!-- ── 2단계 «확인해 주세요» — **맨 위**(2026-08-10 대표님: 「어디서 하는지 찾기 어려움」).
-         아이가 낸 것이 있는데 카드 밑에 묻혀 있으면 부모가 못 보고, 아이는 답을 못 받는다.
-         1차는 아이가 낸 순간 서버가 도장 1개를 준다. 여기는 부모가 보고 보너스를 주는 자리다.
-         보너스를 안 주는 것도 정상 동작이다 — 「확인만」을 같이 둔다. 서버가 «한 번만»을 지킨다. -->
-    ${(() => {
-      const kid = isChildToken() || S.childView || S.kidMode;
-      const pend = kid ? [] : (S.verifyPending || []);
-      if (!pend.length) return "";
-      return `
-      <div class="vf-wrap top">
-        <h2 class="vf-t">확인해 주세요 <em>${pend.length}</em></h2>
-        ${pend.map((v) => {
-          const busy = S.verifyBusy === v.verify_id;
-          return `
-          <div class="vf">
-            <div class="vf-bd">
-              <b>${esc(v.mission_code)}</b>
-              ${v.step1_data ? `<em>${esc(v.step1_data)}</em>` : ""}
-              <span class="vf-at">${esc(fmtIsoDay(v.created_at))} 냈어요</span>
-            </div>
-            <div class="vf-act">
-              ${[1, 2, 3].map((n) => `
-                <button class="vf-b" ${busy ? "disabled" : ""}
-                  onclick="App.verifyBonus('${v.verify_id}', ${n})">★${n}</button>`).join("")}
-              <button class="vf-b none" ${busy ? "disabled" : ""}
-                onclick="App.verifyBonus('${v.verify_id}', 0)">확인만</button>
-            </div>
-          </div>`;
-        }).join("")}
-      </div>`;
-    })()}
-
-    ${list.map((x, i) => {
-      const st = ST[x.status] || ST.open;
-      /* 카드 = 번호·이름·상태 셋만. 자세한 건 눌러서(시안 2026-08-03) */
-      return `
-      <button class="msc ${st.cls}" onclick="App.msOpen(${x.id})">
-        <span class="msc-no">${x.status === "done" ? `<i aria-hidden="true" class="ti ti-check"></i>` : i + 1}</span>
-        <b>${esc(x.title)}</b>
-        <span class="msc-tag">${x.status === "waiting" ? (x.verify === "review" ? "사진 확인" : "확인하기") : x.status === "open" ? `★${x.stars}` : st.ko}</span>
-      </button>`;
-    }).join("")}
-
-    ${(() => {
-      /* 카드 상세 시트 — 확인·되돌리기·바꾸기가 전부 이 안 */
-      const x = list.find((v) => v.id === S.msDetail);
-      if (!x) return "";
-      const st = ST[x.status] || ST.open;
-      return `
-      <div class="modal sheetwrap" onclick="App.msClose()">
-        <div class="sheet" onclick="event.stopPropagation()">
-          <div class="sheet-grip"></div>
-          <h2 class="msc-dt">${esc(x.title)}</h2>
-          <div class="msc-meta">
-            <em>${esc(MISSION_AREA[x.area] || "")}</em>${x.minutes ? `<em>${x.minutes}분</em>` : ""}<em class="star">★${x.stars}</em><em>${x.verify === "review" ? "사진 확인" : x.verify === "endday" ? "하루 끝 확인" : "눌러서 보고"}</em><em>${st.ko}</em>
-          </div>
-          ${x.status === "waiting" ? `
-            ${x.verify === "review"
-              ? `<img class="msc-photo" src="${PLACEHOLDER}" data-rec="/api/v1/missions/${x.id}/photo" alt="아이가 보낸 사진">`
-              : `<p class="msc-said">아이가 <b>다 했어요</b>를 눌렀어요</p>`}
-            <button class="btn-primary" onclick="App.missionApprove(${x.id})"><i aria-hidden="true" class="ti ti-check"></i>잘했어! 도장 찍기</button>
-            ${x.verify !== "review" ? "" : `
-            <!-- 사진 확인에 따라붙는 «서랍에 보관» (2026-08-03 §2) — 도장은 오늘 것이고 서랍은 12년 것이다.
-                 도장을 찍으면 사진은 미션에서 사라진다. 남기고 싶은 한 장은 여기서 서랍으로 옮긴다. -->
-            <button class="msc-keep ${S.keepShot === x.id ? "on" : ""}" onclick="App.keepShot(${x.id})">
-              <i aria-hidden="true" class="ti ${S.keepShot === x.id ? "ti-check" : "ti-photo"}"></i>
-              ${S.keepShot === x.id ? "도장 찍을 때 서랍에 넣어요" : "서랍에 보관하기"}</button>`}
-            <button class="msc-sub" onclick="App.missionRevert(${x.id});App.msClose()">다시 해볼까?</button>
-            <p class="mp-hint" style="text-align:center">안 보면 <b>아침 8시</b> 자동</p>`
-          : x.status === "open" ? `
-            <button class="btn-primary" onclick="App.msClose();App.missionPickOpen()"><i aria-hidden="true" class="ti ti-grip-vertical"></i>다른 미션으로 바꾸기</button>`
-          : `
-            <button class="btn-primary" onclick="App.missionRevert(${x.id});App.msClose()">${x.status === "skipped" ? "다시 줘볼까?" : "다시 해볼까?"}</button>`}
-        </div>
-      </div>`;
-    })()}
-
-    <!-- ── 미션을 만지는 세 가지 — **한 줄로**(2026-08-10 대표님: 「고르는 것·바꾸는 것·넣는 것이 어렵다」).
-         🎲 바꾸기(오늘 것 무작위, 하루 한 번 — 서버 PK 가 강제) · 🎯 고르기(카탈로그) · ＋ 만들기(우리 집 미션).
-         셋이 위·시트 안·맨 아래에 흩어져 있어서 같은 일인 줄 몰랐다 — 나란히 두면 저절로 비교된다.
-         ⚠ 리롤은 아직 시작 안 한 것만 바뀐다. 해낸 것을 날리면 그건 보상이 아니라 벌이다. -->
-    <div class="ms-actrow">
-      <button onclick="App.msReroll()" ${list.some((x) => x.status === "open") ? "" : "disabled"}>🎲<b>바꾸기</b></button>
-      <button onclick="App.missionPickOpen()"><i aria-hidden="true" class="ti ti-grip-vertical"></i><b>고르기</b></button>
-      <button onclick="App.missionMakeOpen()"><i aria-hidden="true" class="ti ti-plus"></i><b>만들기</b></button>
+    <div class="kd-scr">
+      <div class="kd-hd">
+        <button class="kd-bk" onclick="App.goBack()" aria-label="뒤로">‹</button>
+        <span class="ti">미션</span>
+        <span class="kd-pill star">★ ${S.missionStars}</span>
+      </div>
+      ${childLinkWarn()}
+      ${ribbon}
+      ${verifyCard}
+      <div class="kd-card">
+        <div class="h"><span class="em" aria-hidden="true">🗺️</span><span>오늘 준 미션</span>
+          <span class="cnt">${done} / ${list.length}</span></div>
+        ${list.length ? list.map(row).join("")
+          : `<p class="kd-q" style="border:none;color:var(--kd-sub)">아직 준 미션이 없어요</p>`}
+      </div>
+      <div class="kd-tiles">
+        <button class="kd-tile" onclick="App.msReroll()" ${list.some((x) => x.status === "open") ? "" : "disabled"}>
+          <span class="em" aria-hidden="true">🎲</span><span class="nm">바꾸기</span></button>
+        <button class="kd-tile pool" onclick="App.missionPickOpen()">
+          <span class="em" aria-hidden="true">🎯</span><span class="nm">고르기</span></button>
+        <button class="kd-tile grape" onclick="App.missionMakeOpen()">
+          <span class="em" aria-hidden="true">✏️</span><span class="nm">만들기</span></button>
+      </div>
+      <div class="kd-tiles two">
+        <button class="kd-tile" onclick="App.reactOpen(${c.server_id || 0})">
+          <span class="em" aria-hidden="true">💛</span><span class="nm">칭찬 보내기</span></button>
+        <button class="kd-tile pool" onclick="location.hash='#report'">
+          <span class="em" aria-hidden="true">📊</span><span class="nm">이번 달</span></button>
+      </div>
+      <div class="kd-act">
+        <!-- ⚠ gamePreviewOn 은 #game 안에서 탭을 바꾸는 함수다 — 주소를 같이 옮겨야 그려진다(08-10 실측) -->
+        <button class="kd-btn" onclick="location.hash='#game';App.gamePreviewOn()">아이 화면으로 보기</button>
+      </div>
     </div>
-
-    <!-- 아이 화면 미리보기(2026-08-10 대표님: 「애들 느낌으로 보여주면 되는데」) —
-         내가 준 미션이 아이 게임 세계에서 어떻게 보이는지 그대로 본다. 기존 미리보기 길(gamePreviewOn)을 탄다. -->
-    ${(isChildToken() || S.childView || S.kidMode) ? "" : `
-    <!-- ⚠ gamePreviewOn 은 화면(#game) 안에서 탭을 바꾸는 함수다 — 주소를 같이 옮겨야 게임이 그려진다
-         (08-10 에뮬 실측: 주소 없이 부르면 미션 화면에 그대로 서 있다) -->
-    <button class="ms-preview" onclick="location.hash='#game';App.gamePreviewOn()">
-      <i aria-hidden="true" class="ti ti-eye"></i><b>아이 화면으로 보기</b></button>`}
-
-    <!-- 아래는 가는 곳들 — 설명 줄을 뗐다(2026-08-10: 「글이 많고 눌러야 할 게 안 보임」). 이름이 곧 설명이다 -->
-    ${(isChildToken() || S.childView || S.kidMode) ? "" : `
-    <button class="ms-mkbtn" onclick="App.reactOpen(${c.server_id || 0})">
-      <i aria-hidden="true" class="ti ti-award"></i>
-      <span><b>칭찬 보내기</b></span></button>`}
-    <button class="ms-mkbtn" onclick="location.hash='#store'">
-      <i aria-hidden="true">★</i>
-      <span><b>스타코인 상점</b></span></button>
-    <button class="ms-mkbtn" onclick="location.hash='#report'">
-      <i aria-hidden="true" class="ti ti-chart-bar"></i>
-      <span><b>이번 달 리포트</b></span></button>
-
-    <!-- 미션 고르기 «반쪽 시트» 폐지(2026-08-03) — 전용 화면 Screens.missionpick 이 대신한다.
-         고를 것이 수십 개라 시트로는 절반밖에 못 봤다. -->
     ${reactSheetView()}
     ${stickerView()}
     ${msCoachView()}
@@ -2386,7 +2410,8 @@ const Screens = {
             </button>`).join("")}
         </div>
 
-        <button class="kd-card shop" onclick="App.gameTab('shop')">
+        <!-- 2026-08-12: 상점이 kd 세계(#store)로 이사 — 옛 게임 안 shop 탭으로 보내면 파랑 세계가 뜬다 -->
+        <button class="kd-card shop" onclick="location.hash='#store'">
           <span class="em" aria-hidden="true">🏪</span>
           <span class="t">스타코인 상점<em>모은 ★로 바꿔요</em></span>
           <span class="ar">›</span>
@@ -2408,24 +2433,31 @@ const Screens = {
   store: () => {
     const c = cur();
     const kid = isChildToken() || S.childView || S.kidMode;
-    if (!c) return `${subHeader("스타코인 상점")}
+    /* ══ 2026-08-12 «오후 4시의 운동장» — 상점도 미션과 같은 세계다.
+       머리(kd-hd)·카드 문법은 미션 화면과 한 벌. st- 부품은 style.css 정의 자리에서 kd 값으로. */
+    const hd = `
+      <div class="kd-hd">
+        <button class="kd-bk" onclick="App.goBack()" aria-label="뒤로">‹</button>
+        <span class="ti">스타코인 상점</span>
+        <span class="kd-pill star">★ ${S.missionStars || 0}</span>
+      </div>`;
+    if (!c) return `<div class="kd-scr">${hd}
       <div class="ms-empty">
         <b>아이를 등록하면 열려요</b>
-        <button class="btn-primary" onclick="App.childAddStart()">아이 등록하기</button>
-      </div>`;
-    if (S.store === null) return `${subHeader("스타코인 상점")}<p class="sub">불러오는 중…</p>`;
+        <button class="kd-btn" onclick="App.childAddStart()">아이 등록하기</button>
+      </div></div>`;
+    if (S.store === null) return `<div class="kd-scr">${hd}<p class="sub">불러오는 중…</p></div>`;
 
-    const stars = S.missionStars || 0;
     const why = { limit: "이번 기간엔 다 바꿨어요", stars: "스타코인이 모자라요" };
 
     return `
-    ${subHeader("스타코인 상점")}
-    <div class="st-purse"><i aria-hidden="true">★</i><b>${stars}</b><em>지금 가진 스타코인</em></div>
+    <div class="kd-scr">
+    ${hd}
 
     ${!S.store.length ? `
       <div class="ms-empty">
         <b>진열대가 비어 있어요</b>
-        ${kid ? "" : `<button class="btn-primary" onclick="App.storeAddOpen()">진열대에 올리기</button>`}
+        ${kid ? "" : `<button class="kd-btn" onclick="App.storeAddOpen()">진열대에 올리기</button>`}
       </div>` : `
       <ul class="st-list">
         ${S.store.map((it) => {
@@ -2448,19 +2480,20 @@ const Screens = {
         }).join("")}
       </ul>
       ${kid ? "" : `
-      <div class="st-tools">
-        <button class="ms-mkbtn" onclick="App.storeAddOpen()">
-          <i aria-hidden="true" class="ti ti-plus"></i>
-          <span><b>진열대에 올리기</b><em>무엇과 바꿔 줄지 정해요</em></span></button>
-        <button class="ms-mkbtn" onclick="App.storeEditToggle()">
-          <i aria-hidden="true" class="ti ${S.storeEdit ? "ti-check" : "ti-pencil"}"></i>
-          <span><b>${S.storeEdit ? "다 고쳤어요" : "진열대 고치기"}</b><em>올린 것을 내려요</em></span></button>
+      <div class="kd-tiles two" style="margin-top:14px">
+        <button class="kd-tile grape" onclick="App.storeAddOpen()">
+          <span class="em" aria-hidden="true">＋</span><span class="nm">진열대에 올리기</span></button>
+        <button class="kd-tile" onclick="App.storeEditToggle()">
+          <span class="em" aria-hidden="true">${S.storeEdit ? "✓" : "✏️"}</span>
+          <span class="nm">${S.storeEdit ? "다 고쳤어요" : "진열대 고치기"}</span></button>
       </div>`}`}
 
-    <button class="ms-mkbtn" onclick="location.hash='#tickets'">
-      <i aria-hidden="true" class="ti ti-receipt"></i>
-      <span><b>내 티켓</b><em>바꾼 것들이 여기 모여요</em></span></button>
-
+    <button class="kd-card shop" style="margin-top:14px" onclick="location.hash='#tickets'">
+      <span class="em" aria-hidden="true">🎟</span>
+      <span class="t">내 티켓<em>바꾼 것들이 여기 모여요</em></span>
+      <span class="ar">›</span>
+    </button>
+    </div>
     ${storeAddSheet()}`;
   },
 
@@ -2470,21 +2503,29 @@ const Screens = {
   tickets: () => {
     const c = cur();
     const kid = isChildToken() || S.childView || S.kidMode;
-    // 빈 상태는 상점과 **같은 문법**으로 — 한쪽만 맨 글씨면 덜 만든 화면으로 읽힌다
-    if (!c) return `${subHeader("내 티켓")}
+    /* 2026-08-12 듀오링고 캐논 — 상점과 같은 세계, 같은 머리 */
+    const hd = `
+      <div class="kd-hd">
+        <button class="kd-bk" onclick="location.hash='#store'" aria-label="뒤로">‹</button>
+        <span class="ti">내 티켓</span>
+      </div>`;
+    if (!c) return `<div class="kd-scr">${hd}
       <div class="ms-empty">
         <b>아이를 등록하면 열려요</b>
-        <button class="btn-primary" onclick="App.childAddStart()">아이 등록하기</button>
-      </div>`;
-    if (S.rewards === null) return `${subHeader("내 티켓")}<p class="sub">불러오는 중…</p>`;
-    if (!S.rewards.length) return `${subHeader("내 티켓")}
+        <button class="kd-btn" onclick="App.childAddStart()">아이 등록하기</button>
+      </div></div>`;
+    if (S.rewards === null) return `<div class="kd-scr">${hd}<p class="sub">불러오는 중…</p></div>`;
+    if (!S.rewards.length) return `<div class="kd-scr">${hd}
       <div class="ms-empty">
         <b>아직 바꾼 게 없어요</b>
-        <button class="btn-primary" onclick="location.hash='#store'">상점 열기</button>
-      </div>`;
+        <button class="kd-btn" onclick="location.hash='#store'">상점 열기</button>
+      </div></div>`;
 
+    const spent = S.rewards.reduce((a, o) => a + (o.stars_spent || 0), 0);
     return `
-    ${subHeader("내 티켓")}
+    <div class="kd-scr">
+    ${hd}
+    <div class="st-purse"><i aria-hidden="true">🎟</i><b>${S.rewards.length}</b><em>여태 바꾼 것 · 쓴 별 ★${spent}</em></div>
     <ul class="tk-list">
       ${S.rewards.map((o) => {
         const done = o.status === "fulfilled";
@@ -2504,7 +2545,13 @@ const Screens = {
                    onclick="App.rewardFulfill('${o.reward_order_id}')">${busy ? "…" : "바꿔줬어요"}</button>`}
         </li>`;
       }).join("")}
-    </ul>`;
+    </ul>
+    <button class="kd-card shop" style="margin-top:14px" onclick="location.hash='#store'">
+      <span class="em" aria-hidden="true">🏪</span>
+      <span class="t">스타코인 상점<em>또 바꾸러 가기</em></span>
+      <span class="ar">›</span>
+    </button>
+    </div>`;
   },
 
   /* ── 아이 모드 + 4자리 PIN (§0-6 · §5④) ─────────────────────────
@@ -3126,30 +3173,83 @@ const Screens = {
     const list = S.missions || [];
     const x = list.find((v) => v.id === S.msDetail);
     if (!x) return `${subHeader("미션")}<p class="sub">불러오는 중…</p>`;
-    const ST = { open: "아직", waiting: "확인 기다림", done: "완료", skipped: "못 했어요" };
-    return `
-    ${subHeader("미션", ST[x.status] || "")}
-    <h2 class="msc-dt">${esc(x.title)}</h2>
-    <div class="msc-meta">
-      <em>${esc(MISSION_AREA[x.area] || "")}</em>${x.minutes ? `<em>${x.minutes}분</em>` : ""}
-      <em class="star">★${x.stars}</em>
-      <em>${x.verify === "review" ? "사진 확인" : x.verify === "endday" ? "하루 끝 확인" : "눌러서 보고"}</em>
+
+    /* ══ 2026-08-12 «오후 4시의 운동장» (시각 정본 mockups/mission-B.html ③)
+       큰 아이콘 + 이름 + 칩 + 요일 도장판 + 버튼. 문장은 안 쓴다. */
+    const kid = isChildToken() || S.childView || S.kidMode;
+    const AREA_EM = { body: "💪", things: "🧸", study: "📖", prep: "🎒", read: "📚",
+      family: "💛", outside: "🌳", digital: "📱", mind: "🌈", money: "🪙" };
+    const busy = S.missionBusy === x.code ? "disabled" : "";
+
+    const hero = `
+    <div class="kd-hero">
+      <span class="bem" aria-hidden="true">${AREA_EM[x.area] || "⭐"}</span>
+      <h2>${esc(x.title)}</h2>
     </div>
-    ${x.status === "waiting" ? `
-      ${x.verify === "review"
-        ? `<img class="msc-photo" src="${PLACEHOLDER}" data-rec="/api/v1/missions/${x.id}/photo" alt="아이가 보낸 사진">`
-        : `<p class="msc-said">아이가 <b>다 했어요</b>를 눌렀어요</p>`}
-      <button class="btn-primary" onclick="App.missionApprove(${x.id});App.goHome()"><i aria-hidden="true" class="ti ti-check"></i>잘했어! 도장 찍기</button>
-      ${x.verify !== "review" ? "" : `
-      <button class="msc-keep ${S.keepShot === x.id ? "on" : ""}" onclick="App.keepShot(${x.id})">
-        <i aria-hidden="true" class="ti ${S.keepShot === x.id ? "ti-check" : "ti-photo"}"></i>
-        ${S.keepShot === x.id ? "도장 찍을 때 서랍에 넣어요" : "서랍에 보관하기"}</button>`}
-      <button class="msc-sub" onclick="App.missionRevert(${x.id});location.hash='#mission'">다시 해볼까?</button>
-      <p class="mp-hint" style="text-align:center">안 보면 <b>아침 8시</b> 자동</p>`
-    : x.status === "open" ? `
-      <button class="btn-primary" onclick="location.hash='#mission';App.missionPickOpen()"><i aria-hidden="true" class="ti ti-grip-vertical"></i>다른 미션으로 바꾸기</button>`
-    : `
-      <button class="btn-primary" onclick="App.missionRevert(${x.id});location.hash='#mission'">${x.status === "skipped" ? "다시 줘볼까?" : "다시 해볼까?"}</button>`}`;
+    <div class="kd-chips">
+      <span>${esc(MISSION_AREA[x.area] || "")}</span>
+      ${x.minutes ? `<span>${x.minutes}분</span>` : ""}
+      <span class="star">★${x.stars}</span>
+      ${x.verify === "review" ? `<span class="dawn">📷 사진</span>` : ""}
+    </div>`;
+
+    /* 빈 화면 금지(2026-08-12 대표님: 「빈공간 많은 곳을 채워 넣어라」) —
+       «왜 이 미션인가»는 시드에 이미 있다. 지어내지 않고 있는 것만 꺼내 보여준다. */
+    const why = !x.why ? "" : `
+    <div class="kd-why"><b>왜 이 미션인가요</b>${esc(x.why)}</div>`;
+    const hint = x.verify !== "review" || !x.verify_hint ? "" : `
+    <div class="kd-why dawn"><b>사진은 이렇게</b>${esc(x.verify_hint)}</div>`;
+
+    /* 지난 이레 — 부모가 «바꿀까»를 정하는 근거. 서버가 준 것만 그린다(S.msWeek — msOpen 이 받아 온다) */
+    const week = (() => {
+      if (kid) return "";
+      const w = S.msWeek && S.msWeek.code === x.code ? S.msWeek.days : null;
+      if (!w) return "";
+      return `
+      <div class="kd-week"><div class="dots">
+        ${w.map((d) => `
+        <span class="d ${d.today ? "today" : d.st === "done" ? "on" : d.st === "miss" ? "miss" : ""}">
+          <i>${d.st === "done" ? "✓" : d.st === "miss" ? "·" : d.today ? "·" : "—"}</i>${d.today ? "오늘" : d.wd}</span>`).join("")}
+      </div></div>`;
+    })();
+
+    /* 발판 — 역할·상태로 갈린다. 아이 = 해내는 자리, 부모 = 손보는 자리 */
+    const foot = (() => {
+      if (kid) {
+        if (x.status === "done") return `<button class="kd-btn" onclick="location.hash='#mission'">다 했어요!</button>`;
+        if (x.status === "waiting") return `<button class="kd-btn sub" onclick="location.hash='#mission'">엄마아빠가 볼 거예요</button>`;
+        return x.verify === "review"
+          ? `<button class="kd-btn dawn" onclick="S.kidShootId=${x.id};location.hash='#childshoot'">📷 사진 찍기</button>`
+          : `<button class="kd-btn" onclick="App.missionDone(${x.id})">다 했어요!</button>`;
+      }
+      if (x.status === "waiting") return `
+        ${x.verify === "review"
+          ? `<img class="kd-photo" src="${PLACEHOLDER}" data-rec="/api/v1/missions/${x.id}/photo" alt="아이가 보낸 사진">`
+          : ""}
+        <button class="kd-btn" onclick="App.missionApprove(${x.id});App.goHome()">잘했어! 도장 찍기</button>
+        ${x.verify !== "review" ? "" : `
+        <button class="kd-btn sub" onclick="App.keepShot(${x.id})">${S.keepShot === x.id ? "✓ 도장 찍을 때 서랍에 넣어요" : "서랍에 보관하기"}</button>`}
+        <button class="kd-btn sub" onclick="App.missionRevert(${x.id});location.hash='#mission'">다시 해볼까?</button>`;
+      if (x.status === "open") return `
+        <button class="kd-btn" ${busy} onclick="App.missionEdit('${jsq(x.code)}','swap')">이것만 바꾸기</button>
+        <button class="kd-btn sub" ${busy} onclick="App.missionEdit('${jsq(x.code)}','drop')">오늘은 빼기</button>
+        <button class="kd-btn sub" onclick="location.hash='#mission';App.missionPickOpen()">직접 고르기</button>`;
+      return `<button class="kd-btn" onclick="App.missionRevert(${x.id});location.hash='#mission'">${x.status === "skipped" ? "다시 줘볼까?" : "다시 해볼까?"}</button>`;
+    })();
+
+    return `
+    <div class="kd-scr">
+      <div class="kd-hd">
+        <button class="kd-bk" onclick="location.hash='#mission'" aria-label="뒤로">‹</button>
+        <span class="ti">미션</span>
+      </div>
+      ${hero}
+      ${why}
+      ${hint}
+      ${week}
+      <div style="flex:1"></div>
+      <div class="kd-act">${foot}</div>
+    </div>`;
   },
 
   /* ── 미션 고르기 — 전용 전체 화면 (2026-08-03 지시) ──────────────
@@ -3174,14 +3274,19 @@ const Screens = {
     }
     const BANDS = [["low", "저학년"], ["mid", "중학년"], ["high", "고학년"]];
 
+    /* 2026-08-12 듀오링고 캐논 — kd-scr 껍데기 + 사탕알 머리. 반환부의 여닫이와 짝이다 */
     const head = `
-      ${subHeader("미션 고르기", `${picked.length}개 담김`)}
+      <div class="kd-hd">
+        <button class="kd-bk" onclick="location.hash='#mission'" aria-label="뒤로">‹</button>
+        <span class="ti">미션 고르기</span>
+        <span class="kd-pill star">${picked.length}개</span>
+      </div>
       <div class="mk-bands">
         ${BANDS.map(([v, n]) => `<button class="${band === v ? "on" : ""}" onclick="App.pickBand('${v}')">${n}</button>`).join("")}
       </div>`;
 
-    if (!Array.isArray(list)) return `${head}<p class="sub" style="margin-top:20px">불러오는 중…</p>`;
-    if (!list.length) return `${head}<p class="sub" style="margin-top:20px">고를 수 있는 미션이 없어요</p>`;
+    if (!Array.isArray(list)) return `<div class="kd-scr">${head}<p class="sub" style="margin-top:20px">불러오는 중…</p></div>`;
+    if (!list.length) return `<div class="kd-scr">${head}<p class="sub" style="margin-top:20px">고를 수 있는 미션이 없어요</p></div>`;
 
     const row = (m) => {
       const on = picked.includes(m.code);
@@ -3207,6 +3312,7 @@ const Screens = {
     if (rest.length) byArea.push(["_etc", rest]);
 
     return `
+    <div class="kd-scr">
     ${head}
     ${!rec.length ? "" : `
     <div class="mk-sec">
@@ -3228,6 +3334,7 @@ const Screens = {
     <div class="mk-bot">
       <button class="mk-go" ${picked.length ? "" : "disabled"} onclick="App.missionSave()">
         ${picked.length ? `${picked.length}개 담기` : "고른 것이 없어요"}</button>
+    </div>
     </div>`;
   },
 
@@ -5421,9 +5528,12 @@ function parentMissionAdmin(c, coin) {
      아이 테마는 배경 그라데이션 한 쌍만 바뀌고 카드는 항상 흰색이다.
    ⚠ 아이콘은 전부 이모지다. 서브셋 폰트에 없는 `ti-*` 를 쓰면 빈 네모가 뜬다(08-07 사고). */
 
-/* 하루 코인 상한 — 서버(star_core.DAILY_COIN_LIMIT)가 정본이고 여기는 «아직 못 받았을 때»의 기본값이다.
-   🔴 대표님 확정 대기(60 제안). 두 곳이 갈리면 화면이 거짓말을 하므로 서버 값이 오면 그걸 쓴다. */
-const COIN_LIMIT = 60;
+/* 하루 코인 상한 — **서버가 정본이다**(star_core.js 의 `ECON`, 아이마다 「별 라인」으로 다르다).
+   여기 값은 «서버가 아직 답을 안 준 그 찰나»에만 쓰이는 임시 눈금이다.
+   🔴 절대 이 숫자를 늘려 쓰지 마라. 앱에 숫자를 박으면 값을 바꿀 때마다 APK 를 다시 만들어야 한다 —
+      서버에만 두면 워커 배포 한 번으로 끝난다(2026-08-12 대표님 지시).
+   ⚠ 옛 60 은 «안 닿는 천장»이었다. 지금 기본값은 25 이고 부모가 10~35 로 옮긴다. */
+const COIN_LIMIT = 25;
 
 /* 배경 테마 5종 — 실제로 바뀌는 것은 CSS 변수 두 개뿐이다(§01.1) */
 const GM_THEMES = [
@@ -5711,7 +5821,8 @@ function gmShopBar(withTicket) {
   return `
   <div class="gm-shopwrap">
     ${withTicket ? gmTicketBar() : ""}
-    <button class="gm-shopbar" onclick="App.gameTab('shop')">
+    <!-- 2026-08-12: 상점은 kd 세계(#store)다 — 게임 안 shop 탭은 옛 파랑 세계라 안 보낸다 -->
+    <button class="gm-shopbar" onclick="location.hash='#store'">
       <span class="gm-si">🏪</span>
       <span class="gm-sb"><b>스타코인 상점</b><em>모은 ★로 바꾸기</em></span>
       <span class="gm-sc">★${stars}</span>
@@ -5793,7 +5904,7 @@ function gameQuiz() {
         <b>맞힌 만큼 ★</b>
         <p>${q.total}문제 · 한 문제 ${gmSec(q)}초</p>
         <p class="quiet">다 맞히면 보너스 ★${q.perfect_bonus}</p>
-        <button class="gm-go" onclick="App.quizStart()">시작하기 ▶</button>
+        <button class="gm-go" onclick="App.quizStart()">${q.answered ? `이어서 하기 ▶ (${q.answered + 1}번부터)` : "시작하기 ▶"}</button>
       </div>
     </div>`;
   }
@@ -5808,6 +5919,8 @@ function gameQuiz() {
       <div class="qz-hd">
         <span class="qz-no">${S.quizIdx + 1} / ${q.total}</span>
         <span class="qz-field">${esc(QUIZ_FIELD_KO[item.field] || "")}</span>
+        <!-- 중간 나가기(2026-08-12 대표님). 푼 것은 서버에 남고, 돌아오면 그 다음부터 이어진다 -->
+        <button class="qz-quit" onclick="App.quizQuit()" aria-label="나가기">✕</button>
       </div>
       <div class="qz-timer"><span style="width:${ratio}%"></span></div>
       <div class="qz-mid">
@@ -6209,9 +6322,12 @@ function coachView() {
    홈 코치마크와 같은 옷(cm-*)을 입는다. 새 문법을 만들면 배우는 건 사용자다.
    석 장이면 된다: ①카드 ②만지는 세 버튼 ③확인·미리보기. 더 길면 안 읽는다. */
 const MS_COACH = [
-  { t: "매일 아침 3개가 저절로 와요", p: "카드를 누르면 자세히 보고, 아이가 해내면 도장을 찍어요.", spot: ".msc" },
-  { t: "바꾸고 · 고르고 · 만들어요", p: "🎲는 오늘 것을 바꿔요(하루 한 번). 직접 고르거나 우리 집 미션을 만들 수도 있어요.", spot: ".ms-actrow" },
-  { t: "아이 눈으로 볼 수 있어요", p: "아이가 해서 보내면 맨 위에 「확인해 주세요」가 떠요. 아이 화면 그대로 보기도 여기서.", spot: ".ms-preview", cta: "시작하기" },
+  /* ⚠ 「3개」라고 쓰지 마라 — 개수는 고정이 아니다(2026-08-12). 별 라인에 따라 2~8개로 변한다.
+     화면이 숫자를 지어내면 부모가 그걸 규칙으로 믿는다.
+     ⚠ spot 은 kd- 세계의 클래스다(2026-08-12 듀오링고 이식) — 옛 .msc/.ms-actrow 는 없다. */
+  { t: "오늘의 길만 정하면 돼요", p: "−·＋로 길이를 정하면 그만큼 미션이 저절로 와요. 아이가 아무리 눌러도 이 길이를 넘지 않아요.", spot: ".kd-path" },
+  { t: "줄을 누르면 손볼 수 있어요", p: "마음에 안 드는 미션은 「이것만 바꾸기」 한 번이면 다른 걸로 바뀌어요.", spot: ".kd-q" },
+  { t: "바꾸고 · 고르고 · 만들어요", p: "🎲는 오늘 것을 바꿔요(하루 한 번). 직접 고르거나 우리 집 미션을 만들 수도 있어요.", spot: ".kd-tiles", cta: "시작하기" },
 ];
 function msCoachView() {
   const i = S.msCoach;
@@ -7749,6 +7865,9 @@ const App = {
     /* 미션은 **홈에서도** 받아온다 — 홈 카드에 「오늘 2/3」이 떠야 부모가 누를 이유가 생긴다.
        미션·자녀 화면에서도 같은 값을 쓴다. 한 번 받아오면 다시 안 부른다(force 로만 갱신). */
     if (["home", "mission"].includes(name) && S.loggedIn && S.missions === null) this.loadMissions();
+    /* 미션 화면의 «별 라인» 카드가 econ 을 필요로 한다 — 없으면 카드가 통째로 안 그려진다.
+       loadCoin 이 econ 을 같이 받아 온다(2026-08-12). */
+    if (name === "mission" && S.loggedIn && !S.econ) this.loadCoin();
     // 보상 화면 로더 (2026-08-07) — 필요한 화면에서만(첫 화면을 늦추지 않게)
     if (["game"].includes(name) && S.loggedIn) { this.loadCoin(); if (S.missions === null) this.loadMissions(); }
     if (["store", "home", "game"].includes(name) && S.loggedIn && S.store === null) this.loadStore();
@@ -7822,11 +7941,14 @@ const App = {
        미션(파랑)에서 「고르기」를 누르면 부모 베이지 화면이 떴다 — 세계를 오가는 꼴.
        미션에서 타고 들어가는 화면은 **전부** 같은 세계를 입는다.
        #edit(만들기 편집기)는 일정·준비물과 공용이라 **미션으로 들어왔을 때만** 입는다. */
-    const WORLD = ["tickets", "store", "mission", "missionpick", "missionone"];
+    /* 2026-08-12: 미션·상점·티켓은 «오후 4시의 운동장»(kd-)으로 이사 — gmw(파랑 세계)로
+       감싸면 그 그라데이션이 kd 바탕을 덮는다(에뮬 실측으로 잡음). 이제 감싸지 않는다.
+       ⚠ edit(만들기)는 일정·준비물과 공용 폼이라 일단 A캐논 그대로 둔다 — STATUS ⓪ 남은 일. */
+    const WORLD = [];
     const KID_ONLY = ["childmealrate", "childfriend", "childsubject", "childtt"];
     const kidNow = isChildToken() || S.kidMode;
     const asKid = WORLD.includes(name) || (kidNow && KID_ONLY.includes(name))
-      || (name === "edit" && S.edit && S.edit.kind === "mission");
+      ;
     const body = Screens[name]();
     document.getElementById("screen").innerHTML =
       (asKid ? `<div class="gmw">${body}</div>` : body)
@@ -9535,8 +9657,9 @@ const App = {
         : "확인 기다림으로 넘어갔어요");
       return;
     }
-    /* 자녀 화면에선 토스트 대신 **축하 오버레이** — 완료 순간이 이 앱의 봉우리다(테마 시안 확정). */
-    if (isChildToken() || S.childView) { S.kidHooray = { title: m?.title || "", stars: d.got }; this.render(); }
+    /* 자녀 화면에선 토스트 대신 **축하 오버레이** — 완료 순간이 이 앱의 봉우리다(테마 시안 확정).
+       ⚠ kidMode(부모의 아이 화면 미리보기)도 포함 — 빠뜨리면 미리보기에서 축하가 안 보인다(08-12 실측). */
+    if (isChildToken() || S.childView || S.kidMode) { S.kidHooray = { title: m?.title || "", stars: d.got }; this.render(); }
     else toast(`★${d.got} 받았어요!`);
     this.loadMissionSets(true);   // 세트가 완주됐는지는 **서버가** 판단한다
   },
@@ -10187,15 +10310,55 @@ const App = {
     if (!TOKENS.access || !c?.server_id) return;
     if (S.coin && !force) return;
     try {
-      // 코인 상태는 퀴즈 응답이 같이 준다 — 따로 부르는 길이 없으므로 상점 응답으로 대신한다
-      const r = await api(`/children/${c.server_id}/store`);
-      if (r?.ok && typeof r.data.stars === "number") {
-        S.coin = { stars: r.data.stars, earned_today: S.coin?.earned_today || 0,
-                   limit: S.coin?.limit || COIN_LIMIT, room: S.coin?.room ?? COIN_LIMIT,
-                   level: S.coin?.level || 1, streak: S.coin?.streak || 0 };
+      /* ⚙️ `/econ` 하나로 **경제 설정과 코인 상태를 같이** 받는다(2026-08-12).
+         여태는 상점 응답에서 잔액만 긁어 오고 `earned_today`·`limit` 은 **앱이 지어냈다** —
+         그래서 「오늘 0/60」이 늘 떠 있었다. 이제 서버가 센 값을 그대로 쓴다.
+         🔴 그리고 이 응답이 **숫자의 정본**이다 — 상한·별 라인·보너스·재도전 값이 다 여기 있다.
+            앱에 상수로 박지 마라. 서버(star_core.js ECON)를 고치면 배포 한 번으로 반영된다. */
+      const r = await api(`/children/${c.server_id}/econ`);
+      if (r?.ok) {
+        S.econ = r.data;
+        if (r.data.coin) S.coin = r.data.coin;
       }
     } catch (_) {}
     this.render();
+  },
+
+  /* 부모가 하루 별 예산을 옮긴다. 서버가 범위를 지키므로 여기서는 넘겨만 준다.
+     ⚠ 오늘 이미 나간 미션은 안 바뀐다(서버 주석 참고) — 새 라인은 내일 배정부터다. */
+  async starLineSet(n) {
+    const c = cur();
+    if (!c?.server_id || S.lineBusy) return;
+    S.lineBusy = true; this.render();
+    try {
+      const r = await api(`/children/${c.server_id}/star-line`, { method: "PUT", body: { star_line: n } });
+      if (r?.ok) {
+        if (S.econ) { S.econ.star_line = r.data.star_line; S.econ.limit = r.data.limit; }
+        if (r.data.coin) S.coin = r.data.coin;
+        toast(`하루 별 라인 ★${r.data.star_line}`);
+      } else toast(r?.error?.message || "잘 안 됐어요");
+    } catch (_) { toast("잘 안 됐어요"); }
+    S.lineBusy = false;
+    await this.loadCoin(true);
+  },
+
+  /* 🔁 이것만 바꾸기 / 오늘은 빼기 — 부모가 미션 하나를 **한 번 눌러** 손본다.
+     여태는 155개 카탈로그를 열어 처음부터 다시 골라야 했다. */
+  async missionEdit(code, how) {
+    const c = cur();
+    if (!c?.server_id || S.missionBusy) return;
+    S.missionBusy = code; this.render();
+    try {
+      const r = await api(`/children/${c.server_id}/missions`, { method: "PUT", body: { [how]: [code] } });
+      S.missionBusy = null;
+      if (!r?.ok) { this.render(); toast(r?.error?.message || "잘 안 됐어요"); return; }
+      /* ⚠ 상세 화면(#missionone)에 그대로 서 있으면 방금 바꾼 미션이 사라져
+         「불러오는 중…」에 갇힌다 — 목록으로 돌려보낸다(2026-08-12 브라우저 실측). */
+      S.msDetail = null;
+      if ((location.hash || "") === "#missionone") location.hash = "#mission";
+      await this.loadMissions(true);
+      toast(how === "swap" ? "다른 미션으로 바꿨어요" : "오늘 목록에서 뺐어요");
+    } catch (_) { S.missionBusy = null; this.render(); toast("잘 안 됐어요"); }
   },
 
   /* 게임 화면에 들어올 때 한 번에 불러온다 — 카드가 하나씩 뒤늦게 뜨면 «고장»으로 읽힌다 */
@@ -10255,8 +10418,20 @@ const App = {
 
   quizStart() {
     if (!S.quiz?.items?.length) return;
-    S.quizIdx = 0; S.quizPick = {};
+    /* 중간에 나갔다 오면 **푼 다음 문제부터** — 문제 순서는 판이 고정이고, 답은 앞에서부터
+       순서대로 잠기므로 «answered 개수 = 다음 문제 번호»다. 0부터 다시 돌리면
+       이미 잠긴 문제에서 「이미 답했어요」가 떠서 아이가 갇힌다(2026-08-12). */
+    S.quizIdx = Math.min(S.quiz.answered || 0, S.quiz.items.length - 1);
+    S.quizPick = {};
     this.quizTick();
+    this.render();
+  },
+
+  /* 중간 나가기 — 벌 없음. 푼 것은 서버 원장에 이미 있으니 잃는 게 없다. */
+  quizQuit() {
+    clearInterval(QUIZ_TIMER); clearTimeout(FEED_TIMER);
+    S.quizFeed = null; S.quizMy = null; S.quizIdx = -1; S._answering = false;
+    this.loadQuiz(true);           // 서버가 센 answered 로 다시 맞춘다 — 이어하기의 근거
     this.render();
   },
 
@@ -10766,7 +10941,17 @@ const App = {
     Object.keys(S.todayCards).forEach((k) => { S.todayCards[k] = true; });
     saveHome(); this.render(); toast("모두 켰어요");
   },
-  msOpen(id) { S.msDetail = id; location.hash = "#missionone"; this.render(); hydrateImages(); },
+  msOpen(id) {
+    S.msDetail = id; location.hash = "#missionone"; this.render(); hydrateImages();
+    /* 지난 이레 — 부모만. 늦게 와도 화면이 다시 그려질 뿐이라 기다리지 않는다 */
+    const m = (S.missions || []).find((v) => v.id === id);
+    const c = cur();
+    if (m && c?.server_id && !(isChildToken() || S.childView || S.kidMode)
+        && !(S.msWeek && S.msWeek.code === m.code)) {
+      api(`/children/${c.server_id}/missions/week?code=${encodeURIComponent(m.code)}`)
+        .then((r) => { if (r?.ok) { S.msWeek = r.data; this.render(); } }).catch(() => {});
+    }
+  },
   msClose() { S.msDetail = null; S.keepShot = null; location.hash = "#mission"; this.render(); },
 
   /* ── «서랍에 보관» (§2) — 사진 확인 시트에서 도장과 나란히 선다.

@@ -14,9 +14,13 @@
 import { apiOk, apiList, apiErr, readJson } from "./api_core.js";
 import { resolveAuth } from "./auth_core.js";
 // 스타코인은 star_core 한 곳에서만 다룬다 — 리밋을 여기저기서 세면 반드시 어긋난다(2026-08-08)
-import { grantStars, spendStars, starsOf as coinBalance, coinState, BONUS } from "./star_core.js";
+import { grantStars, spendStars, starsOf as coinBalance, coinState, BONUS,
+         ECON, clampLine, starLineOf, coinLimitOf, missionBudgetOf } from "./star_core.js";
 
-const DAY_PICK = 3;              // 하루에 주는 개수
+/* ⚠ 옛 「하루 3개」. 이제 **개수가 아니라 별 라인**으로 채운다(2026-08-12) —
+   저학년 미션은 별이 1~2 라서 3개면 4점밖에 안 됐다. 여기 남은 건 안전선 하나뿐:
+   부모가 목록에서 고를 때 한 번에 담을 수 있는 최대치(ECON.maxPerDay). */
+const DAY_PICK = ECON.maxPerDay;
 const PHOTO_KEEP_DAYS = 7;       // 미션 사진 보관 기간. 서랍(기록)과 **별개**다
 const PHOTO_MAX = 3 * 1024 * 1024;
 
@@ -68,10 +72,79 @@ async function gate(request, db, env, childId) {
   return { child, auth, isChild: auth.role === "child" };
 }
 
+/* ── ⚙️ GET /api/v1/children/{id}/econ — 경제 설정을 앱에 내려보낸다 ──
+   🔴 **앱은 이 숫자들을 자기 안에 안 들고 있다.** 여기서 받아 쓴다.
+      그래서 `star_core.js` 의 ECON 을 고치고 워커만 배포하면 **그 자리에서 반영된다** —
+      APK 를 다시 만들 필요도, 스토어를 기다릴 필요도 없다(2026-08-12 대표님 지시).
+   ⚠ 새 숫자를 만들면 **여기에도 실어라.** 안 실으면 앱은 옛 임시값을 계속 쓴다. */
+async function econ(request, db, env, childId) {
+  const g = await gate(request, db, env, childId);
+  if (g.err) return g.err;
+  const line = await starLineOf(db, g.child.id);
+  return apiOk({
+    star_line: line,
+    line_min: ECON.starLineMin, line_max: ECON.starLineMax, line_step: ECON.starLineStep,
+    line_default: ECON.starLineDefault,
+    limit: coinLimitOf(line),
+    hidden_limit: ECON.hiddenLimit,
+    max_per_day: ECON.maxPerDay, min_per_day: ECON.minPerDay,
+    mission_budget: missionBudgetOf(line),   // 의뢰 미션이 맡는 몫 — 나머지는 퀴즈·세트·기록
+    auto_pass_instant: !!ECON.autoPassInstant,
+    bonus: ECON.bonus,
+    retry_cost: ECON.retryCost,
+    coin: await coinState(db, g.child.id),
+  });
+}
+
+/* ── PUT /api/v1/children/{id}/star-line — 부모가 하루 별 예산을 정한다 ──
+   아이는 못 바꾼다. 이게 「무조건 통과」를 막는 유일한 손잡이라서 아이가 쥐면 의미가 없다. */
+async function setStarLine(request, db, env, childId) {
+  const g = await gate(request, db, env, childId);
+  if (g.err) return g.err;
+  if (g.isChild) return apiErr("FORBIDDEN", null, "별 라인은 부모님이 정해요.");
+  const b = await readJson(request);
+  const raw = Number(b && b.star_line);
+  if (!Number.isFinite(raw) || raw <= 0) {
+    return apiErr("VALIDATION", { fields: { star_line: "하루 별 예산을 정해 주세요." } });
+  }
+  const line = clampLine(raw);
+  await db.prepare("UPDATE children SET star_line = ? WHERE id = ?").bind(line, g.child.id).run();
+  /* ⚠ 오늘 이미 배정된 미션은 **건드리지 않는다.** 아이가 보고 있던 목록이 눈앞에서 바뀌면
+     「했는데 없어졌다」가 된다. 새 라인은 내일 배정부터 — 오늘 당장 늘리고 싶으면
+     부모가 add 로 하나 더 주면 된다(그 길을 이번에 열었다). */
+  return apiOk({ star_line: line, limit: coinLimitOf(line), coin: await coinState(db, g.child.id) });
+}
+
+/* ── GET /api/v1/children/{id}/missions/week?code=X — 이 미션의 지난 이레 ──
+   부모가 「이것만 바꾸기」를 누를지 정하는 근거다. 설명이 아니라 **해 온 기록**을 보여준다.
+   done=했다 · miss=받았는데 안 했다 · none=그날 이 미션이 없었다. */
+async function missionWeek(request, db, env, childId, url) {
+  const g = await gate(request, db, env, childId);
+  if (g.err) return g.err;
+  const code = String(url.searchParams.get("code") || "");
+  if (!code) return apiErr("VALIDATION", null, "어떤 미션인지 알 수 없어요.");
+  const WD = ["일", "월", "화", "수", "목", "금", "토"];
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(Date.now() - i * 86400000);
+    const ymd = ymdKst(d);
+    const r = await db.prepare(
+      "SELECT status FROM mission_assign WHERE child_id = ? AND ymd = ? AND mission_code = ?"
+    ).bind(g.child.id, ymd, code).first();
+    days.push({
+      ymd, wd: WD[new Date(d.getTime() + 9 * 3600 * 1000).getUTCDay()],
+      today: i === 0,
+      st: !r ? "none" : r.status === "done" ? "done" : i === 0 ? "none" : "miss",
+    });
+  }
+  return apiOk({ code, days });
+}
+
 const shape = (r) => ({
   id: r.id, code: r.mission_code, title: r.title, area: r.area,
   minutes: r.minutes, verify: r.verify, verify_hint: r.verify_hint,
   slot: r.slot, stars: r.stars, caution: r.caution || null,
+  why: r.why || null,   // 미션 하나 화면의 «왜 이 미션인가요» — 빈 화면 채우기(2026-08-12 대표님)
   status: r.status, has_photo: !!r.photo_key,
   claimed_at: r.claimed_at, decided_at: r.decided_at, auto_at: r.auto_at,
   got: r.got_stars,
@@ -81,7 +154,7 @@ async function todayRows(db, childId, ymd) {
   const { results } = await db.prepare(
     `SELECT a.id, a.mission_code, a.status, a.photo_key, a.claimed_at, a.decided_at, a.auto_at,
             a.stars AS got_stars,
-            m.title, m.area, m.minutes, m.verify, m.verify_hint, m.slot, m.stars, m.caution
+            m.title, m.area, m.minutes, m.verify, m.verify_hint, m.slot, m.stars, m.caution, m.why
        FROM mission_assign a JOIN missions m ON m.code = a.mission_code
       WHERE a.child_id = ? AND a.ymd = ?
       ORDER BY (a.status='open') DESC, m.verify, a.id`
@@ -90,24 +163,83 @@ async function todayRows(db, childId, ymd) {
 }
 
 /* 오늘 것이 없으면 자동으로 채운다 — **부모가 안 들어와도 아이는 미션을 받는다.**
-   즉시 2 + 대기 1 이 기본. 그날 아무 도장도 못 받는 상황을 막는다(규칙 ②). */
+   그날 아무 도장도 못 받는 상황을 막는다(규칙 ②).
+
+   ── 2026-08-12 «별 라인»으로 바뀐 것 ────────────────────────────────
+   옛 방식은 «즉시 2 + 사진 1» 로 **개수를 고정**했다. 그런데 저학년 미션은 별이 1~2 라
+   3개를 다 해도 4점이었다 — 상한 60 은커녕 15도 안 됐다.
+   이제 **부모가 정한 별 라인이 찰 때까지** 넣는다. 학년이 올라 별이 커지면 개수는 저절로 준다.
+   ⚠ 개수 안전선은 남긴다 — 1점짜리로 라인을 채우면 20개가 되고, 그건 미션이 아니라 숙제다.
+   ⚠ 사진(review)은 **하루 한 장까지**. 세 장은 아이에게 숙제가 된다(규칙 ②의 원래 이유). */
 async function ensureToday(db, child) {
   const ymd = ymdKst();
   const have = await todayRows(db, child.id, ymd);
   if (have.length) return have;
 
+  const line = missionBudgetOf(await starLineOf(db, child.id));
   const band = bandOf(child.grade), season = seasonOf();
-  const pick = async (verify, n) => {
-    const { results } = await db.prepare(
-      `SELECT code FROM missions
-        WHERE band = ? AND season = ? AND verify = ? AND active = 1
-        ORDER BY (id * 7 + ?) % 97 LIMIT ?`      // 날짜를 섞어 매일 같은 것만 나오지 않게
-    ).bind(band, season, verify, parseInt(ymd, 10) % 97, n).all();
-    return (results || []).map((x) => x.code);
-  };
-  let codes = [...(await pick("instant", 2)), ...(await pick("review", 1))];
-  if (codes.length < DAY_PICK) codes = [...codes, ...(await pick("endday", DAY_PICK - codes.length))];
-  codes = [...new Set(codes)].slice(0, DAY_PICK);
+
+  /* ⚠ **후보를 잘라서 뽑지 마라.** 한때 `LIMIT 16` 으로 뽑았는데, 그 16 개 안에 3점짜리가
+     한 개밖에 안 들어와서 라인을 20·40·60 어디에 둬도 별합이 13 에서 멈췄다(2026-08-12 실측).
+     밴드별 후보는 50 줄 남짓이라 통째로 읽어도 싸다 — 고르는 일은 아래 그리디가 한다. */
+  const { results: all } = await db.prepare(
+    `SELECT code, stars, verify FROM missions
+      WHERE band = ? AND season = ? AND active = 1 AND verify IN ('instant','review','endday')
+      ORDER BY (id * 7 + ?) % 97`      // 날짜를 섞어 매일 같은 것만 나오지 않게
+  ).bind(band, season, parseInt(ymd, 10) % 97).all();
+  const cand = all || [];
+
+  /* 사진 1개를 먼저 확보한 뒤 나머지를 채운다 — 사진이 뒤로 밀려 영영 안 걸리는 걸 막는다. */
+  const shot = cand.filter((m) => m.verify === "review").slice(0, 1);
+  const rest = cand.filter((m) => m.verify !== "review");
+
+  /* ── 예산을 «크기에 맞는 것»으로 채운다 ────────────────────────────
+     ⚠ 후보를 순서대로 집으면 1점짜리부터 걸려서 개수 안전선(8)에 먼저 닿는다 —
+        실측: 라인을 20·40·60 어디에 둬도 별합이 13 에서 멈췄다(2026-08-12).
+     그래서 매번 «남은 예산 ÷ 남은 자리»를 계산해 그 크기에 **가장 가까운 것**을 집는다.
+     라인이 크면 3점짜리가, 작으면 1점짜리가 자연히 걸린다. 순서는 이미 날짜로 섞여 있으므로
+     같은 크기 안에서는 매일 다른 것이 나온다.
+     ⚠ 사진(shot)은 예산과 무관하게 **먼저 한 장** 넣는다 — 뒤로 밀리면 영영 안 걸린다. */
+  const codes = [];
+  let sum = 0;
+  for (const m of shot) { codes.push(m.code); sum += m.stars || 1; }
+
+  /* 목표 «개수»를 먼저 정한다 — 몫 ÷ 바라는 크기(2.5).
+     ⚠ 남은 자리를 maxPerDay 로 세면 want 가 1 로 떨어져서 ★1 짜리를 잔뜩 집는다
+       (실측: 라인 20 에 ★1×7). 목표 개수로 세야 «적고 굵게»가 나온다. */
+  const target = Math.max(ECON.minPerDay,
+    Math.min(ECON.maxPerDay, Math.ceil(line / ECON.avgStarTarget)));
+
+  const pool = rest.filter((m) => !codes.includes(m.code));
+  while (codes.length < ECON.maxPerDay && pool.length) {
+    if (sum >= line && codes.length >= ECON.minPerDay) break;
+    const slotsLeft = Math.max(1, target - codes.length);
+    const want = Math.max(1, Math.ceil(Math.max(0, line - sum) / slotsLeft));
+    /* 원하는 크기에 가장 가까운 것. 같으면 «큰 쪽»을 집는다 —
+       작은 쪽을 집으면 남은 자리로 예산을 못 채우고 또 개수에 먼저 걸린다. */
+    let best = 0;
+    for (let i = 1; i < pool.length; i++) {
+      const a = Math.abs((pool[i].stars || 1) - want), b = Math.abs((pool[best].stars || 1) - want);
+      if (a < b || (a === b && (pool[i].stars || 1) > (pool[best].stars || 1))) best = i;
+    }
+    const m = pool.splice(best, 1)[0];
+    codes.push(m.code); sum += m.stars || 1;
+  }
+
+  /* ── 재고가 얇은 밴드·시즌을 위한 보충 ─────────────────────────────
+     2026-08-12 실측: **고학년 주말은 사진 아닌 미션이 단 2개**다(사진은 14개).
+     즉시형만 고집하면 그런 날은 미션이 두세 개로 끝나 아이가 할 게 없다.
+     그래서 예산이 남으면 사진을 **한 장 더까지** 얹는다.
+     ⚠ 두 장이 상한이다. 세 장은 미션이 아니라 숙제가 된다(규칙 ②). */
+  const MAX_SHOTS = 2;
+  if (sum < line && codes.length < ECON.maxPerDay) {
+    const more = cand.filter((m) => m.verify === "review" && !codes.includes(m.code));
+    while (codes.length < ECON.maxPerDay && sum < line && more.length
+           && codes.filter((c) => cand.find((m) => m.code === c && m.verify === "review")).length < MAX_SHOTS) {
+      const m = more.shift();
+      codes.push(m.code); sum += m.stars || 1;
+    }
+  }
 
   const now = nowIso();
   for (const c of codes) {
@@ -286,21 +418,110 @@ async function setToday(request, db, env, childId) {
   if (err) return err;
   if (isChild) return apiErr("FORBIDDEN");
   const b = await readJson(request);
-  const codes = Array.isArray(b && b.codes) ? b.codes.slice(0, DAY_PICK).map(String) : null;
-  if (!codes || !codes.length) return apiErr("VALIDATION", { fields: { codes: "미션을 골라 주세요." } });
+  const ymd = ymdKst(), now = nowIso();
+  const norm = (v) => (Array.isArray(v) ? [...new Set(v.map(String).filter(Boolean))].slice(0, DAY_PICK) : []);
+
+  /* ── 2026-08-12: «하나만» 바꾸는 길을 연다 ──────────────────────────
+     여태 이 API 는 `codes` 로 **오늘 것을 통째로 갈아끼우는** 방식뿐이었다.
+     그래서 부모가 미션 하나를 빼거나 더하려 해도 155개 목록을 다시 열어 전부 다시 골라야 했다
+     (대표님: 「부모미션을 주는 것도 매우 어렵고」). add/drop 이면 홈에서 한 번에 끝난다.
+     ⚠ 셋을 섞어 보내지 마라 — codes 가 오면 그게 정본이고 add/drop 은 무시한다. */
+  const codes = norm(b && b.codes);
+  const add = norm(b && b.add);
+  const drop = norm(b && b.drop);
+  const swap = norm(b && b.swap);
+  if (!codes.length && !add.length && !drop.length && !swap.length) {
+    return apiErr("VALIDATION", { fields: { codes: "미션을 골라 주세요." } });
+  }
+
+  /* ── 🔁 이것만 바꾸기 ────────────────────────────────────────────────
+     부모가 미션 하나를 마음에 안 들어 할 때 **한 번 눌러 끝나야 한다.**
+     여태는 155개 카탈로그를 열어 처음부터 다시 골라야 했다(대표님: 「부모미션 주는 것도 매우 어렵고」).
+     비슷한 크기(별)로 갈아 끼운다 — 별이 바뀌면 그날 예산이 어긋난다.
+     ⚠ **아직 손대지 않은 것(open)만** 바꾼다. 아이가 이미 한 것을 바꾸면 도장이 사라진다. */
+  if (swap.length) {
+    const { results: mine } = await db.prepare(
+      `SELECT a.mission_code, m.stars, m.verify FROM mission_assign a JOIN missions m ON m.code = a.mission_code
+        WHERE a.child_id = ? AND a.ymd = ? AND a.status = 'open'
+          AND a.mission_code IN (${swap.map(() => "?").join(",")})`
+    ).bind(child.id, ymd, ...swap).all();
+    if (!(mine || []).length) return apiErr("VALIDATION", null, "이미 한 미션은 바꿀 수 없어요.");
+
+    const band = bandOf(child.grade), season = seasonOf();
+    let changed = 0;
+    for (const row of mine) {
+      // 오늘 이미 붙어 있는 것은 후보에서 뺀다 — 같은 미션이 두 번 나오면 바뀐 것처럼 안 보인다
+      const { results: used } = await db.prepare(
+        "SELECT mission_code FROM mission_assign WHERE child_id = ? AND ymd = ?").bind(child.id, ymd).all();
+      const skip = (used || []).map((u) => u.mission_code);
+      /* 같은 크기를 먼저, 없으면 ±1 까지 넓힌다.
+         ⚠ 딱 맞는 별만 찾으면 «후보가 없어 조용히 아무 일도 안 하는» 일이 난다
+           (2026-08-12 실측: mid 평일 사진 아닌 ★3 이 한 개뿐이라 바꾸기가 먹통이었다).
+         ⚠ 사진 미션은 사진으로, 아닌 것은 아닌 것으로 바꾼다 — 하나뿐인 사진이 사라지면 안 된다. */
+      const sameKind = row.verify === "review" ? "= 'review'" : "!= 'review'";
+      const { results: alt } = await db.prepare(
+        `SELECT code FROM missions
+          WHERE band = ? AND season = ? AND active = 1 AND verify ${sameKind}
+            AND ABS(stars - ?) <= 1
+            AND code NOT IN (${skip.map(() => "?").join(",") || "''"})
+          ORDER BY ABS(stars - ?), (id * 13 + ?) % 89 LIMIT 1`
+      ).bind(band, season, row.stars, ...skip, row.stars, parseInt(ymd, 10) % 89).all();
+      if (!(alt || []).length) continue;   // 바꿀 게 없으면 그냥 둔다 — 빼 버리면 미션이 준다
+      await db.prepare("DELETE FROM mission_assign WHERE child_id = ? AND ymd = ? AND mission_code = ? AND status = 'open'")
+        .bind(child.id, ymd, row.mission_code).run();
+      await db.prepare(
+        "INSERT OR IGNORE INTO mission_assign (child_id, mission_code, ymd, status, created_at) VALUES (?, ?, ?, 'open', ?)"
+      ).bind(child.id, alt[0].code, ymd, now).run();
+      changed++;
+    }
+    /* 하나도 못 바꿨으면 **그렇다고 말한다.** 조용히 성공을 돌려주면 부모는 버튼이 고장 난 줄 안다. */
+    if (!changed) {
+      return apiErr("VALIDATION", { items: (await todayRows(db, child.id, ymd)).map(shape) },
+        "바꿀 만한 미션이 더 없어요. 「고르기」에서 직접 골라 주세요.");
+    }
+    return apiOk({ changed, items: (await todayRows(db, child.id, ymd)).map(shape) });
+  }
+
+  if (!codes.length) {
+    /* ── 하나만 빼기 / 더하기 ──
+       ⚠ **아직 손대지 않은 것(open)만** 뺀다. 아이가 이미 한 것을 부모가 빼면 도장이 사라진다. */
+    if (drop.length) {
+      await db.prepare(
+        `DELETE FROM mission_assign WHERE child_id = ? AND ymd = ? AND status = 'open'
+           AND mission_code IN (${drop.map(() => "?").join(",")})`
+      ).bind(child.id, ymd, ...drop).run();
+    }
+    if (add.length) {
+      const { results: ok } = await db.prepare(
+        `SELECT code FROM missions WHERE active = 1 AND code IN (${add.map(() => "?").join(",")})`
+      ).bind(...add).all();
+      const cnt = await db.prepare(
+        "SELECT COUNT(*) n FROM mission_assign WHERE child_id = ? AND ymd = ?").bind(child.id, ymd).first();
+      let room = Math.max(0, ECON.maxPerDay - ((cnt && cnt.n) || 0));
+      if (!room && (ok || []).length) {
+        return apiErr("LIMIT_EXCEEDED", null, `하루에 ${ECON.maxPerDay}개까지만 줄 수 있어요.`);
+      }
+      for (const r of (ok || [])) {
+        if (room-- <= 0) break;
+        await db.prepare(
+          "INSERT OR IGNORE INTO mission_assign (child_id, mission_code, ymd, status, created_at) VALUES (?, ?, ?, 'open', ?)"
+        ).bind(child.id, r.code, ymd, now).run();
+      }
+    }
+    return apiOk({ items: (await todayRows(db, child.id, ymd)).map(shape) });
+  }
 
   const { results: picked } = await db.prepare(
     `SELECT code, verify FROM missions WHERE active = 1 AND code IN (${codes.map(() => "?").join(",")})`
   ).bind(...codes).all();
   if (!picked.length) return apiErr("VALIDATION", { fields: { codes: "없는 미션이에요." } });
-  /* 규칙 ② — 셋 다 사진이면 아이가 부담스럽다.
-     (2026-08-02 이전엔 「그날 도장을 못 받는다」가 이유였는데, 이제 의뢰는 전부 부모 확인이라
-      도장 시점은 어차피 같다. 남은 이유는 «사진 세 장은 숙제가 된다»는 것 하나다.) */
+  /* 규칙 ② — 전부 사진이면 아이가 부담스럽다. 사진 세 장은 미션이 아니라 숙제가 된다.
+     (2026-08-12: 이제 즉시형은 누르면 바로 별이 나오므로, 즉시형이 하나라도 있어야
+      «오늘 뭔가 해냈다»가 그 자리에서 생긴다 — 이 규칙의 이유가 하나 더 늘었다.) */
   if (picked.length > 1 && picked.every((p) => p.verify === "review")) {
     return apiErr("VALIDATION", { fields: { codes: "사진 없이 눌러서 보고하는 것도 하나 넣어 주세요." } });
   }
 
-  const ymd = ymdKst(), now = nowIso();
   // 아직 손대지 않은 것만 치운다 — 이미 한 것을 지우면 아이가 받은 도장이 사라진다
   await db.prepare("DELETE FROM mission_assign WHERE child_id = ? AND ymd = ? AND status = 'open'")
     .bind(child.id, ymd).run();
@@ -339,9 +560,32 @@ async function claim(request, db, env, id) {
   if (a.status !== "open") return apiErr("VALIDATION", { status: a.status }, "이미 처리된 미션이에요.");
   if (a.verify === "review") return apiErr("VALIDATION", null, "사진을 찍어 보내주세요.");
 
-  /* 별은 여기서 주지 않는다. approve() 나 autoApprove 크론이 준다.
+  const now = nowIso();
+
+  /* ── ✅ 즉시 통과 (2026-08-12) ────────────────────────────────────
+     `instant` 미션은 **누른 그 자리에서 별이 나온다.**
+     2026-08-02 에 의뢰를 전부 부모 확인형으로 바꿨는데, 그 결과 「자동으로 되는 것이 하나도
+     없는」 상태가 됐다 — 155개 중 70개가 즉시형인데도 부모가 안 눌러주면 별이 안 나왔다.
+     아이는 「했는데 왜 안 줘」를 묻고, 부모는 매일 확인 버튼을 누르는 숙제를 받았다.
+
+     🔑 그럼 «무조건 통과»는 뭐가 막나 — **별 라인**이 막는다.
+        아무리 눌러도 하루 총량이 부모가 정한 예산을 못 넘는다(grantStars 가 깎아서 준다).
+        미션을 하나하나 검사하는 것보다 이쪽이 부모에게도 아이에게도 싸다.
+     ⚠ 되돌리기는 그대로 남는다 — 부모가 `revert` 하면 준 별까지 회수된다(spendStars).
+     ⚠ 사진(review)·하루끝(endday)은 **그대로 부모 확인**이다. 즉시형만 바뀐다. */
+  if (a.verify === "instant" && ECON.autoPassInstant) {
+    const g = await grantStars(db, a.child_id, a.mstars, "mission:" + a.mission_code);
+    await db.prepare("UPDATE mission_assign SET status='done', claimed_at=?, decided_at=?, stars=? WHERE id=?")
+      .bind(now, now, g.granted, id).run();
+    /* ⚠ `stars` 에 **실제로 들어간 양**을 적는다(a.mstars 가 아니라 g.granted).
+       상한에 걸려 깎였는데 원래 값을 적으면, 되돌릴 때 안 받은 별까지 회수된다. */
+    return apiOk({ status: "done", got: g.granted, capped: g.capped,
+                   coin: await coinState(db, a.child_id), stars: g.stars });
+  }
+
+  /* 확인형은 여기서 별을 주지 않는다. approve() 나 autoApprove 크론이 준다.
      여기서 주고 나중에 또 주면 두 배가 나간다 — 별 원장은 되돌리기 어렵다. */
-  const now = nowIso(), auto = autoAtIso();
+  const auto = autoAtIso();
   await db.prepare("UPDATE mission_assign SET status='waiting', claimed_at=?, auto_at=? WHERE id=?")
     .bind(now, auto, id).run();
   return apiOk({ status: "waiting", auto_at: auto });
@@ -506,10 +750,12 @@ async function approve(request, db, env, id) {
   const a = await findAssign(db, auth.ownerToken, id);
   if (!a) return apiErr("NOT_FOUND");
   if (a.status !== "waiting") return apiErr("VALIDATION", { status: a.status }, "확인할 수 없는 상태예요.");
+  /* ⚠ **먼저 주고, 실제로 들어간 양을 적는다.** 상한에 걸려 깎였는데 원래 값을 적어 두면
+     되돌릴 때 안 받은 별까지 회수된다(2026-08-12 즉시통과 붙이며 같이 고침). */
+  const g = await grantStars(db, a.child_id, a.mstars, "mission:" + a.mission_code);
   await db.prepare("UPDATE mission_assign SET status='done', decided_at=?, stars=? WHERE id=?")
-    .bind(nowIso(), a.mstars, id).run();
-  await grantStars(db, a.child_id, a.mstars, "mission:" + a.mission_code);
-  return apiOk({ status: "done", got: a.mstars, stars: await coinBalance(db, a.child_id) });
+    .bind(nowIso(), g.granted, id).run();
+  return apiOk({ status: "done", got: g.granted, capped: g.capped, stars: g.stars });
 }
 
 /* ── POST /api/v1/missions/{id}/revert — 부모가 되돌린다 ──
@@ -550,8 +796,9 @@ export async function missionCron(db, env) {
   for (const d of due) {
     const m = await db.prepare("SELECT stars FROM missions WHERE code = ?").bind(d.mission_code).first();
     const s = (m && m.stars) || 1;
-    await db.prepare("UPDATE mission_assign SET status='done', decided_at=?, stars=? WHERE id=?").bind(now, s, d.id).run();
-    await grantStars(db, d.child_id, s, "mission:" + d.mission_code);
+    const g = await grantStars(db, d.child_id, s, "mission:" + d.mission_code);
+    // 실제로 들어간 양을 적는다 — 상한에 걸린 날 되돌리면 안 받은 별이 회수된다
+    await db.prepare("UPDATE mission_assign SET status='done', decided_at=?, stars=? WHERE id=?").bind(now, g.granted, d.id).run();
   }
   const cut = new Date(Date.now() - PHOTO_KEEP_DAYS * 86400000).toISOString();
   const { results: old } = await db.prepare(
@@ -743,7 +990,13 @@ export async function handleMissionApi(request, db, env, url) {
   const mine = p.match(/^\/api\/v1\/missions\/(U-[0-9a-f]{8})$/);
   if (mine && m === "DELETE") return deleteCustom(request, db, env, mine[1]);
 
-  let x = p.match(/^\/api\/v1\/children\/(\d+)\/report\/?$/);
+  // ⚙️ 경제 설정 — 앱이 상수를 안 들고 여기서 받아 간다(2026-08-12)
+  let x = p.match(/^\/api\/v1\/children\/(\d+)\/econ\/?$/);
+  if (x && m === "GET") return econ(request, db, env, x[1]);
+  x = p.match(/^\/api\/v1\/children\/(\d+)\/star-line\/?$/);
+  if (x && m === "PUT") return setStarLine(request, db, env, x[1]);
+
+  x = p.match(/^\/api\/v1\/children\/(\d+)\/report\/?$/);
   if (x && m === "GET") return report(request, db, env, x[1]);
 
   x = p.match(/^\/api\/v1\/children\/(\d+)\/marks\/?$/);
@@ -754,6 +1007,10 @@ export async function handleMissionApi(request, db, env, url) {
   if (x && m === "GET") return missionSets(request, db, env, x[1]);
   x = p.match(/^\/api\/v1\/children\/(\d+)\/mission-sets\/bonus$/);
   if (x && m === "POST") return claimSetBonus(request, db, env, x[1]);
+
+  // 지난 이레 — ⚠ 아래 `/missions/?$` 보다 **먼저**(더 긴 경로가 앞)
+  x = p.match(/^\/api\/v1\/children\/(\d+)\/missions\/week$/);
+  if (x && m === "GET") return missionWeek(request, db, env, x[1], url);
 
   // 🎲 리롤 — ⚠ 아래 `/missions/?$` 보다 **먼저** 잡아야 한다(더 긴 경로가 앞)
   x = p.match(/^\/api\/v1\/children\/(\d+)\/missions\/reroll$/);
