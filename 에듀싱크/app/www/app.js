@@ -7827,8 +7827,12 @@ const App = {
       name = "game";
       if (location.hash !== "#game") history.replaceState(null, "", "#game");
     }
-    /* 🔒 아이 모드 — 열어 줄 화면은 넷뿐(§5④). 서랍만 감추면 주소·뒤로가기로 샌다 */
-    if (S.kidMode && !["game", "mission", "store", "tickets"].includes(name)) {
+    /* 🔒 아이 모드 — 아이 세계의 화면만 연다(§5④). 서랍만 감추면 주소·뒤로가기로 샌다.
+       ⚠ «넷뿐»으로 잠갔더니 **미션 상세(missionone)·사진 내기(childshoot)·학교미션 입력**까지
+         #game 으로 튕겨서 아이 모드에선 사진 미션을 낼 수도, 카드를 열 수도 없었다
+         (2026-08-12 전수검수 실클릭으로 잡음). 아이 세계 화면을 전부 연다 — 부모 화면은 여전히 막힌다. */
+    if (S.kidMode && !["game", "mission", "missionone", "store", "tickets", "childshoot",
+        "childmealrate", "childfriend", "childsubject", "childtt", "childtheme"].includes(name)) {
       name = "game";                       // 아이 모드의 홈도 게임이다(위 주석 참조)
       if (location.hash !== "#game") history.replaceState(null, "", "#game");
     }
@@ -9650,6 +9654,10 @@ const App = {
       const r = await api(`/missions/${id}/${path}`, { method: "POST", ...(body ? { body } : {}) });
       S.missionBusy = null;
       if (!r?.ok) { this.render(); toast(r?.error?.message || "잘 안 됐어요"); return null; }
+      /* 지갑 동기화(2026-08-12) — 응답에 coin 이 실려 오면 그대로 받고,
+         잔액(stars)만 오면 그 숫자만 갈아끼운다. 안 하면 되돌리기 뒤 ★알약이 옛값으로 남는다. */
+      if (r.data?.coin) S.coin = r.data.coin;
+      else if (typeof r.data?.stars === "number" && S.coin) S.coin = { ...S.coin, stars: r.data.stars };
       await this.loadMissions(true);
       return r.data;
     } catch (_) {
@@ -9660,6 +9668,9 @@ const App = {
     const m = (S.missions || []).find((x) => x.id === id);
     const d = await this._mission(id, "done");
     if (!d) return;
+    /* 서버가 준 지갑을 그대로 받는다(즉시통과 응답에 coin 이 실려 온다, 2026-08-12) —
+       안 받으면 ★알약이 다음 econ 로드까지 옛 숫자로 남는다(전수검수 실클릭으로 잡음) */
+    if (d.coin) S.coin = d.coin;
     /* 의뢰는 부모 확인을 거친다(2026-08-02). 별이 그 자리에서 안 나오는데 축하 오버레이를
        띄우면 «받았다»고 거짓말하는 것이다. 보낸 사실만 알리고, 카드가 «기다리는 중»으로 바뀐다. */
     if (d.status === "waiting") {
@@ -10994,8 +11005,11 @@ const App = {
      담는 자리에서 막고 왜 막았는지 말해 준다 — 잘려 나간 걸 나중에 알면 «저장이 안 됐다»로 읽힌다. */
   missionToggle(code) {
     const i = S.missionPick.indexOf(code);
+    /* ⚠ 상한은 서버가 준 값(econ.max_per_day)이다 — 옛 「하루 3개」가 여기 박혀 있어서
+       별 라인으로 4개 이상 받은 날 「고르기」에서 더 못 담았다(2026-08-12 전수검수에서 잡음). */
+    const cap = (S.econ && S.econ.max_per_day) || 8;
     if (i >= 0) S.missionPick.splice(i, 1);
-    else if (S.missionPick.length >= 3) return toast("하루에 세 개까지예요");
+    else if (S.missionPick.length >= cap) return toast(`하루에 ${cap}개까지예요`);
     else S.missionPick.push(code);
     this.render();
   },
