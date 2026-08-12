@@ -7763,6 +7763,10 @@ const isGuest = () => !S.loggedIn && !isChildToken() && !!localStorage.getItem("
 const CHILD_SCREENS = ["childlink", "login", "terms", "policy",
   "childtheme", "childshoot", "childexpired", "childtt", "childmealrate", "childfriend", "childsubject", "childlocked",
   // 상점·티켓은 아이가 직접 쓴다(§5③). ⚠ childmode 는 넣지 않는다 — 자녀폰에서 열리면 아이가 제 잠금을 푼다
+  /* mission·missionone (2026-08-12) — 아이의 «오늘의 미션» 목록·상세다. 빠져 있어서
+     **진짜 자녀폰**에선 미션 상세가 홈으로 튕겨 「다 했어요!」를 누를 수 없었다
+     (부모 미리보기(kidMode)만 고치고 자녀토큰 목록을 빠뜨림 — 3대 실연결 검수에서 잡음). */
+  "mission", "missionone",
   "store", "tickets", "game"];
 /* §4.5 열람 잠금 — **비웠다**(2026-07-31 «기록 누르면 바로 기록잠금 나오게 하지마»).
    기록을 볼 때마다 지문을 묻는 건 제 폰에서 제 아이 기록을 보는 흐름을 막는다.
