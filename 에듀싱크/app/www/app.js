@@ -280,8 +280,8 @@ function homeCarousel() {
   }
   // 다가오는 학교 행사 D-day(2026-07-27) — 달력은 «며칠인지», 이건 «며칠 남았는지»를 말한다.
   if (on("dday")) {
-    const next = schedulesOf()
-      .filter((e) => e.date >= TODAY && classifyEvent(e.name, e.closure_type) && !e.name.includes("토요휴업일"))
+    const next = eventsOf()
+      .filter((e) => e.date >= TODAY && classifyEvent(e.name, e.closure_type))
       .sort((a, b) => (a.date < b.date ? -1 : 1))[0];
     if (next) {
       const c2 = classifyEvent(next.name, next.closure_type);
@@ -603,6 +603,18 @@ async function api(path, { method = "GET", body, form, timeout, reauth, _retry }
         || "로그인이 만료됐어요. 다시 로그인해 주세요.";
       setTimeout(() => { toast(S.authEnded); App.render(); }, 0);
     }
+    /* 🔴 표가 «죽은» 경우(AUTH_INVALID) — 새로고침으로도 못 살린다.
+       가장 흔한 이유는 **다른 기기에서 같은 계정으로 로그인해 이 폰이 밀려난 것**이다.
+       예전엔 화면이 그냥 「저장하지 못했어요」만 하고 넣은 것이 사라져서,
+       사용자는 «앱이 고장났다»고 읽었다(2026-08-12 준비물에서 실제로 겪음).
+       이유를 말하고 로그인으로 보낸다 — 부모 표일 때만(자녀 표는 위에서 따로 처리한다). */
+    if (!j?.ok && ["AUTH_INVALID", "AUTH_REQUIRED"].includes(j?.error?.code)
+        && !isChildToken() && !S.authEnded) {
+      saveTokens(null);
+      S.loggedIn = false;
+      S.authEnded = j.error.message || "다른 기기에서 로그인해서 이 폰은 로그아웃됐어요. 다시 로그인해 주세요.";
+      setTimeout(() => { toast(S.authEnded); location.hash = "#login"; App.render(); }, 0);
+    }
     return j;
   } catch (e) {
     /* 🔌 인터넷이 끊기거나 시간이 초과되면 fetch가 **예외를 던진다**(2026-07-27 실측).
@@ -727,6 +739,7 @@ const COACH_KEY = "eduthink.coachSeen";   // 코치마크는 계정당 한 번�
 const MS_COACH_KEY = "eduthink.coachMission";   // 미션 화면 첫 방문 안내 — 따로 센다(홈을 본 사람도 미션은 처음이다)
 
 const ART_SETS = [
+  { key: "", label: "기본 파랑" },   // 그림 없음 — 구글 파랑 한 벌(대표님 2026-08-11 «기본 테마 넣어 놓고»)
   { key: "theme_01", label: "서재" },
   { key: "theme_02", label: "은행나무길" },
   { key: "theme_03", label: "언덕 우체통" },
@@ -1085,13 +1098,31 @@ function subjectCi(v) {
 }
 
 // 화면이 쓰는 접근자 — 받아온 게 있으면 그것, 없으면 스텁
-const schoolInfo = () => SCHOOL.info || { ...STUB.school, ...(cur()?.school || {}) };
+const schoolInfo = () => SCHOOL.info
+  || (TOKENS.access ? { ...(cur()?.school || {}) }            // 로그인 상태 — 내 학교만. 견본 금지
+                    : { ...STUB.school, ...(cur()?.school || {}) });
 /* 등록한 학교 이름. **없으면 빈 문자열**이다 — 견본 학교명을 대신 넣지 않는다(2026-08-03 지시).
    앞이 비어 보이는 표시(«· 초등학교», «장 귀하»)를 막으려면 부르는 쪽에서 빈 값을 걸러야 한다. */
 const schoolName = (c) => String((c || cur())?.school?.name || SCHOOL.info?.name || "").trim();
-const mealsOf = () => SCHOOL.meals || STUB.meals;
-const schedulesOf = () => SCHOOL.schedules || STUB.schedules;
-const ttOf = () => SCHOOL.timetable || STUB.timetable;
+/* 🔴 로그인한 사람에게는 **목업을 절대 안 보여준다** (2026-08-12 대표님:
+   «숭미초는 20일부터인데 13일에 급식이 나온다» — 실사용자에게 지어낸 식단이 뜬 사고).
+   서버가 아직 안 왔거나 그 학교에 그 날 자료가 없으면 **빈 목록**이 정답이다.
+   STUB 은 로그인 전 «둘러보기» 화면에서만 쓴다. 「없다」가 「가짜」보다 낫다. */
+const useStub = () => !TOKENS.access;
+const mealsOf = () => SCHOOL.meals || (useStub() ? STUB.meals : []);
+const schedulesOf = () => SCHOOL.schedules || (useStub() ? STUB.schedules : []);
+/* 🔴 공휴일은 «일정»이 아니다 (대표님 2026-08-11 «일정에 공휴일은 안 나오게»).
+   광복절·석가탄신일·대체공휴일은 학교가 알려주는 «행사»가 아니라 달력 성질이다.
+   목록·전광판·D-day 에서는 빼고, **달력 날짜 색(빨간 날)으로만** 남긴다.
+   → 목록을 만들 땐 eventsOf(), 날짜를 칠할 땐 schedulesOf() 원본을 쓴다. */
+const isHoliday = (e) => (e.closure_type || "").includes("공휴일")
+  || /공휴일|대체휴일/.test(e.name || "");
+const eventsOf = () => schedulesOf().filter((e) => !isHoliday(e)
+  && !String(e.name || "").includes("토요휴업일"));
+/* 시간표도 같다 — 로그인 상태에서 서버 값이 없으면 **빈 표**다. 견본 과목을 채우지 않는다.
+   빈 표는 화면이 「아직 안 올라옴 · 눌러서 직접 넣기」로 안내한다(그게 사실이다). */
+const EMPTY_TT = { grid: [[], [], [], [], [], []].map(() => ["", "", "", "", ""]) };
+const ttOf = () => SCHOOL.timetable || (useStub() ? STUB.timetable : EMPTY_TT);
 
 /* 로그인 뒤 내 계정·자녀를 받아온다(GET /me).
    화면의 자녀(STUB.children)에 **서버 id(server_id)** 를 붙여준다 —
@@ -1209,6 +1240,12 @@ async function loadRecords() {
 async function loadLife() {
   const c = cur();
   if (!TOKENS.access || !c?.server_id) return;
+  /* 🔴 요청이 «떠난 시각»을 잡아 둔다 (2026-08-12).
+     이 요청보다 **나중에 만든** 것은 서버 응답에 들어 있을 수 없다 —
+     그런데도 응답으로 목록을 통째로 갈아끼워서 **방금 넣은 준비물·일정이 사라졌다**.
+     server_id 가 붙은 뒤에도 사라졌다(POST 는 끝났지만 목록 요청이 더 먼저 떠났으므로).
+     → 아래 교체에서 `_localAt > t0` 인 것은 살린다. */
+  const t0 = Date.now();
   const base = `/children/${encodeURIComponent(c.server_id)}`;
   // 여섯을 한 번에 — 두 묶음으로 나누면 왕복이 두 번(요청당 ~1초 회선에서 체감이 배로 는다)
   const [docs, msgs, posts, acts, evs, sup] = await Promise.all([
@@ -1231,18 +1268,25 @@ async function loadLife() {
       at: (m.created_at || "").slice(5, 16).replace("T", " "),
     }));
   }
+  /* 🔴 서버 목록으로 갈아끼울 때 **아직 서버 확인이 안 온 로컬 항목은 살린다** (2026-08-12).
+     넣자마자 백그라운드 새로고침(먼저 떠난 옛 응답)이 도착하면 방금 넣은 게 화면에서
+     사라졌다 — 대표님이 준비물에서 겪은 «넣어도 없어진다»의 원인. POST 가 끝나면
+     server_id 가 붙어 다음 교체부터는 서버 본에 자연히 포함된다. */
   if (sup?.ok) {
+    const pending = STUB.supplies.filter((x) => !x.server_id || (x._localAt || 0) > t0);
     STUB.supplies = sup.data.items.map((s) => ({
       id: s.id, server_id: s.id, date: s.date, item: s.item, memo: s.memo || "", done: !!s.done,
-    }));
+    })).concat(pending);
   }
   if (acts?.ok) {
+    const pendingA = STUB.activities.filter((x) => !x.server_id || (x._localAt || 0) > t0);
     STUB.activities = acts.data.items.map((a) => ({
       id: a.id, server_id: a.id, type: a.type, name: a.name, color: a.color ?? 0,
       days_of_week: String(a.days_of_week ?? a.days ?? ""), start_time: a.start_time, end_time: a.end_time,
-    }));
+    })).concat(pendingA);
   }
   if (evs?.ok) {
+    const pendingE = STUB.myEvents.filter((x) => !x.server_id || (x._localAt || 0) > t0);   // 위 준비물과 같은 경합 방지
     STUB.myEvents = evs.data.items.map((e) => ({
       id: e.id, server_id: e.id, date: e.date, title: e.title, memo: e.memo || "",
       start: e.start || "", end: e.start || "",
@@ -1256,7 +1300,7 @@ async function loadLife() {
         if (at.getHours() === 20 && at.getDate() !== base.getDate()) return "prev";
         return [0, 10, 30, 60].includes(diff) ? String(diff) : "";
       })(),
-    }));
+    })).concat(pendingE);
   }
   if (posts?.ok) {
     STUB.communityPosts = posts.data.items.map((p) => ({
@@ -1402,11 +1446,11 @@ const WIDGET_ITEMS = [
         .filter(Boolean).map(shortSubject);
       return subs.length ? subs.join(" ") : "오늘은 수업이 없어요";
     } },
-  { key: "schedule", icon: "🏫", ic: "ti-calendar", ci: 1, label: "오늘 학교 일정", go: "#school/schedule", make: () => {
-      const sc = schedulesOf().filter((e) => e.date === TODAY && !e.name.includes("토요휴업일"));
+  { key: "schedule", icon: "🏫", ic: "ti-calendar", ci: 1, label: "오늘 학교 일정", go: "#calendar", make: () => {
+      const sc = eventsOf().filter((e) => e.date === TODAY);
       return sc.length ? sc.map((e) => e.name).join(" · ") : "";
     } },
-  { key: "myevent", icon: "📔", ic: "ti-notebook", ci: 4, label: "오늘 내 일정", go: "#school/schedule", make: () => {
+  { key: "myevent", icon: "📔", ic: "ti-notebook", ci: 4, label: "오늘 내 일정", go: "#calendar", make: () => {
       const mine = STUB.myEvents.filter((e) => e.date === TODAY);
       return mine.length ? mine.map((e) => (e.start ? `${e.start} ${e.title}` : e.title)).join(" · ") : "";
     } },
@@ -1437,9 +1481,9 @@ const WIDGET_ITEMS = [
       const next = m.find((x) => x.status === "open");
       return `${done}/${m.length}${wait ? ` · 확인 ${wait}` : ""}${next ? ` · ${next.title}` : ""}`;
     } },
-  { key: "dday", icon: "📌", ic: "ti-pin", ci: 6, label: "다가오는 행사", go: "#school/schedule", make: () => {
-      // 오늘 이후 «중요한» 학교 일정 하나. 지난 것과 토요휴업일은 뺀다.
-      const next = schedulesOf().filter((e) => e.date > TODAY && classifyEvent(e.name, e.closure_type))
+  { key: "dday", icon: "📌", ic: "ti-pin", ci: 6, label: "다가오는 행사", go: "#calendar", make: () => {
+      // 오늘 이후 «중요한» 학교 일정 하나. 지난 것·토요휴업일·공휴일은 뺀다.
+      const next = eventsOf().filter((e) => e.date > TODAY && classifyEvent(e.name, e.closure_type))
         .sort((a, b) => a.date.localeCompare(b.date))[0];
       if (!next) return "";
       const dd = ddayLabel(next.date);
@@ -1621,7 +1665,7 @@ function openExternal(url, label) {
 const LEGAL = {
   effective: "2026-08-01",
   terms: [
-    ["제1조 (목적)", "본 약관은 베이직씨엔엠(이하 '회사')이 제공하는 '아이서랍' 서비스(웹 및 모바일 앱, 이하 '서비스')의 이용 조건과 회사·이용자의 권리, 의무를 정합니다."],
+    ["제1조 (목적)", "본 약관은 베이직씨엔엠(이하 '회사')이 제공하는 '학교퀘스트' 서비스(웹 및 모바일 앱, 이하 '서비스')의 이용 조건과 회사·이용자의 권리, 의무를 정합니다."],
     ["제2조 (서비스 내용)", "서비스는 ① NEIS·학교알리미 등 공공데이터 기반의 급식·시간표·학사일정 안내 ② 자녀 기록(상장·통지표 등) 보관 ③ 교외체험학습 신청서·결석신고서 등 서식 작성 도움 ④ 준비물·일정 관리와 알림 ⑤ 자녀 기기 연결 기능을 제공합니다."],
     ["제3조 (정보의 성격)", "급식·시간표·학사일정은 공공데이터 공시 시점 기준이며 학교 사정으로 실제와 다를 수 있습니다. 서식은 일반적인 양식을 기준으로 하며 학교마다 다를 수 있으므로 제출 전 학교 안내를 확인해야 합니다. 서비스가 제공하는 정보는 참고용입니다."],
     ["제4조 (계정)", "가입은 보호자 본인이 해야 하며, 계정·비밀번호 관리 책임은 이용자에게 있습니다. 만 14세 미만 아동은 직접 가입할 수 없고, 자녀 기기 연결은 보호자가 발급한 코드로만 가능합니다."],
@@ -1870,7 +1914,7 @@ const Screens = {
       <div class="lg-hd">
         ${starMark()}
         <div>
-          <h1 class="lg-title">아이<span class="br">서랍</span></h1>
+          <h1 class="lg-title">학교<span class="br">퀘스트</span></h1>
           <p class="lg-sub">학교 소식과 아이의 12년</p>
         </div>
       </div>
@@ -2275,31 +2319,83 @@ const Screens = {
     const pct = coin.limit ? Math.min(100, Math.round((coin.earned_today / coin.limit) * 100)) : 0;
     const tiles = gameCats().map((t) => gameTile(t)).join("");
 
+    /* ══ 자녀앱 홈 — 새 정본 «오후 4시의 운동장» (2026-08-12) ══════════
+       시각 정본: mockups/main-B-v2.html · CSS: kid.css (전부 kd- 접두사)
+       구조 — 머리(고정) · 가운데(구름) · 발판(고정). A모듈에서 배운 세 줄을 지킨다:
+         ① 화면은 «한 화면»이다 — 페이지가 구르지 않고 가운데만 구른다
+         ② 발판은 내비바 위에 앉는다(bottom:0 금지)
+         ③ 크기는 가용 높이(--kd-ah) 기준. vh 로 재지 않는다
+       갈래는 넷 — 아침 · 학교 · 방과후(시간이 가른다) + 엄마아빠 퀘스트(누가 냈나가 다르다) */
+    const cats = gameCats();
+    const byKey = (k) => cats.find((t) => t.key === k) || { done: 0, all: 0 };
+    const mor = byKey("morning"), sch = byKey("school"), aft = byKey("after");
+    const parentQ = (S.missions || []).filter((x) => (x.slot || "any") === "any");
+    const pDone = parentQ.filter((x) => x.status === "done").length;
+    const allDone = mor.done + sch.done + aft.done + pDone;
+    const allAll = mor.all + sch.all + aft.all + parentQ.length;
+    const tile = (t, cls, icon, name) => `
+        <button class="kd-tile ${cls}" onclick="App.gameTab('${t.key || ""}')">
+          <span class="em" aria-hidden="true">${icon}</span>
+          <span class="nm">${name}</span>
+          <span class="vv">${t.done} / ${t.all}</span>
+        </button>`;
+
     return `
-    <div class="gm ${gmTheme()}">
-      <!-- 캐릭터 시트 — 아바타 자리는 비워 둔다(캐릭터는 업데이트 분, 기획서 v2 §01.4) -->
-      <div class="gm-hero">
-        ${(!isChildToken() && !S.kidMode && S.gamePreview)
-          ? `<button class="gm-ava" onclick="App.gamePreviewOff()" aria-label="미리보기 끝내기">‹</button>`
-          : `<button class="gm-ava" onclick="App.gameTab('profile')" aria-label="내 프로필">${gmAvatar(c)}</button>`}
-        <div class="gm-me">
-          <span class="gm-lv">Lv.${coin.level || 1} ${gmRank(coin.level || 1)}</span>
-          <b class="gm-nm">${esc(c.nickname || "나")}</b>
+    <div class="kd-home">
+      <span class="kd-cloud c1" aria-hidden="true"></span><span class="kd-cloud c2" aria-hidden="true"></span>
+
+      <div class="kd-fixtop">
+        <div class="kd-top">
+          ${(!isChildToken() && !S.kidMode && S.gamePreview)
+            ? `<button class="kd-av" onclick="App.gamePreviewOff()" aria-label="미리보기 끝내기">‹</button>`
+            : `<button class="kd-av" onclick="App.gameTab('profile')" aria-label="내 프로필">${gmAvatar(c)}</button>`}
+          <span class="kd-who">${esc(c.nickname || "나")}
+            <em>Lv.${coin.level || 1} ${gmRank(coin.level || 1)}</em></span>
+          <span class="kd-pill fire">🔥 ${coin.streak || S.streakDays || 0}</span>
+          <span class="kd-pill star">★ ${coin.stars}</span>
         </div>
-        <div class="gm-purse"><i aria-hidden="true">★</i><b>${coin.stars}</b></div>
+
+        <!-- 오늘의 길 — 상한이 이 게임의 시계다(기획서 v2 §02) -->
+        <div class="kd-path">
+          <div class="bar"><i style="width:${pct}%"></i></div>
+          <span class="flag" aria-hidden="true">🚩</span>
+          <div class="lb"><span>오늘의 길</span>
+            <span><b>${coin.earned_today}</b> / ${coin.limit}</span></div>
+        </div>
       </div>
 
-      <!-- 오늘 얼마나 벌었나 — 상한이 게임의 시계다(기획서 v2 §02) -->
-      <div class="gm-xp">
-        <div class="gm-xpb"><span style="width:${pct}%"></span></div>
-        <div class="gm-xpt">오늘 ${coin.earned_today} / ${coin.limit}
-          ${coin.room > 0 ? `<em>${coin.room}개 더!</em>` : `<em class="full">오늘은 여기까지</em>`}</div>
+      <div class="kd-scroll">
+        <div class="kd-sec"><span>오늘의 퀘스트</span><b>${allDone} / ${allAll}</b></div>
+        <div class="kd-tiles">
+          ${tile(mor, "dawn", "🌅", "아침")}
+          ${sch.key ? tile(sch, "mint", "🏫", "학교") : ""}
+          ${tile(aft, "pool", "📚", "방과후")}
+        </div>
+
+        <!-- 엄마아빠 퀘스트 — 시간이 아니라 «누가 냈나»로 갈린다. 그래서 목록까지 편다 -->
+        <div class="kd-card">
+          <div class="h"><span class="em" aria-hidden="true">💛</span><span>엄마아빠 퀘스트</span>
+            <span class="cnt">${pDone} / ${parentQ.length}</span></div>
+          ${!parentQ.length
+            ? `<p class="kd-q" style="border:none;color:var(--kd-sub)">아직 받은 퀘스트가 없어요</p>`
+            : parentQ.map((m) => `
+            <button class="kd-q ${m.status === "done" ? "done" : ""}" onclick="App.msOpen(${m.id})">
+              <span class="bx">${m.status === "done" ? "✓" : ""}</span>
+              <span class="n">${esc(m.title)}</span>
+              <span class="st">★${m.stars || 1}</span>
+            </button>`).join("")}
+        </div>
+
+        <button class="kd-card shop" onclick="App.gameTab('shop')">
+          <span class="em" aria-hidden="true">🏪</span>
+          <span class="t">스타코인 상점<em>모은 ★로 바꿔요</em></span>
+          <span class="ar">›</span>
+        </button>
       </div>
 
-      <!-- 2×2 타일 — 홈이든 카드 안이든 «같은 문법»이라 아이가 배울 것이 없다 -->
-      <div class="gm-grid">${tiles}</div>
-
-      ${gmShopBar(true)}
+      <div class="kd-act">
+        <button class="kd-btn" onclick="App.gameTab('today')">퀘스트 시작하기</button>
+      </div>
     </div>
     ${stickerView()}${clearView()}`;
   },
@@ -2460,9 +2556,7 @@ const Screens = {
     const hitCount = groups.reduce((n, [, rows]) => n + rows.length, 0);
 
     return `
-    <a class="back" href="javascript:history.back()" aria-label="뒤로"><i aria-hidden="true" class="ti ti-chevron-left"></i></a>
-    <h1 class="pg-h">고객센터</h1>
-    <p class="sub">찾아보고 없으면 바로 물어보세요</p>
+    ${subHeader("고객센터", "찾아보고 없으면 바로 물어보세요")}
 
     ${S.inquiries === null ? "" : (S.inquiries || []).length ? `
       <button class="hlp-my" onclick="location.hash='#asks'">
@@ -2514,7 +2608,9 @@ const Screens = {
     <div class="card" style="margin-top:12px">
       <p class="sub" style="margin:0;line-height:1.7">
         베이직씨엔엠 · 사업자등록번호 746-21-02507<br>
-        문의 <a href="mailto:dndmotor1@gmail.com">dndmotor1@gmail.com</a><br>
+        <!-- 글줄 속 링크는 21px 라 손끝이 못 잡는다(전수검사) — 세로 패딩으로 24px 이상을 만든다.
+             inline-block + 음수 마진이라 글줄 간격은 안 벌어진다 -->
+        문의 <a href="mailto:dndmotor1@gmail.com" style="display:inline-block;padding:6px 2px;margin:-6px -2px">dndmotor1@gmail.com</a><br>
         평일 10:00~18:00 (점심 12:00~13:00 · 주말·공휴일 휴무)
       </p>
       <div class="row" style="margin-top:10px">
@@ -2530,8 +2626,7 @@ const Screens = {
     const d = S.askDraft || {};
     const c = cur();
     return `
-    <a class="back" href="#help" aria-label="뒤로"><i aria-hidden="true" class="ti ti-chevron-left"></i></a>
-    <h1 class="pg-h">문의하기</h1>
+    ${subHeader("문의하기")}
 
     <label class="f">어떤 내용인가요?</label>
     <select id="ask-cat" onchange="App.askSet('category', this.value)">
@@ -2564,8 +2659,7 @@ const Screens = {
     const CAT = Object.fromEntries(ASK_CATS);
     const ST = { open: ["접수됨", "hlp-st open"], answered: ["답변 왔어요", "hlp-st ans"], closed: ["종료", "hlp-st done"] };
     return `
-    <a class="back" href="#help" aria-label="뒤로"><i aria-hidden="true" class="ti ti-chevron-left"></i></a>
-    <h1 style="margin-top:8px">내 문의</h1>
+    ${subHeader("내 문의")}
     ${list === null ? `<p class="sub">불러오는 중…</p>`
       : !list.length ? `<p class="sub">아직 보낸 문의가 없어요.</p>`
       : list.map((x) => {
@@ -2631,21 +2725,21 @@ const Screens = {
     const tomorrow = ymdPlus(TODAY, 1);
     const packs = STUB.supplies.filter((x) => x.date === tomorrow && !x.done);
 
-    /* 오늘 일정 — 학사일정 + 내 일정. 시각 순 */
-    const sch = schedulesOf().filter((e) => e.date === TODAY && !e.name.includes("토요휴업일")
-      && !(S.holiOff && (e.closure_type || "").includes("공휴일")));
+    /* 오늘 일정 — 학사일정 + 내 일정. 시각 순. 공휴일은 eventsOf() 가 이미 뺀다 */
+    const sch = eventsOf().filter((e) => e.date === TODAY);
     const mine = (STUB.myEvents || []).filter((e) => e.date === TODAY);
     const evs = [...sch.map((e) => ({ at: "", t: e.name })), ...mine.map((e) => ({ at: e.start || "", t: e.title }))]
       .sort((x, y) => String(x.at || "99:99").localeCompare(String(y.at || "99:99")));
     const acts = STUB.activities.filter((a) => String(a.days_of_week || "").split(",").includes(String(dow)));
 
-    /* D-day — 가장 가까운 «큰» 학교 행사 하나만 */
-    const nextBig = schedulesOf()
-      .filter((e) => e.date >= TODAY
-        && !(S.holiOff && (e.closure_type || "").includes("공휴일"))
-        && !e.name.includes("토요휴업일")
-        && classifyEvent(e.name, e.closure_type))
+    /* D-day — 가장 가까운 «큰» 학교 행사 하나만. 공휴일은 안 센다(전광판도 이 값을 쓴다) */
+    const nextBig = eventsOf()
+      .filter((e) => e.date >= TODAY && classifyEvent(e.name, e.closure_type))
       .sort((a, b) => a.date.localeCompare(b.date))[0];
+
+    /* 오늘 급식 — 하단 빈 공간을 내용으로 채운다(대표님 2026-08-11 «다음 꺼» 지시).
+       없는 날에도 줄은 남기고 «없어요»라고 말한다(빈 줄 금지 원칙과 같음) */
+    const meal = mealsOf().find((m) => m.date === TODAY && m.type === "중식");
 
     const ms = S.missions;
     const msDone = (ms || []).filter((x) => x.status === "done").length;
@@ -2671,7 +2765,7 @@ const Screens = {
         ${S.kidMode
           ? `<button class="ham" onclick="App.kidModeOff()" aria-label="부모 모드로 나가기"><i aria-hidden="true" class="ti ti-lock"></i></button>`
           : `<button class="ham" onclick="App.drawerOpen()" aria-label="메뉴${unread ? ` · 안 읽음 ${unread}개` : ""}"><i aria-hidden="true" class="ti ti-menu-2"></i>${unread ? `<span class="badge">${unread}</span>` : ""}</button>`}
-        <h1>아이서랍</h1>
+        <h1>학교퀘스트</h1>
       </div>
 
       <div class="ns-now">
@@ -2694,9 +2788,12 @@ const Screens = {
         ${drw("b", "ti-calendar", "오늘 일정",
           evs.length ? `${evs[0].at ? esc(fmtT(evs[0].at)) : "종일"} · ${esc(evs[0].t)}` : "",
           evs.length ? `${evs.length}개` : "없어요", "", `App.dayOpen('${TODAY}')`)}
+        ${drw("b", "ti-tools-kitchen-2", "오늘 급식",
+          meal ? esc(meal.dishes.slice(0, 2).map((x) => x.name).join(" · ")) : "",
+          meal ? `${meal.dishes.length}가지` : "없어요", "", "location.hash='#school/meal'")}
         ${drw("b", "ti-backpack", "내일 준비물", "",
           packs.length ? `${packs.length}개` : "완료", packs.length ? "" : "ok", "location.hash='#supplies'")}
-        ${drw("nt", "ti-run", "방과후 · 학원", "",
+        ${drw("nt", "ti-run", "방과후 시간표", "",
           acts.length ? `${acts.length}개` : "없어요", "", "location.hash='#afterschool'")}
         ${pend ? drw("p", "ti-eye", "확인해 주세요", "", `${pend}건`, "need", "location.hash='#game'") : ""}
         ${drw("p", "ti-target", "오늘 미션", "",
@@ -2739,9 +2836,7 @@ const Screens = {
     ];
     const on = CARDS.filter(([k]) => S.todayCards[k]).length;
     return `
-    <a class="back" href="#home" aria-label="뒤로"><i aria-hidden="true" class="ti ti-chevron-left"></i></a>
-    <h1 style="margin-top:8px">오늘 카드</h1>
-    <p class="sub">끈 것은 없어지지 않아요 — 각자의 화면에 그대로 있어요</p>
+    ${subHeader("오늘 카드", "끈 것은 없어지지 않아요 — 각자의 화면에 그대로 있어요")}
 
     <div class="card" style="padding:8px 10px">
       <div class="edhd"><b>오늘 화면에 보일 줄</b><span class="sub" style="margin:0">${on}/${CARDS.length}개</span></div>
@@ -2785,16 +2880,9 @@ const Screens = {
       </div>
     </div>
 
-<div class="card" style="padding:8px 10px">
-      <div class="edhd"><b>일정에 공휴일</b></div>
-      <div class="edlist">
-        <div class="edrow">
-          <span class="edname">광복절·설날 같은 공휴일 보이기</span>
-          <button class="swt ${S.holiOff ? "" : "on"}" onclick="App.holiToggle()" aria-label="공휴일 일정 ${S.holiOff ? "켜기" : "끄기"}"><i></i></button>
-        </div>
-      </div>
-      <p class="sub" style="padding:0 4px 6px;margin:0">꺼도 학교탭 달력에는 그대로 있어요</p>
-    </div>
+    <!-- 🔴 「일정에 공휴일」 스위치를 걷어냈다(대표님 2026-08-11 «일정에 공휴일은 안 나오게»).
+         이제 공휴일은 목록·전광판·D-day 어디에도 안 나온다 — 달력의 빨간 날로만 남는다.
+         켤 수 없는 것에 스위치를 두면 «되는데 안 되는» 것으로 읽힌다. -->
 
     <!-- ⛔ 「맨 위 알림 카드」 3종 + 「자동으로 넘기기」 를 여기서 뺐다(2026-07-28).
          새 홈(시안 5a)에는 넘기는 캐러셀이 없다 — homeCarousel() 을 부르는 곳이 0이었다.
@@ -3150,36 +3238,38 @@ const Screens = {
        옆 테마가 살짝 보여야 «더 있다»가 읽힌다(캐러셀).
      ⚠ 고르는 즉시 적용하지 않는다. 아래 «사용» 을 눌러야 확정이다 —
        훑어보다 실수로 바뀌면 되돌리는 길을 또 찾아야 한다. */
+  /* ── 테마 고르기 — 새 정본 (2026-08-11) ────────────────────────
+     🔴 «밝게 / 어둡게» 토글을 걷어냈다. 다크는 없앴다(단일 라이트).
+        그림 19벌이 색을 지므로 고를 것은 그림 하나뿐이다.
+     격자 2열 — 캐러셀은 «옆 것이 살짝»만 보여서 19벌을 훑기 어려웠다.
+     미리보기는 실제 홈 구조(시계 앞판 · 서랍 앞판 둘 · 하단 바) 그대로 축소한 것이다. */
   theme: () => {
-    const pickArt = S.themePick?.art || S.art;
-    const pickTheme = S.themePick?.theme || (DARK_THEMES.includes(S.theme) ? "dark" : "light");
-    const changed = pickArt !== S.art || pickTheme !== (DARK_THEMES.includes(S.theme) ? "dark" : "light");
+    /* ⚠ 기본 파랑의 key 는 빈 문자열 — `||` 로 고르면 falsy 라 무시돼 «기본을 못 고른다»(실측) */
+    const pickArt = (S.themePick && "art" in S.themePick) ? S.themePick.art : S.art;
+    const changed = pickArt !== S.art;
     return `
-    ${subHeader("테마", "배경과 밝기")}
+    ${subHeader("테마", "배경 그림 19벌")}
 
-    <div class="th-mode">
-      ${[["light", "밝게"], ["dark", "어둡게"]].map(([v, n]) => `
-        <button class="${pickTheme === v ? "on" : ""}" onclick="App.themePick('theme','${v}')">${n}</button>`).join("")}
-    </div>
-
-    <!-- 실물 미리보기 캐러셀 — 옆 것이 살짝 보이게 (§6) -->
-    <div class="th-car" id="thcar">
+    <div class="ns-thgrid">
       ${ART_SETS.map((a) => `
-        <button class="th-item ${pickArt === a.key ? "on" : ""}" onclick="App.themePick('art','${jsq(a.key)}')">
-          <span class="ph" data-art="${esc(a.key)}" data-theme="${esc(pickTheme)}">
-            <span class="ph-bar"></span>
-            <span class="ph-card"><i></i><i class="s"></i></span>
-            <span class="ph-card"><i></i></span>
-            <span class="ph-fab"></span>
+        <button class="ns-th ${pickArt === a.key ? "on" : ""}" onclick="App.themePick('art','${jsq(a.key)}')"
+                aria-label="${esc(a.label)}${pickArt === a.key ? " · 고름" : ""}">
+          <!-- 미리보기는 그림이 아니라 «색»이다(대표님 2026-08-11) — 흰 바탕에
+               시계 칩·일정 줄 둘·하단 바 세 가지가 그 테마 색으로만 바뀐다 -->
+          <span class="pv" ${a.key ? `data-art="${esc(a.key)}"` : ""}>
+            <span class="pv-now"></span>
+            <span class="pv-row"></span>
+            <span class="pv-row"></span>
+            <span class="pv-bar"></span>
           </span>
           <b>${esc(a.label)}</b>
         </button>`).join("")}
     </div>
 
-    <div class="th-act">
-      <button class="th-use" ${changed ? "" : "disabled"} onclick="App.themeApply()">
+    <div class="ns-thact">
+      <button class="ns-btn" ${changed ? "" : "disabled"} onclick="App.themeApply()">
         ${changed ? "이 테마 사용" : "지금 쓰는 테마예요"}</button>
-      ${!S.themeFirst ? "" : `<button class="cm-skip" style="width:100%;margin-top:4px" onclick="App.themeLater()">나중에</button>`}
+      ${!S.themeFirst ? "" : `<button class="ns-btn ghost" onclick="App.themeLater()">나중에</button>`}
     </div>`;
   },
 
@@ -3213,7 +3303,7 @@ const Screens = {
     <label class="ed-f" for="ed-t">${isSup ? "뭘 챙기나요" : e.kind === "mission" ? "아이에게 뭘 시킬까요" : "무슨 일인가요"}</label>
     <input id="ed-t" class="ed-title" maxlength="40" autocomplete="off"
       placeholder="${isSup ? "예: 실내화" : e.kind === "mission" ? "예: 윙크 20분 하기" : "예: 치과"}"
-      value="${esc(e.title)}" oninput="S.edit.title=this.value">
+      value="${esc(e.title)}" oninput="App.editTitleInput(this)">
 
     ${(() => {
       // 최근에 넣은 것 재사용 — 「치과·태권도」처럼 되풀이되는 이름을 다시 타자 치게 하지 않는다
@@ -3241,13 +3331,14 @@ const Screens = {
     </div>
 
     <label class="ed-f">시간</label>
-    <div class="ed-chips">
-      ${TIMES.map(([v, n]) => `<button class="${e.time === v ? "on" : ""}" onclick="App.editSet('time', '${v}')">${n}</button>`).join("")}
+    <!-- 시간대마다 옅은 물감 — 아침·하교 후·저녁이 눈으로 갈린다(대표님 2026-08-11) -->
+    <div class="ed-chips tday">
+      ${TIMES.map(([v, n], i) => `<button class="t${i} ${e.time === v ? "on" : ""}" onclick="App.editSet('time', '${v}')">${n}</button>`).join("")}
       <button class="${e.timeOpen ? "on" : ""}" onclick="App.editTimeOpen()">직접 입력</button>
     </div>
     ${!e.timeOpen ? "" : `<input class="ed-time" type="time" value="${esc(e.time || "")}" oninput="S.edit.time=this.value">`}
 
-    <label class="ed-f">되풀이</label>
+    <label class="ed-f">반복</label>
     <div class="ed-chips">
       <button class="${e.repeat ? "on" : ""}" onclick="App.editSet('repeat', ${e.repeat ? "false" : "true"})">
         매주 ${["일","월","화","수","목","금","토"][new Date(`${e.date.slice(0,4)}-${e.date.slice(4,6)}-${e.date.slice(6)}`).getDay()]}요일</button>
@@ -3309,14 +3400,20 @@ const Screens = {
        「일정 없어요 / 준비물 없어요 / 미션은 아침에 / 방과후 없어요」 네 장이 줄지어 있으면
        화면이 «없다»는 말로 가득 찬다. 있는 것만 카드로 만들고, 전부 비면 한 줄로 합친다. */
     const secs = [];
+    /* 아코디언 (대표님 2026-08-11) — 한 페이지가 넘으면 자동으로 접고, 안 넘으면 다 편다.
+       접힘 상태는 화면을 다 그린 뒤 실측으로 정한다(dayAutoFold). 사람이 누르면 그 뜻이 이긴다 */
+    const fold = S.dayFold || {};
     const sec = (title, count, body) => {
       if (body) secs.push(`
-      <section class="dy-sec">
-        <div class="dy-st"><b>${title}</b>${count ? `<em>${count}</em>` : ""}</div>
-        ${body}
+      <section class="dy-sec ${fold[title] ? "fold" : ""}">
+        <button class="dy-st" onclick="App.dayFoldToggle('${title}')">
+          <b>${title}</b>${count ? `<em>${count}</em>` : ""}
+          <i aria-hidden="true" class="ti ti-chevron-down ar"></i></button>
+        <div class="dy-bd">${body}</div>
       </section>`);
       return "";        // ⚠ 값을 안 돌려주면 템플릿에 «undefined» 가 찍힌다
     };
+    if (!S.dayFold) setTimeout(() => App.dayAutoFold(), 0);
 
     return `
     ${subHeader(past ? "지난 날 · 기록" : today ? "오늘" : (ddayLabel(key) || "앞으로"))}
@@ -3339,7 +3436,7 @@ const Screens = {
     ${sec("일정", evs.length, !evs.length ? "" : `
         <ul class="dy-list">${evs.map((e) => `
           <!-- 길게 누르면 고치기(§7). 버튼(연필)도 같이 둔다 — 제스처만 있으면 모르는 사람은 못 쓴다 -->
-          <li class="${e.k}${e.holi ? " holi" : ""}"${e.k === "me" && !past ? ` onpointerdown="App.holdEvent(${e.id})"` : ""}>
+          <li class="${e.k}${e.holi ? " holi" : ""}"${e.k === "me" && !past ? ` onclick="if(!App.holdGuard())App.eventMenu(${e.id})" onpointerdown="App.holdEvent(${e.id})"` : ""}>
             <span class="at">${e.at ? esc(fmtT(e.at)) : "종일"}</span>
             <span class="bd"><b>${esc(e.t)}</b>${e.sub ? `<em>${esc(e.sub)}</em>` : ""}</span>
             ${e.k === "me" && !past ? `<button class="ed" onclick="App.editOpen('plan', ${e.id})" aria-label="고치기"><i aria-hidden="true" class="ti ti-pencil"></i></button>` : ""}
@@ -3507,9 +3604,7 @@ const Screens = {
   switch: () => `
     <!-- ⚠ 나가는 길이 없었다(화면 지도 2026-08-10). 아이를 «바꾸려다 그만두면» 갇힌다 —
          특히 아이가 하나뿐이면 고를 것도 없이 막다른 길이다. -->
-    <a class="back" href="javascript:App.goBack()" aria-label="뒤로"><i aria-hidden="true" class="ti ti-chevron-left"></i></a>
-    <h1 style="text-align:center;padding-top:26px">누구의 기록을 볼까요?</h1>
-    <p class="sub" style="text-align:center">캐릭터를 고르면 그 자녀로 전환돼요</p>
+    ${subHeader("자녀 바꾸기", "고르면 그 자녀 화면으로 바뀌어요")}
     <div class="charselect">
       ${STUB.children.map((c) => {
         // 기본 자녀(형제가 있을 때만) — 앱을 켜면 이 아이부터. 아무도 안 골랐으면 첫째가 기본.
@@ -3796,6 +3891,9 @@ const Screens = {
   // 주간 타임그리드 — 작은 칸에 글자를 우겨넣지 않는다(2026-07-24 지시).
   // 가로=월~금, 세로=시간축. 시간은 축에서 읽으므로 블록 안에는 이름만 넣는다(글자 잘림 원인 제거).
   afterschool: () => {
+    /* 칸을 정사각형으로 (대표님 2026-08-11) — 세로만 길쭉하면 손가락이 시각을 못 가늠한다.
+       한 시간 칸 높이(px×2)를 요일 한 칸 폭에 맞춘다. 좁은 폰은 칸도 같이 작아진다 */
+    GRID.px = Math.max(26, Math.round((Math.min(innerWidth, 480) - 32 - 34) / 10));
     // 오늘 열을 짚어준다 — 주간 격자에서 제일 먼저 궁금한 것이 «오늘 뭐 있지»다
     const todayCol = new Date(`${TODAY.slice(0,4)}-${TODAY.slice(4,6)}-${TODAY.slice(6)}`).getDay() - 1;
     const byDay = [[], [], [], [], []];
@@ -3803,7 +3901,7 @@ const Screens = {
     const hours = [];
     for (let h = GRID.h0; h < GRID.h1; h++) hours.push(h);
     return `
-    ${subHeader("방과후 · 학원")}
+    ${subHeader("방과후 시간표")}
     <!-- 자매 사이트 — 학원을 찾는 맥락이 여기다(방과후 시간표를 짜다가 "어디 보내지?"가 나온다).
          앱 안 웹뷰가 아니라 **바깥 브라우저**로 연다: 우리 앱은 아이 정보를 다루므로
          남의 페이지를 앱 안에 띄우면 쿠키·권한이 섞이고 스토어 심사에서도 설명이 길어진다.
@@ -3813,7 +3911,7 @@ const Screens = {
     ${STUB.activities.length ? "" : `
     <button class="ms-mkbtn" onclick="App.planNew()">
       <i aria-hidden="true" class="ti ti-plus"></i>
-      <span><b>방과후 · 학원 넣기</b></span></button>`}
+      <span><b>방과후 시간표 넣기</b></span></button>`}
     <!-- 「[네이티브 자리] 실앱은 드래그를 그대로 씁니다」를 걷어낼 때 엉뚱한 문장이 붙어
          «시간이 늘어납니다 순서는 화살표로 바꿔요»가 됐다(2026-07-27). 사람이 읽는 말로 되돌린다. -->
     <!-- ⚠ 세로 구분선이 없어서 «이게 화요일인지 수요일인지» 안 읽혔다(2026-07-28 사장님 지적).
@@ -3828,14 +3926,18 @@ const Screens = {
                role="button" aria-label="${d}요일 — 눌러서 일정 넣기" onclick="App.planTap(event, ${i + 1})">
             ${hours.map(() => `<div class="wk-slot" style="height:${GRID.px * 2}px"></div>`).join("")}
             ${byDay[i].map((a) => `
-              <div class="blk" onclick="if(!App.holdGuard())App.planEdit(${a.id})" onpointerdown="App.holdPlan(${a.id})" style="top:${gridTop(a.start_time)}px;height:${Math.max(GRID.px, gridTop(a.end_time) - gridTop(a.start_time))}px;--tag:${planColor(a.color, a.name).v}"
-                   onclick="event.stopPropagation();App.askDelete('일정 「${esc(a.name)}」 수정·삭제')">
+              <div class="blk ${S.planMove?.id === a.id ? "moving" : ""}"
+                   onclick="if(!App.holdGuard()&&!App.dragGuard())App.planMenu(${a.id}, ${i + 1})"
+                   onpointerdown="App.blockDown(event, ${a.id}, ${i + 1})"
+                   style="top:${gridTop(a.start_time)}px;height:${Math.max(GRID.px, gridTop(a.end_time) - gridTop(a.start_time))}px;--tag:${planColor(a.color, a.name).v}">
                 <b>${esc(a.name)}</b>
                 <i class="grip" onpointerdown="App.gripDown(event, ${a.id}, ${i + 1})"></i>
               </div>`).join("")}
           </div>`).join("")}
       </div>
     </div>
+    <!-- 사용법 — 제스처는 안 써 놓으면 아무도 모른다(대표님 2026-08-11) -->
+    <p class="gc-hint">빈 칸 누르면 넣기 · 블록은 끌어서 이동 · 아래 손잡이로 길이 · 꾹 누르면 수정·삭제</p>
 `;
   },
 
@@ -3906,11 +4008,9 @@ const Screens = {
         손이 먼저 가면 안 된다. 경고문은 누른 뒤 확인 창이 말한다 */
   mypage: () => {
     const me = STUB.me;
-    /* 테마 2벌(2026-08-02) — 옛 6키는 style.css 에서 새 두 벌에 매달아 뒀다.
-       저장해 둔 값이 옛 키여도 이름이 «—»로 비지 않게 여기서도 같이 접는다. */
-    const themeName = ({ light: "밝게", warmgray: "밝게", ivory: "밝게", mint: "밝게",
-                        dark: "어둡게", lavender: "어둡게", navy: "어둡게", charcoal: "어둡게" }[S.theme] || "밝게")
-      + " · " + (ART_SETS.find((a) => a.key === S.art)?.label || "새벽");
+    /* 다크를 없앴다(새 정본 2026-08-11) — «밝게/어둡게»를 앞에 붙이지 않는다.
+       고른 것은 그림 하나뿐이라 그림 이름만 보여 준다. */
+    const themeName = ART_SETS.find((a) => a.key === S.art)?.label || "기본";
     /* 행마다 왼쪽 선형 아이콘(2026-08-02 다이어트) — 홈 격자와 같은 스타일.
        파랑은 절제: 아이콘은 회색, 값·경고만 기능색. icon 이 빈 문자열이면 칸 자체가 없다(계정 구역). */
     const row = (icon, label, value, onclick, cls = "") => `
@@ -4087,16 +4187,14 @@ const Screens = {
       </div>`;
 
     if (!r || S.reportBusy) return `
-      <a class="back" href="#mission" aria-label="뒤로"><i aria-hidden="true" class="ti ti-chevron-left"></i></a>
-      <h1 class="pg-h">${esc(c?.nickname || "아이")} 리포트</h1>
+      ${subHeader(`${esc(c?.nickname || "아이")} 리포트`)}
       ${nav}
       <p class="sub" style="margin-top:20px">불러오는 중…</p>`;
 
     // 셋 다 비었으면 «아직 모으는 중» 한 장. 빈 표를 늘어놓으면 고장난 것처럼 보인다
     const total = (r.meal?.days || 0) + (r.play?.days || 0) + (r.subject?.days || 0);
     if (!total) return `
-      <a class="back" href="#mission" aria-label="뒤로"><i aria-hidden="true" class="ti ti-chevron-left"></i></a>
-      <h1 class="pg-h">${esc(c?.nickname || "아이")} 리포트</h1>
+      ${subHeader(`${esc(c?.nickname || "아이")} 리포트`)}
       ${nav}
       <div class="rp-empty">
         <i aria-hidden="true" class="ti ti-clock"></i>
@@ -4122,8 +4220,7 @@ const Screens = {
       ["📘", "과목", r.subject?.days || 0],
     ];
     return `
-    <a class="back" href="#mission" aria-label="뒤로"><i aria-hidden="true" class="ti ti-chevron-left"></i></a>
-    <h1 class="pg-h">${esc(c?.nickname || "아이")} 리포트</h1>
+    ${subHeader(`${esc(c?.nickname || "아이")} 리포트`)}
     ${nav}
 
     <div class="rp-sum">
@@ -4193,8 +4290,7 @@ const Screens = {
     const list = S.planList || STUB.plans;
     const seat = S.planSeat || 1;
     return `
-    <a class="back" href="#mypage" aria-label="뒤로"><i aria-hidden="true" class="ti ti-chevron-left"></i></a>
-    <h1 style="margin-top:8px">이용권</h1>
+    ${subHeader("이용권")}
     <p class="sub">자녀 1명당 하나씩 — 지금은 <b>${esc(c.nickname)}</b> 이용권을 골라요</p>
     ${seat > 1 ? `<p class="seatnote"><i class='ti ti-discount'></i> <b>${seat}번째 자녀</b>라 더 저렴해요</p>` : ""}
     <!-- 🎁 1주일 무료체험 — **선택지 맨 위**(대표님 2026-08-10: 「1주일 무료체험도 넣어서 누르게 하고」).
@@ -4459,8 +4555,7 @@ const Screens = {
       : k === "absence" ? absence() : counsel();
 
     return `
-    <a class="back" href="#docs" aria-label="뒤로"><i aria-hidden="true" class="ti ti-chevron-left"></i></a>
-    <h1 style="margin-top:8px">${docTitle()}</h1>
+    ${subHeader(docTitle())}
     ${body}`;
   },
 
@@ -5970,11 +6065,14 @@ function subHeader(title, sub) {
   /* ⚠ 뒤로가기가 **항상 홈으로** 가고 있었다(대표님 지적 08-08).
      두 단계 들어갔다가 한 번 누르면 처음으로 튕겨 나와서, 되돌아가려면 다시 두 번을 눌러야 했다.
      이제 «한 걸음 뒤로»다 — 갈 곳이 없을 때만 홈으로 간다(App.goBack). */
+  /* ── 새 정본 머리 (2026-08-11) ────────────────────────────────
+     홈의 ☰ 머리와 **같은 규격**이다 — 48px 높이, 40px 손잡이, 상태바 아래에서 시작.
+     화면마다 제각각이던 sub-top 을 이 하나로 갈았다(ns- 라 옛 규칙이 안 걸린다). */
   return `
-  <div class="sub-top">
-    <button class="sub-back" onclick="App.goBack()" aria-label="뒤로">
+  <div class="ns-hd sub">
+    <button class="ham" onclick="App.goBack()" aria-label="뒤로">
       <i aria-hidden="true" class="ti ti-chevron-left"></i></button>
-    <h1 class="sub-t">${title}${sub ? `<em>${sub}</em>` : ""}</h1>
+    <h1>${title}${sub ? `<em>${sub}</em>` : ""}</h1>
   </div>`;
 }
 
@@ -6017,16 +6115,18 @@ function drawerView(c) {
     <div class="ns-me">
       <div class="top">
         <span class="av"><i aria-hidden="true" class="ti ti-user"></i></span>
-        <span class="nm">${c ? esc(c.nickname) : "아이서랍"}</span>
+        <span class="nm">${c ? esc(c.nickname) : "학교퀘스트"}</span>
         ${c ? `<button class="go" onclick="App.drawerClose();location.hash='#timeline'" aria-label="서랍">
           <i aria-hidden="true" class="ti ti-archive"></i></button>` : ""}
       </div>
-      ${c ? `<div class="stats">
+      ${c ? `<div class="ns-stats">
         <span class="s">학교<b>${esc(schoolName(c))}${c.grade ? ` · ${c.grade}학년` : ""}${c.class_name ? ` ${esc(c.class_name)}반` : ""}</b></span>
         <span class="s">이용권<b>${esc(pass?.t || "확인 중")}</b></span>
         <span class="s">자녀폰<b>${c.child_device ? "연결됨" : "연결 안 됨"}</b></span>
-      </div>` : `<div class="stats">
-        <span class="s">시작하기<b>${TOKENS.access ? "아이 등록하기" : "로그인"}</b></span>
+      </div>` : `<div class="ns-stats">
+        <!-- 🔴 span 이라 «보이는데 안 눌리는» 줄이었다(대표님 2026-08-12). 버튼으로 바꾼다 -->
+        <button class="s go" onclick="App.drawerClose();${TOKENS.access ? "App.childAddStart()" : "location.hash='#login'"}">
+          시작하기<b>${TOKENS.access ? "아이 등록하기 ›" : "로그인 ›"}</b></button>
       </div>`}
     </div>
 
@@ -6733,7 +6833,7 @@ function todayList(date) {
   const school = wd >= 1 && wd <= 5;
   const items = [];
 
-  schedulesOf().filter((e) => e.date === date && !e.name.includes("토요휴업일")).forEach((e) => {
+  eventsOf().filter((e) => e.date === date).forEach((e) => {
     const c = classifyEvent(e.name, e.closure_type);
     items.push({ t: null, icon: c ? c.icon : "ti-school", title: e.name, sub: e.content || "학교 일정" });
   });
@@ -6756,7 +6856,7 @@ function todayList(date) {
      그 바람에 한동안 «수정도 삭제도 안 되는» 상태였다(2026-07-27 지적받고 되살림).
      꾹 누르기만 두면 있는 줄도 모른다. 오른쪽에 연필을 같이 보여준다. */
   return `<div class="todaylist">${items.map((i) => i.mine ? `
-    <div class="trow mine" onclick="if(!App.holdGuard())App.evEdit(${i.mine})" onpointerdown="App.holdEvent(${i.mine})">
+    <div class="trow mine" onclick="if(!App.holdGuard())App.eventMenu(${i.mine})" onpointerdown="App.holdEvent(${i.mine})">
       <span class="ticon"><i class='ti ${i.icon}'></i></span>
       <span><b>${esc(i.title)}</b><span class="ntime">${i.sub}</span></span>
       <span class="tedit"><i class='ti ti-pencil'></i></span></div>` : `
@@ -6788,7 +6888,7 @@ function dayTimeline(date, opts = {}) {
       h1 = Math.min(DAY.h1, Math.ceil(Math.max(...times) / 60));
     }
   }
-  const sc = schedulesOf().filter((e) => e.date === date && !e.name.includes("토요휴업일"));
+  const sc = eventsOf().filter((e) => e.date === date);
   const mine = STUB.myEvents.filter((e) => e.date === date);
   const meal = mealsOf().find((m) => m.date === date && m.type === "중식");
   const acts = school ? STUB.activities.filter((a) => a.days_of_week.split(",").includes(String(dayIdx + 1))) : [];
@@ -6859,7 +6959,7 @@ function dayTimeline(date, opts = {}) {
         }).join("") : ""}
         ${school && withMeal && meal ? box(lunchOf().start, lunchOf().end, "meal", "급식", meal.dishes.slice(0, 2).map((x) => x.name).join(" · ")) : ""}
         ${acts.map((a) => box(a.start_time, a.end_time, "act2", a.name, "학원·방과후")).join("")}
-        ${timed.map((e) => box(e.start, e.end, "mine", e.title, e.memo, `App.evEdit(${e.id})`, `App.holdEvent(${e.id})`)).join("")}
+        ${timed.map((e) => box(e.start, e.end, "mine", e.title, e.memo, `App.eventMenu(${e.id})`, `App.holdEvent(${e.id})`)).join("")}
       </div>
     </div>
     ${!school ? `<p class="sub" style="padding:0 2px">주말이라 수업·급식은 없어요.</p>` : ""}`;
@@ -6901,7 +7001,9 @@ function diaryTab() {
   const vac = vacationRanges();
   const inVac = (d) => vac.some(([a, b]) => d >= a && d < b);
 
-  const schoolOf = (d) => schedulesOf().filter((e) => e.date === d && !e.name.includes("토요휴업일"));
+  /* 두 벌이다 — 목록엔 공휴일이 안 나오고, 달력 칸은 빨간 날을 알아야 한다(2026-08-11) */
+  const schoolOf = (d) => eventsOf().filter((e) => e.date === d);              // 아젠다(목록)용
+  const holiOn = (d) => schedulesOf().some((e) => e.date === d && isHoliday(e)); // 날짜 칠하기용
   const mineOf = (d) => STUB.myEvents.filter((e) => e.date === d);
 
   // ── 달력 칸 ──────────────────────────────────────────────
@@ -6919,7 +7021,7 @@ function diaryTab() {
     const d = +key.slice(6);
     const wd = (first + d - 1) % 7;
     const sc = schoolOf(key), mine = mineOf(key);
-    const holi = sc.some((e) => (e.closure_type || "").includes("공휴일"));
+    const holi = holiOn(key);
     // 점 하나만 — 공휴일 danger · 내 일정 accent · 학교 회색
     const dot = holi ? "holi" : mine.length ? "mine" : sc.length ? "sc" : "";
     /* 아이 흔적 (§3) — 일정 점과 **줄을 나눠** 아래에 단다.
@@ -6984,7 +7086,7 @@ function diaryTab() {
             })()}</span></span>`;
         }).join("")}
         ${r.mine.map((e) => `
-          <button class="gc-ev mine" onclick="event.stopPropagation();if(!App.holdGuard())App.evEdit(${e.id})" onpointerdown="event.stopPropagation();App.holdEvent(${e.id})">
+          <button class="gc-ev mine" onclick="event.stopPropagation();if(!App.holdGuard())App.eventMenu(${e.id})" onpointerdown="event.stopPropagation();App.holdEvent(${e.id})">
             <i class="mine"></i>
             <span class="gc-et"><b>${esc(e.title)}</b><span>${e.start ? `${esc(e.start)}${e.end ? `~${esc(e.end)}` : ""}` : "종일"}${e.memo ? ` · ${esc(e.memo)}` : ""}</span></span>
           </button>`).join("")}
@@ -7104,7 +7206,7 @@ function timetableTab() {
         const days = String(a.days_of_week || "").split(",").filter(Boolean)
           .sort().map((n) => DAY_KO[+n - 1]).filter(Boolean).join(" ");
         return `
-        <button class="ttp-item" onclick="App.planEdit(${a.id})" style="--tag:${planColor(a.color, a.name).v}">
+        <button class="ttp-item" onclick="App.planMenu2(${a.id})" style="--tag:${planColor(a.color, a.name).v}">
           <i></i>
           <span class="ttp-name"><b>${esc(a.name)}</b><em>${days}${days && a.start_time ? " · " : ""}${esc(a.start_time || "")}${a.end_time ? ` – ${esc(a.end_time)}` : ""}</em></span>
           <span class="ttp-go"><i aria-hidden="true" class="ti ti-chevron-right"></i></span>
@@ -7198,7 +7300,7 @@ function dayPanel(key) {
   const weekend = wd === 0 || wd === 6;
   const vac = vacationRanges().some(([a, b]) => key >= a && key < b);
   // ⚠ schoolOf/mineOf 는 diaryTab 안에만 있는 지역 함수다 — 여기서 쓰면 «is not defined»로 화면이 통째로 죽는다.
-  const sc = schedulesOf().filter((e) => e.date === key && !e.name.includes("토요휴업일"));
+  const sc = eventsOf().filter((e) => e.date === key);
   const closed = weekend || vac || sc.some((e) => (e.closure_type || "").includes("휴업") || (e.closure_type || "").includes("공휴일"));
   const mine = STUB.myEvents.filter((e) => e.date === key);
   const meal = mealsOf().find((m) => m.date === key && m.type === "중식");
@@ -7527,6 +7629,12 @@ function passLabel(c) {
   return { t: "쓰는 중", cls: "" };
 }
 
+/* 🔴 우리만의 뒤로가기 발자국 (2026-08-11 대표님 «미션 화면들 뒤로가기가 학교정보로 간다»).
+   history.back() 은 못 믿는다 — 라우터가 replaceState 로 주소를 갈아끼우고(#school→#meal),
+   캐러셀·위젯이 기록을 어지럽혀서 엉뚱한 화면(학교정보)으로 튄다.
+   화면이 실제로 바뀔 때만 발자국을 남기고, 뒤로가기는 그 발자국을 되밟는다. */
+const NAV = { stack: [], last: null, back: false };
+
 const App = {
   render() {
     /* 🇰🇷 한글 조합 중에는 다시 그리지 않는다 (2026-07-27).
@@ -7535,11 +7643,28 @@ const App = {
        개별 핸들러마다 막으면 한 곳만 빠뜨려도 그 칸이 깨지므로 **여기서 한 번에** 막는다.
        미뤄둔 그리기는 조합이 끝날 때(compositionend) 커서 자리를 지키며 실행된다. */
     if (IME_ON) { IME_DIRTY = true; return; }
+    { /* 발자국 — 화면(주소)이 실제로 바뀌었을 때만 지난 주소를 쌓는다 */
+      const h = location.hash || "#home";
+      if (NAV.back) { NAV.back = false; NAV.last = h; }
+      else if (NAV.last && NAV.last !== h) {
+        NAV.stack.push(NAV.last);
+        if (NAV.stack.length > 40) NAV.stack.shift();
+        NAV.last = h;
+      } else if (!NAV.last) NAV.last = h;
+    }
     /* ⚠ 주소가 비어 있으면 «로그인»이 아니라 **로그인 여부로** 정한다.
        예전엔 `location.hash || "#login"` 이라 빈 주소가 무조건 login 이 됐다.
        주소를 안 지우던 시절엔 티가 안 났는데, 시작할 때 주소를 비우도록 바꾸자마자
        **로그인한 사람이 로그인 화면에 갇혔다**(2026-07-28 실측·자책). */
     let name = (location.hash || "").slice(1);
+    /* 갈래 주소 — «#school/meal» 처럼 / 뒤가 탭이다(위젯·홈 급식 칸이 쓴다).
+       🔴 이걸 안 갈라서 "school/meal" 이 통째로 화면 이름이 됐고, 없는 화면이라
+       홈으로 떨어졌다 — 「오늘 급식」 칸이 안 넘어가던 원인(대표님 2026-08-11 발견). */
+    if (name.includes("/")) {
+      const [base, tab] = name.split("/");
+      if (base === "school" && tab) S.schoolTab = tab;
+      name = base;
+    }
     /* 옛 주소 호환 (2026-08-03) — `#school` 은 탭 다섯 개를 한 화면에 몰아넣던 시절의 것이다.
        바깥(위젯·알림·저장된 링크)에서 아직 올 수 있으니, 보던 탭에 맞는 **단독 화면**으로 넘긴다.
        replaceState 라 뒤로가기 기록에 «학교 탭»이 남지 않는다. */
@@ -7846,10 +7971,9 @@ const App = {
     if (!S.carAuto) { clearInterval(this._carTimer); this._carTimer = null; }
     saveHome(); this.render();
   },
-  holiToggle() {
-    S.holiOff = !S.holiOff;
-    saveHome(); this.render();
-  },
+  /* 🔴 2026-08-11 폐기 — 공휴일은 언제나 «일정»에서 뺀다(eventsOf). 스위치도 없앴다.
+     저장해 둔 값이 남아 있어도 아무 데도 안 쓴다. 호출부가 없지만 옛 저장본 호환으로 남긴다. */
+  holiToggle() {},
   homeReset() {
     S.menuOrder = [...MENU_KEYS]; S.menuHidden = [...MENU_OFF_DEFAULT]; S.carHidden = []; S.carAuto = true; S.holiOff = false;
     saveHome(); this.render(); toast("기본값으로 되돌렸어요");
@@ -7888,7 +8012,8 @@ const App = {
     document.addEventListener("pointermove", move);
     document.addEventListener("pointerup", up);
   },
-  setTheme(t) { S.theme = t; document.documentElement.setAttribute("data-theme", t); saveHome(); this.render(); },
+  /* 다크를 없앴다(새 정본) — 무엇을 넣어도 라이트다. 호출부는 남겨 둔다(테마 화면 정리 전까지) */
+  setTheme() { S.theme = "light"; document.documentElement.setAttribute("data-theme", "light"); saveHome(); this.render(); },
   /* 로그인 — 서버가 있으면 **진짜로** 로그인해 토큰을 받는다(2026-07-25).
      토큰이 있어야 기록을 올리고 다시 볼 수 있다. 서버가 없으면 지금까지처럼 목업으로 들어간다. */
   async login(id, pw) {
@@ -8069,6 +8194,39 @@ const App = {
 
   // ── 길게 누르기 메뉴 ──────────────────────────────────────
   holdGuard: () => holdGuard(),
+  /* 🔴 일관성 (대표님 2026-08-11 «시간표나 일정이나 같은 기능은 똑같이») —
+     사용자 항목은 어디서든 **탭 = 이동·수정·삭제 메뉴**다. 방과후 블록과 같은 문법. */
+  eventMenu(id) {
+    const ev = STUB.myEvents.find((x) => x.id === id);
+    if (!ev) return;
+    /* 반복으로 태어난 일정(같은 이름·같은 시각이 앞으로 여러 날) — 하나만 지우면
+       다음 주 것이 살아 있어 «안 지워졌다»로 읽힌다(2026-08-12 전수검사). 둘 다 준다 */
+    const twins = STUB.myEvents.filter((x) => x.title === ev.title
+      && (x.start || "") === (ev.start || "") && x.date >= ev.date);
+    const acts = [
+      { label: "수정", icon: "ti-pencil", run: () => App.evEdit(id) },
+      { label: twins.length > 1 ? "이 날만 지우기" : "삭제", icon: "ti-trash", danger: true,
+        run: () => { S.evDraft = { id, title: ev.title }; App.evDelete(); } },
+    ];
+    if (twins.length > 1) acts.push({
+      label: `이후 반복 모두 지우기 (${twins.length}개)`, icon: "ti-trash-x", danger: true,
+      run: () => {
+        for (const t of twins) { S.evDraft = { id: t.id, title: t.title }; App.evDelete(); }
+        toast(`「${ev.title}」 반복 ${twins.length}개를 지웠어요`);
+      } });
+    S.holdMenu = { title: ev.title, actions: acts };
+    this.render();
+  },
+  planMenu2(id) {   // 시간표 하교후 줄 — 격자가 아니라 «이동» 없이 수정·삭제만
+    const a = STUB.activities.find((x) => x.id === id);
+    if (!a) return;
+    S.holdMenu = { title: a.name, actions: [
+      { label: "수정", icon: "ti-pencil", run: () => App.planEdit(id) },
+      { label: "삭제", icon: "ti-trash", danger: true,
+        run: () => { S.planDraft = { id, name: a.name }; App.planDelete(); } },
+    ] };
+    this.render();
+  },
   // 내 일정 — 수정·삭제
   holdEvent(e, id) {
     if (typeof e === "number") { id = e; e = window.event; }
@@ -8100,11 +8258,16 @@ const App = {
       { label: "삭제", icon: "ti-trash", danger: true, run: () => { S.viewRecord = id; App.recordDelete(r.title); } },
     ]);
   },
-  holdClose() { S.holdMenu = null; holdFired = false; this.render(); },
+  /* ⚠ 메뉴를 닫는 «그 손가락»의 클릭이 밑에 새로 그려진 화면에 떨어진다(유령 클릭).
+     이동을 눌렀는데 밑의 빈 칸이 눌려 «새 학원» 폼이 열렸다(대표님 2026-08-12 발견).
+     닫고 0.4초는 클릭을 삼킨다 — 진짜 다음 탭은 그 뒤에 온다. */
+  holdClose() { S.holdMenu = null;
+    holdFired = true; setTimeout(() => { holdFired = false; }, 400);
+    this.render(); },
   holdRun(i) {
     const a = S.holdMenu?.actions?.[i];
     S.holdMenu = null;
-    holdFired = false;                 // 메뉴를 닫는 순간 «다음 클릭 삼키기»를 푼다
+    holdFired = true; setTimeout(() => { holdFired = false; }, 400);
     if (a?.run) a.run();
     else this.render();
   },
@@ -9872,9 +10035,11 @@ const App = {
   /* 한 걸음 뒤로. 뒤로 갔는데 주소가 그대로면 «갈 곳이 없던 것»이라 홈으로 보낸다 —
      history.length 만 보면 앱 밖(빈 페이지)으로 나가 흰 화면이 된다. */
   goBack() {
-    const from = location.hash;
-    history.back();
-    setTimeout(() => { if (location.hash === from) App.goHome(); }, 120);
+    /* 발자국을 되밟는다 — 같은 주소는 건너뛴다(재렌더로 겹쳐 쌓였을 수 있다) */
+    let prev = NAV.stack.pop();
+    while (prev && prev === (location.hash || "#home")) prev = NAV.stack.pop();
+    if (prev) { NAV.back = true; location.hash = prev; }
+    else this.goHome();
   },
 
   clearClose() { S.clear = null; this.render(); },
@@ -10348,7 +10513,7 @@ const App = {
     const from = ymdPlus(TODAY, -DAYS);
     const dLabel = (k) => `${k.slice(0, 4)}-${k.slice(4, 6)}-${k.slice(6)}`;
     const L = [];
-    L.push(`아이서랍 내보내기`);
+    L.push(`학교퀘스트 내보내기`);
     L.push(`아이: ${c?.nickname || ""}${schoolName(c) ? ` (${schoolName(c)}${c?.grade ? ` ${c.grade}학년` : ""})` : ""}`);
     L.push(`기간: ${dLabel(from)} ~ ${dLabel(TODAY)}`);
     L.push(`만든 날: ${dLabel(TODAY)}`);
@@ -10381,7 +10546,7 @@ const App = {
     if (!recs.length) L.push("  (없음)");
 
     const text = L.join("\n");
-    const name = `아이서랍_${c?.nickname || "기록"}_${TODAY}.txt`;
+    const name = `학교퀘스트_${c?.nickname || "기록"}_${TODAY}.txt`;
     try {
       const FS = window.Capacitor?.Plugins?.Filesystem;
       if (FS?.writeFile) {
@@ -10409,15 +10574,13 @@ const App = {
 
   /* ── 테마 화면 (§4·§6) — 고르는 것과 «쓰기»를 나눈다 ── */
   themePick(k, v) {
-    const cur0 = { art: S.art, theme: DARK_THEMES.includes(S.theme) ? "dark" : "light" };
-    S.themePick = { ...cur0, ...(S.themePick || {}), [k]: v };
+    S.themePick = { art: S.art, ...(S.themePick || {}), [k]: v };   /* 밝기는 안 고른다 — 단일 라이트 */
     this.render();
   },
   themeLater() { S.themeFirst = false; S.themePick = null; location.hash = "#home"; this.render(); },
   themeApply() {
     const p = S.themePick; if (!p) return;
-    if (p.theme) this.setTheme(p.theme);
-    if (p.art) this.setArt(p.art);
+    if ("art" in p) this.setArt(p.art);   // 빈 키(기본 파랑)도 값이다
     S.themePick = null; S.themeFirst = false;
     toast("테마를 바꿨어요");
     location.hash = "#home"; this.render();
@@ -10433,6 +10596,15 @@ const App = {
   editCancel() {
     const back = S.edit?.from || "#day";
     S.edit = null; location.hash = back; this.render();
+  },
+  /* 🔴 제목을 쳐도 「넣기」가 안 깨어나던 사고 (대표님 2026-08-11 «달력 입력이 안 된다»).
+     버튼의 disabled 는 렌더 때만 계산되는데, 글자 입력은 일부러 재렌더를 안 한다
+     (한글 조합이 깨진다) — 그래서 새 일정은 제목을 아무리 써도 버튼이 잠겨 있었다.
+     → 입력할 때 버튼만 콕 집어 깨운다. 재렌더 없음, IME 안전. */
+  editTitleInput(el) {
+    S.edit.title = el.value;
+    const b = document.querySelector(".ed-act .ed-save");
+    if (b) b.disabled = !!S.edit.busy || !el.value.trim();
   },
   async editSave() {
     const e = S.edit;
@@ -10500,6 +10672,7 @@ const App = {
   /* 일간 화면 열기 (§2). 날짜를 들고 간다 — 어느 날을 보는지가 이 화면의 전부다. */
   dayOpen(ymd) {
     S.day = /^\d{8}$/.test(String(ymd || "")) ? String(ymd) : TODAY;
+    S.dayFold = null;   // 날이 바뀌면 접힘도 다시 잰다(한 페이지 규칙)
     location.hash = "#day"; this.render();
   },
   dayMove(delta) {
@@ -10798,10 +10971,13 @@ const App = {
     });
   },
   /* 날짜를 꾹 — 그 날짜로 새 일정. 탭은 선택만(다른 날짜 지정이 돼야 한다, 2026-08-03) */
+  /* 🔴 옛 배선 사고 (대표님 2026-08-11 «달력에서 일정 추가가 안 된다니깐») —
+     길게 누르면 evStart 가 **폐지된 모달**의 초안만 만들고 끝났다(그리는 코드가 없다).
+     새 전체 화면 편집기(editOpen)로 잇고, 누른 날짜를 미리 채운다. */
   holdDay(e, key) {
     if (!e) e = window.event;
     S.calPick = key;
-    holdDirect(e, () => this.evStart(key));
+    holdDirect(e, () => { S.day = key; this.editOpen("plan"); });
   },
   calFold() { S.calFold = !S.calFold; saveHome(); this.render(); },
 
@@ -10881,7 +11057,7 @@ const App = {
       return toast(`「${e.title.trim()}」 일정을 고쳤어요${알림말}`);
     }
     const nid = Math.max(0, ...STUB.myEvents.map((x) => x.id)) + 1;
-    STUB.myEvents.push({ id: nid,
+    STUB.myEvents.push({ id: nid, _localAt: Date.now(),
       date: e.date, title: e.title.trim(), memo: e.memo.trim(), start: e.start, end: e.end, remind: e.remind || "" });
     const c1 = cur();
     if (TOKENS.access && c1?.server_id) {
@@ -10913,7 +11089,7 @@ const App = {
     const c = cur();
     const date = ymdPlus(TODAY, 1);
     const nid = Math.min(0, ...STUB.supplies.map((x) => x.id)) - 1;
-    STUB.supplies.push({ id: nid, date, item, memo: "", done: false, by: "child" });
+    STUB.supplies.push({ id: nid, _localAt: Date.now(), date, item, memo: "", done: false, by: "child" });
     S.supDraft.item = "";
     this.render();
     document.getElementById("csup")?.focus();
@@ -10984,7 +11160,7 @@ const App = {
     /* ⚠️ 임시 id는 **음수**로 만든다. 양수로 매기면 서버가 돌려준 id와 부딪힌다 —
        화면에 id가 같은 줄이 둘 생기고, 체크·삭제가 엉뚱한 줄을 건드린다(2026-07-27 실측). */
     const nid = Math.min(0, ...STUB.supplies.map((x) => x.id)) - 1;
-    STUB.supplies.push({ id: nid, date: d.date, item, memo, done: false });
+    STUB.supplies.push({ id: nid, _localAt: Date.now(), date: d.date, item, memo, done: false });
     S.supDraft = { date: d.date, item: "", memo: "" };   // 날짜는 남긴다 — 보통 같은 날 것을 연달아 적는다
     this.render();
     document.getElementById("sup-i")?.focus();
@@ -11021,7 +11197,7 @@ const App = {
       r.data.items.forEach((s) => STUB.supplies.push({ id: s.id, server_id: s.id, date: s.date, item: s.item, memo: s.memo || "", done: false }));
     } else {
       let nid = Math.min(0, ...STUB.supplies.map((x) => x.id));
-      dates.forEach((date) => STUB.supplies.push({ id: --nid, date, item, memo, done: false }));
+      dates.forEach((date) => STUB.supplies.push({ id: --nid, _localAt: Date.now(), date, item, memo, done: false }));
     }
     S.supDraft = { date: d.date, item: "", memo: "" };
     this.render();
@@ -11253,17 +11429,24 @@ const App = {
 
   // ── 방과후 주간 타임그리드 ────────────────────────────────
   // 빈 칸을 누른 지점의 y로 시작 시각을 잡고(10분 단위) 입력 바를 올린다. 기본 1시간.
+  /* 🔴 입력 폼은 #editact 전용 화면이다 — hash 를 안 바꾸면 render 가 방과후 격자를
+     다시 그릴 뿐 폼이 영영 안 뜬다. planEdit 만 바꾸고 이 둘을 빠뜨려서
+     「눌러도 안 넣어진다」가 됐다(대표님 2026-08-11 발견). */
   planTap(e, day) {
+    if (holdGuard() || this.dragGuard()) return;        // 메뉴 유령 클릭·드래그 끝 클릭 차단
+    if (S.planMove) { S.planMove = null; toast("이동을 취소했어요"); this.render(); return; }
     const box = e.currentTarget.getBoundingClientRect();
     const mins = snap10(GRID.h0 * 60 + ((e.clientY - box.top) / GRID.px) * 30);
     S.planDraft = { day, days: [day], name: "", start: toHHMM(mins), end: toHHMM(Math.min(mins + 60, GRID.h1 * 60)), color: 0 };
-    this.render();
+    if (location.hash !== "#editact") S._planFrom = location.hash || "#afterschool";
+    location.hash = "#editact"; this.render();
     document.getElementById("pb-name")?.focus();
   },
   // 시간표의 「＋ 줄 추가」 — 방과후 격자를 거치지 않고 바로 새 학원을 만든다
   planNew() {
     S.planDraft = { day: null, days: [], name: "", start: "15:00", end: "16:00", color: 0 };
-    this.render();
+    if (location.hash !== "#editact") S._planFrom = location.hash || "#afterschool";
+    location.hash = "#editact"; this.render();
     document.getElementById("pb-name")?.focus();
   },
   planColor(i) { S.planDraft.color = i; this.render(); },
@@ -11273,7 +11456,7 @@ const App = {
     this.render();
   },
   planCancel() {
-    location.hash = "#afterschool"; S.planDraft = null; this.render(); },
+    location.hash = S._planFrom || "#afterschool"; S.planDraft = null; this.render(); },
   // 블록을 누르면 같은 창을 값이 채워진 채로 — 이름·시간·색을 고치거나 지운다
   planEdit(id) {
     const a = STUB.activities.find((x) => x.id === id);
@@ -11281,6 +11464,7 @@ const App = {
     const days = String(a.days_of_week || "").split(",").filter(Boolean).map(Number).sort();
     S.planDraft = { id: a.id, day: days[0] || 1, days, name: a.name,
       start: a.start_time, end: a.end_time, color: a.color ?? 0 };
+    if (location.hash !== "#editact") S._planFrom = location.hash || "#afterschool";   // 지우고 돌아갈 곳
     location.hash = "#editact"; this.render();
     document.getElementById("pb-name")?.focus();
   },
@@ -11297,7 +11481,11 @@ const App = {
     const i = STUB.activities.findIndex((a) => a.id === k.id);
     const gone = i >= 0 ? STUB.activities[i] : null;
     if (i >= 0) STUB.activities.splice(i, 1);
-    S.planKill = null; S.planDraft = null; this.render();
+    S.planKill = null; S.planDraft = null;
+    /* 🔴 폼(#editact)에서 지웠으면 **들어온 화면으로** 돌아간다(대표님 2026-08-11
+       «시간표에서 지우면 불러오는 중에 갇힌다») — 초안이 없는 폼은 «불러오는 중»만 남는다 */
+    if (location.hash === "#editact") location.hash = S._planFrom || "#afterschool";
+    this.render();
     this._planPush(gone, "DELETE");   // 서버에도 — 안 지우면 되살아난다(2026-08-03 검수학원 사건)
     toast(`「${k.name}」 을(를) 지웠어요`);
   },
@@ -11325,17 +11513,20 @@ const App = {
       const a = STUB.activities.find((x) => x.id === d.id);
       if (a) Object.assign(a, { name: d.name.trim(), color: d.color, start_time: d.start, end_time: d.end,
                                 days_of_week: days.join(",") });
-      S.planDraft = null; this.render();
+      S.planDraft = null; location.hash = S._planFrom || "#afterschool"; this.render();   // 들어온 화면으로
       this._planPush(a, "PATCH");   // 서버에도 — 안 보내면 앱을 다시 켤 때 옛 이름이 돌아온다(2026-08-03)
       return toast(`${d.name.trim()} 을(를) 고쳤어요`);
     }
     const newId = Math.max(0, ...STUB.activities.map((a) => a.id)) + 1;
-    STUB.activities.push({
+    STUB.activities.push({ _localAt: Date.now(),
       id: newId,
       type: "academy", name: d.name.trim(), color: d.color,
       days_of_week: days.join(","), start_time: d.start, end_time: d.end,
     });
     S.planDraft = null;
+    /* 🔴 격자로 돌아간다 — 폼(#editact)에 남으면 「불러오는 중…」이 떠서
+       저장이 안 된 것처럼 보였다(대표님 2026-08-11 «넣는 게 안 된다»의 나머지 절반) */
+    location.hash = S._planFrom || "#afterschool";
     this.render();
     // 서버에도 — 안 하면 앱을 지우거나 폰을 바꿀 때 사라진다
     const c0 = cur();
@@ -11354,6 +11545,87 @@ const App = {
       });
     }
     toast("추가했어요");
+  },
+  /* 일간 아코디언 — 다 편 채로 재 보고, 넘치면 아래 구획부터 접는다(일정은 안 접는다) */
+  dayFoldToggle(t) {
+    S.dayFold = { ...(S.dayFold || {}) };
+    S.dayFold[t] = !S.dayFold[t];
+    this.render();
+  },
+  dayAutoFold() {
+    if (S.dayFold || !location.hash.startsWith("#day")) return;
+    const scr = document.getElementById("screen");
+    if (!scr) return;
+    const fold = {};
+    const secsEl = [...scr.querySelectorAll(".dy-sec")].reverse();   // 아래(방과후·미션)부터
+    for (const el of secsEl) {
+      if (document.body.scrollHeight <= innerHeight + 4) break;
+      const t = el.querySelector(".dy-st b")?.textContent;
+      if (!t || t === "일정") continue;
+      el.classList.add("fold"); fold[t] = true;
+    }
+    S.dayFold = fold;   // 상태만 기억 — DOM 은 이미 접어 뒀으니 다시 안 그린다
+  },
+  /* 🔴 블록 조작 = «눌러서 고른다» (대표님 2026-08-11 «누르면 이동·수정 나와서 선택»).
+     탭 → 이동·수정·삭제 메뉴. 「이동」을 고르면 그 블록만 끌기 모드가 되고,
+     끌어서 놓으면 저장된다(세로 10분 · 가로 요일). 길이는 아래 손잡이 그대로. */
+  _dragT: 0,
+  dragGuard() { const t = this._dragT; this._dragT = 0; return t && Date.now() - t < 400; },
+  planMenu(id, day) {
+    const a = STUB.activities.find((x) => x.id === id);
+    if (!a) return;
+    S.holdMenu = { title: a.name, actions: [
+      { label: "이동", icon: "ti-arrows-move", run: () => { S.planMove = { id, day };
+          toast("블록을 끌어서 옮기세요"); App.render(); } },
+      { label: "수정", icon: "ti-pencil", run: () => App.planEdit(id) },
+      { label: "삭제", icon: "ti-trash", danger: true,
+        run: () => { S.planDraft = { id, name: a.name }; App.planDelete(); } },
+    ] };
+    this.render();
+  },
+  blockDown(e, id, day) {
+    /* 이동 모드가 아니면 여기선 꾹 메뉴만 — 즉시 드래그는 스크롤과 싸워서 덜컹거렸다 */
+    if (!S.planMove || S.planMove.id !== id) { App.holdPlan(e, id); return; }
+    const a = STUB.activities.find((x) => x.id === id);
+    if (!a) return;
+    e.preventDefault();
+    const blk = e.currentTarget;
+    try { blk.setPointerCapture(e.pointerId); } catch (_) {}   // 손가락을 붙잡아야 안 끊긴다
+    const colW = blk.parentElement.offsetWidth || 1;
+    const startX = e.clientX, startY = e.clientY;
+    const dur = toMin(a.end_time) - toMin(a.start_time);
+    let dx = 0, dy = 0, raf = 0;
+    const paint = () => { raf = 0; blk.style.transform = `translate(${dx}px,${dy}px)`; };
+    const move = (ev) => {
+      dx = ev.clientX - startX; dy = ev.clientY - startY;
+      if (!raf) raf = requestAnimationFrame(paint);   // transform 만 — layout 을 안 건드려야 안 느리다
+    };
+    const up = (ev) => {
+      blk.removeEventListener("pointermove", move);
+      blk.removeEventListener("pointerup", up);
+      blk.removeEventListener("pointercancel", up);
+      if (raf) cancelAnimationFrame(raf);
+      blk.style.transform = "";
+      /* 거의 안 움직였으면 저장하지 않는다 — 이동 모드는 유지, 다시 끌면 된다 */
+      if (Math.hypot(ev.clientX - startX, ev.clientY - startY) < 6) { this._dragT = Date.now(); return; }
+      this._dragT = Date.now();
+      const ns = Math.max(GRID.h0 * 60,
+        Math.min(snap10(toMin(a.start_time) + ((ev.clientY - startY) / GRID.px) * 30), GRID.h1 * 60 - dur));
+      a.start_time = toHHMM(ns); a.end_time = toHHMM(ns + dur);
+      const shift = Math.round((ev.clientX - startX) / colW);
+      if (shift) {
+        const days = String(a.days_of_week || "").split(",").filter(Boolean).map(Number);
+        const nd = Math.max(1, Math.min(5, day + shift));
+        a.days_of_week = [...new Set(days.map((x) => (x === day ? nd : x)))].sort().join(",");
+      }
+      S.planMove = null;
+      App.render();
+      this._planPush && this._planPush(a, "PATCH");
+      toast(`${a.name} ${a.start_time}~${a.end_time}`);
+    };
+    blk.addEventListener("pointermove", move);
+    blk.addEventListener("pointerup", up);
+    blk.addEventListener("pointercancel", up);
   },
   // 블록 아래 손잡이를 끌어 끝 시각을 조정한다. 실앱에서도 같은 제스처를 쓴다.
   gripDown(e, id) {
@@ -11732,8 +12004,30 @@ function loadHome() {
 }
 
 window.addEventListener("hashchange", () => App.render());
+
+/* 🔴 안전영역을 «웹이 직접 물어본다» (2026-08-11 폴드6 실기 사고).
+   네이티브가 밀어넣는 방식만 믿었더니, 앱 안에서 새로고침이 일어난 뒤
+   `--sa-bottom` 이 0 으로 남아 **내비바가 있는데도 입력바·하단 바가 그 위를 덮었다.**
+   위쪽은 CSS 바닥값 24px 이 막지만 아래쪽은 못 막는다 — 제스처 폰은 0 이 «정답»이라
+   바닥값을 깔면 바가 붕 뜬다. 그래서 값을 **물어서** 채운다.
+   ⚠ 화면이 바뀔 때마다(접기·회전·키보드) 다시 묻는다. 같은 값이면 아무 일도 안 한다. */
+function askInsets() {
+  try {
+    const raw = window.NativeInsets && window.NativeInsets.get();
+    if (!raw) return;
+    const [t, b] = raw.split(",").map(Number);
+    if (!Number.isFinite(t) || !Number.isFinite(b)) return;
+    const r = document.documentElement.style;
+    if (r.getPropertyValue("--sa-top") !== t + "px") r.setProperty("--sa-top", t + "px");
+    if (r.getPropertyValue("--sa-bottom") !== b + "px") r.setProperty("--sa-bottom", b + "px");
+  } catch (e) {}
+}
+askInsets();
+[60, 250, 800, 2000].forEach((ms) => setTimeout(askInsets, ms));   // 웹뷰가 붙기 전일 수 있다
+document.addEventListener("visibilitychange", () => { if (!document.hidden) askInsets(); });
+
 // 폴더블을 펼치거나 접으면 화면 폭이 바뀐다 — 서류 종이 축소율을 다시 계산해야 한 화면에 맞는다(2026-07-25).
-window.addEventListener("resize", () => App.fitPage());
+window.addEventListener("resize", () => { askInsets(); App.fitPage(); });
 loadHome();
 loadDayMarks();   // 달력에 남길 «아이 흔적»(§3) — 이 폰이 본 것만 들어 있다
 loadKidPrefs();   // 자녀 테마 로컬 캐시 — 서버 값은 연결 때 덮는다
@@ -11764,7 +12058,11 @@ if (TOKENS.access) {
     loadMe().finally(() => { S.booting = false; App.render(); });
   }
 }
-document.documentElement.setAttribute("data-theme", S.theme);   // 시작 테마 적용
+/* 🔴 단일 라이트 (새 정본 2026-08-11) — 다크는 없앴다.
+   19벌 그림 테마가 색을 지고, UI 는 늘 흰 바탕이다. 지난 설정에 "dark" 가 남아 있어도
+   여기서 라이트로 눕힌다(옛 다크 블록이 되살아나면 새 캐논이 통째로 뒤집힌다). */
+S.theme = "light";
+document.documentElement.setAttribute("data-theme", "light");
 document.documentElement.setAttribute("data-art", S.art);       // 시작 테마 세트(§6)
 /* ⚠ 앱은 **늘 첫 화면에서 시작한다**(2026-07-28 사장님 지적: "왜 기록 부분이 처음에 나와?").
    웹뷰는 지난번 주소를 그대로 되살린다 — 끄기 전이 #timeline 이었으면 다시 켜도 기록이 뜬다.

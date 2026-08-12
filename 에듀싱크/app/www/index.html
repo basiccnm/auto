@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>아이서랍</title>
+<title>학교퀘스트</title>
 <!--
   ══════════════════════════════════════════════════════════════
   앱 껍데기 1차 구조 목업 (회신25-2 승인, 2026-07-24)
@@ -25,11 +25,14 @@
 <link rel="stylesheet" href="style.css" id="css">
 <!-- 새 디자인 정본(2026-08-11) — style.css 뒤에 실어야 이긴다. design/아이서랍-정본.md -->
 <link rel="stylesheet" href="design.css" id="css2">
+<!-- 자녀앱(B모듈) 정본 — «오후 4시의 운동장». design.css 뒤에 실어야 이긴다 -->
+<link rel="stylesheet" href="kid.css" id="css3">
 <!-- 목업 단계에선 CSS를 매번 새로 받는다(고정 이름이면 고쳐도 옛 파일이 돈다 — 2026-07-24·25 두 번 겪음).
      아이콘 CSS 안의 woff2 는 빌드 스크립트가 ?v=… 를 박아준다. 배포 전엔 셋 다 고정 버전으로. -->
 <script>
-  document.getElementById("css").href = "style.css?v=f413c981";
+  document.getElementById("css").href = "style.css?v=" + Date.now();   // 목업 단계 — 매번 새로
   document.getElementById("css2").href = "design.css?v=" + Date.now();
+  document.getElementById("css3").href = "kid.css?v=" + Date.now();
   document.getElementById("icons").href = "fonts/tabler-subset.css?v=aa2bfb93";
 </script>
 </head>
@@ -77,7 +80,8 @@
   <!-- 목업 안 알림(토스트) — 크롬 alert 대신. 실앱도 이 자리(화면 안 표시)를 쓴다(검수 지적 2026-07-24). -->
   <div id="toast" class="toast hidden"></div>
 
-  <!-- CSS와 같은 이유로 캐시를 끊는다(고정 ?v=2면 고쳐도 옛 app.js가 돈다). 배포 전 고정 버전으로. -->
-  <script src="app.js?v=6e3c1e4c"></script>
+  <!-- 🔴 고정 ?v= 라 **웹에서 옛 app.js 가 계속 돌았다**(2026-08-12 «캐시 안 지운 것 같은데» —
+       맞았다). CSS 처럼 매번 끊는다. 출시 전 빌드 해시로 바꿀 것. -->
+  <script>document.write('<script src="app.js?v=' + Date.now() + '"><\/script>');</script>
 </body>
 </html>

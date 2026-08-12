@@ -22,8 +22,11 @@
   --ns-line:#dadce0;
 
   /* 기본 테마 = 구글 파랑. 그림 테마를 고르면 아래 [data-art] 가 덮는다 */
-  --ns-blue:#1a73e8; --ns-blue-tx:#185abc; --ns-blue-tint:#CADBF0;   /* 한 단 진하게(대표님 C안) — 잉크 4.62:1 */
+  --ns-blue:#1a73e8; --ns-blue-tx:#185abc; --ns-blue-tint:#e8f1fd;   /* 정본(목업)과 동일 — 잉크 6.51:1 */
   --t-ink:var(--ns-blue-tx); --t-bar:var(--ns-blue); --t-tint:var(--ns-blue-tint);
+  /* 진한 틴트 — 시계 앞판 전용(대표님 2026-08-11 「너무 옅다」). 틴트에 바 색 11%.
+     기본 파랑이면 ≈#d1e3fb. 19벌 전부 자동 파생 — 값을 따로 안 적는다 */
+  --t-tint2:color-mix(in srgb, var(--t-bar) 11%, var(--t-tint));
   --ns-scrim:0;                     /* 그림이 있을 때만 1 */
 
   /* 자주 — 「우리 아이」 */
@@ -32,17 +35,48 @@
   /* 쉬는 날(토·일·공휴일) — 틴트 위 5.09:1 */
   --ns-off:#c5221f;
 
+  /* ══ 크기 반응 체계 (2026-08-11 대표님 확정 · 시각 정본 mockups/main-A-google.html) ══
+     기준 = 제일 작은 화면 320×640. 거기서 다 들어가는 값이 하한(clamp min),
+     393×852(목업 정본)에서 확정된 생김새와 정확히 일치, 큰 화면에선 상한에 걸려
+     «요소가 아니라 여백»이 늘어난다. 목업의 cqw/cqh = 여기선 vw/vh (화면 전체가 틀).
+     ⚠ 칩 32 · 아이콘 20 · ＋버튼 48 · 아바타 44 · 배지는 여기 안 태운다 — 고정 px */
+
   /* 간격 · 모서리 */
-  /* 폭에 비례한다 — px 로 못 박으면 기기가 바뀔 때마다 어긋난다.
-     clamp 로 위아래를 막아 극단으로는 안 간다.   368→8/15   412→9/17 */
   --ns-4:4px;
-  --ns-8:  clamp(6px,  2.1vw, 11px);
-  --ns-16: clamp(12px, 4.2vw, 22px);
-  --ns-24: clamp(18px, 6.3vw, 32px);
+  --ns-8:  clamp(6px,  2.04vw, 9px);    /* 393에서 8 */
+  --ns-16: clamp(12px, 4.07vw, 17px);   /* 393에서 16 */
+  --ns-24: clamp(18px, 6.1vw,  25px);   /* 393에서 24 */
   --ns-r-band:4px; --ns-r:8px; --ns-r-pill:1000px;
 
-  /* 크기 */
-  --ns-clock: clamp(48px, 15.5vw, 74px);  --ns-h-nav:48px; --ns-h-row:54px; --ns-h-band:42px; --ns-h-dday:48px;
+  /* 글자 — 이름 = 393px(정본)에서의 크기 */
+  --ns-fs-13:clamp(12px,   calc(7.6px  + 1.37vw), 13.5px);
+  --ns-fs-14:clamp(13px,   calc(8.6px  + 1.37vw), 14.5px);
+  --ns-fs-16:clamp(14.5px, calc(7.9px  + 2.05vw), 16.5px);
+  --ns-fs-17:clamp(15.5px, calc(8.9px  + 2.05vw), 17.5px);
+  --ns-fs-19:clamp(17px,   calc(9.9px  + 2.32vw), 19.5px);   /* 머리 제목 — 17이 작았다(2026-08-11) */
+  --ns-fs-22:clamp(20px,   calc(11.2px + 2.74vw), 23px);
+  --ns-clock:clamp(48px, 16.3vw, 74px);   /* 393에서 64 */
+
+  /* 세로 — 기준은 화면 전체(vh)가 아니라 **가용 높이**다.
+     폴드6는 상태바 36 + 3버튼 내비바 48 = 84px 를 먹는다. vh 로 재면 인셋 큰 폰에서
+     그만큼 넘친다(905 폰에서 16px 실측). 1차식이 (가용 616 → 하한)·(가용 837 → 정본값)
+     두 점을 지난다 — 837 은 «5칸 홈이 정본 크기로 꼭 들어가는» 가용 높이다. */
+  --ns-ah:calc(100vh - var(--sa-t, 0px) - var(--sa-b, 0px));
+  --ns-h-nav:48px;                                                    /* 고정 */
+  --ns-now-pt:clamp(8px,  calc(-31.02px + 0.06335*var(--ns-ah)), 22px);   /* 시계 위 숨통 */
+  --ns-h-band:clamp(28px, calc(-11.02px + 0.06335*var(--ns-ah)), 42px);   /* 전광판 */
+  --ns-h-dday:clamp(34px, calc(6.13px   + 0.04525*var(--ns-ah)), 44px);
+  --ns-row-pt:clamp(8px,  calc(-25.45px + 0.05430*var(--ns-ah)), 20px);   /* 서랍 앞판 위 */
+  --ns-row-pb:clamp(6px,  calc(-16.30px + 0.03620*var(--ns-ah)), 14px);   /* 서랍 앞판 아래 */
+  --ns-row-mh:clamp(50px, calc(-33.62px + 0.13575*var(--ns-ah)), 80px);   /* 앞판 — 정본 80 · 하한 50 */
+  --ns-act-h:clamp(44px,  calc(10.55px  + 0.05430*var(--ns-ah)), 56px);   /* 하단 바 버튼 */
+  --ns-gap9:clamp(4px,    calc(-9.93px  + 0.02262*var(--ns-ah)), 9px);    /* 서랍 틈 */
+  --ns-me-p:clamp(8px,    calc(-8.72px  + 0.02715*var(--ns-ah)), 14px);   /* 프로필 패딩 */
+  --ns-me-g:clamp(6px,    calc(-5.15px  + 0.01810*var(--ns-ah)), 10px);
+  /* 드로어 세로 — 하한에서 «자연 높이 합»이 판 안에 들어가야 밑선(내정보=홈 바)이 산다 */
+  --ns-h-row:clamp(38px,  calc(-6.60px  + 0.07240*var(--ns-ah)), 54px);   /* 드로어 행 */
+  --ns-thm-h:clamp(32px,  calc(-7.02px  + 0.06335*var(--ns-ah)), 46px);
+  --ns-sec-pt:clamp(6px,  calc(-33.02px + 0.06335*var(--ns-ah)), 20px);
 
   --ns-sh:0 1px 2px rgba(0,0,0,.05), 0 2px 10px rgba(0,0,0,.05);
 }
@@ -53,93 +87,154 @@
    ⚠ 사람이 고르지 않는다. 새 그림이 들어오면 같은 계산을 돌려 한 줄 추가한다.
      (계산식은 design/아이서랍-정본.md) */
 [data-art]{--ns-scrim:1}
-[data-art="theme_01"]{--t-ink:#5E2000;--t-bar:#5E2000;--t-tint:#EECBB9}
-[data-art="theme_02"]{--t-ink:#706419;--t-bar:#847514;--t-tint:#EEE7B9}
-[data-art="theme_03"]{--t-ink:#4D6E2D;--t-bar:#57822D;--t-tint:#D5EEBE}
-[data-art="theme_04"]{--t-ink:#162348;--t-bar:#111F48;--t-tint:#B9C8EE}
-[data-art="theme_05"]{--t-ink:#7E502E;--t-bar:#A76432;--t-tint:#EED0BA}
-[data-art="theme_06"]{--t-ink:#993316;--t-bar:#992908;--t-tint:#EEC5B9}
-[data-art="theme_07"]{--t-ink:#29405B;--t-bar:#243D5B;--t-tint:#C1D6EE}
-[data-art="theme_08"]{--t-ink:#174928;--t-bar:#124925;--t-tint:#B9EECC}
-[data-art="theme_09"]{--t-ink:#103370;--t-bar:#062D70;--t-tint:#B9CDEE}
-[data-art="theme_10"]{--t-ink:#3D7066;--t-bar:#3F8073;--t-tint:#C9EEE7}
-[data-art="theme_11"]{--t-ink:#7B4F50;--t-bar:#A46364;--t-tint:#EED1D1}
-[data-art="theme_12"]{--t-ink:#002976;--t-bar:#002976;--t-tint:#B9CCEE}
-[data-art="theme_13"]{--t-ink:#7C5949;--t-bar:#9B6A55;--t-tint:#EED7CD}
-[data-art="theme_14"]{--t-ink:#461D0B;--t-bar:#461906;--t-tint:#EEC9B9}
-[data-art="theme_15"]{--t-ink:#206186;--t-bar:#1D7DB3;--t-tint:#B9DBEE}
-[data-art="theme_16"]{--t-ink:#73643E;--t-bar:#877443;--t-tint:#EEE4C9}
-[data-art="theme_17"]{--t-ink:#69507E;--t-bar:#8C67AC;--t-tint:#E0D0EE}
-[data-art="theme_18"]{--t-ink:#532597;--t-bar:#4C1A97;--t-tint:#CFB9EE}
+[data-art="theme_01"]{--t-ink:#5E2000;--t-bar:#5E2000;--t-tint:#F8E1D5}
+[data-art="theme_02"]{--t-ink:#7A6D1C;--t-bar:#847514;--t-tint:#F8F3D5}
+[data-art="theme_03"]{--t-ink:#50732F;--t-bar:#57822D;--t-tint:#E8F8D8}
+[data-art="theme_04"]{--t-ink:#162348;--t-bar:#111F48;--t-tint:#D5DFF8}
+[data-art="theme_05"]{--t-ink:#8E5A33;--t-bar:#A76432;--t-tint:#F8E4D5}
+[data-art="theme_06"]{--t-ink:#993316;--t-bar:#992908;--t-tint:#F8DDD5}
+[data-art="theme_07"]{--t-ink:#29405B;--t-bar:#243D5B;--t-tint:#DAE8F8}
+[data-art="theme_08"]{--t-ink:#174928;--t-bar:#124925;--t-tint:#D5F8E2}
+[data-art="theme_09"]{--t-ink:#103370;--t-bar:#062D70;--t-tint:#D5E2F8}
+[data-art="theme_10"]{--t-ink:#40756B;--t-bar:#3F8073;--t-tint:#DFF8F3}
+[data-art="theme_11"]{--t-ink:#8B595A;--t-bar:#A46364;--t-tint:#F8E5E5}
+[data-art="theme_12"]{--t-ink:#002976;--t-bar:#002976;--t-tint:#D5E2F8}
+[data-art="theme_13"]{--t-ink:#86604F;--t-bar:#9B6A55;--t-tint:#F8E9E2}
+[data-art="theme_14"]{--t-ink:#461D0B;--t-bar:#461906;--t-tint:#F8E0D5}
+[data-art="theme_15"]{--t-ink:#236C95;--t-bar:#1D7DB3;--t-tint:#D5ECF8}
+[data-art="theme_16"]{--t-ink:#786941;--t-bar:#877443;--t-tint:#F8F1DF}
+[data-art="theme_17"]{--t-ink:#755A8D;--t-bar:#8C67AC;--t-tint:#EFE4F8}
+[data-art="theme_18"]{--t-ink:#532597;--t-bar:#4C1A97;--t-tint:#E3D5F8}
 
-/* ── 화면 껍데기 ──────────────────────────────────────────────────── */
-body:has(.ns-home), body:has(.ns-drawer){ background:var(--ns-bg); }
-/* 상태바 자리 띠 — 옛 토큰(--bg, 베이지)을 칠하고 있었다. 회색으로 고정 */
-body:has(.ns-home)::before, body:has(.ns-drawer)::before{ background:var(--ns-bg); }
-#screen:has(.ns-home){
-  padding:0 var(--ns-16) calc(var(--sa-b) + var(--ns-8));
+/* ══ 옛 6토큰 ↔ 새 캐논 결합 (2026-08-11) ═══════════════════════════════
+   나머지 40화면은 style.css 의 `--bg/--card/--ink/--muted/--line/--accent` 를 읽는다.
+   화면을 하나씩 고치는 대신 **토큰이 가리키는 값을 여기서 한 번** 바꾼다.
+   덧대기가 아니다 — 테마→토큰 매핑의 «정의 자리»가 이 파일(디자인 정본)이기 때문이다.
+   화면 CSS 규칙은 손대지 않는다. 색만 정본을 따라온다.
+
+   ⚠ style.css 의 생성물 블록 `:root[data-art="theme_NN"]` 이 --accent 를 따로 박는다.
+     같은 무게(0,2,0)로 `:root[data-art]` 을 써야 나중 파일인 여기가 이긴다. */
+:root{
+  --bg:var(--ns-bg);          /* 화면 바탕 — 흰 카드와 1.28:1 로 갈린다(면 대비) */
+  --card:var(--ns-canvas);
+  --ink:var(--ns-ink);
+  --muted:var(--ns-muted);
+  --line:var(--ns-line);
+  --accent:var(--t-bar);
+  --accent-ink:var(--t-ink);
+  --icon:var(--ns-muted);     /* 아이콘 단색 — 따뜻한 회색은 새 팔레트에서 누렇다 */
+  --chip:#f1f3f4;             /* 아이콘 칸 — 구글 중립 회색 */
+  --todo:var(--ns-off); --todo-ink:var(--ns-off);
+  --done:#1e8e3e; --done-ink:#1e8e3e;
+  --danger:#c5221f;
+  --outer:var(--ns-bg);
+}
+:root[data-art]{ --accent:var(--t-bar); --accent-ink:var(--t-ink); }
+
+/* ── 화면 껍데기 ────────────────────────────────────────────────────
+   🔴 모든 화면이 같은 틀을 쓴다(2026-08-11). 예전엔 홈만 새 틀이고 나머지 40화면은
+      옛 `#screen{padding:18px 20px …}` 였다 — 화면을 옮길 때마다 좌우 여백이 튀었다.
+   상태바(--sa-t)·내비바(--sa-b) 자리는 **여기 한 곳**에서만 만든다.
+   ⚠ 옛 규칙 두 개(style.css 2598·7188행)에 `:not(:has(.ns-home))` 예외를 달아 뒀다 —
+     새 화면 여백은 이 파일이 정한다. */
+body{ background:var(--ns-bg); }
+body::before{ background:var(--ns-bg); }   /* 상태바 자리 띠 — 옛 베이지를 회색으로 */
+#screen{
+  padding:var(--sa-t) var(--ns-16) calc(var(--sa-b) + var(--ns-16));
   background:var(--ns-bg); min-height:100vh;
+}
+/* 🔴 홈은 «한 화면»이다 — 목업의 폰 틀(.phone)과 같은 규칙(2026-08-11).
+   화면 자체는 구르지 않고, 넘치면 **서랍장만** 구른다.
+   전에는 min-height:100vh 라 내용이 넘치면 페이지가 늘어났고, 하단 바가 sticky 로
+   떠 있어서 «마지막 줄이 바 밑으로 깔렸다»(320×640 + 3버튼 내비바에서 23px 실측).
+   높이를 화면에 못 박으면 그 일이 구조적으로 불가능해진다. */
+#screen:has(.ns-home){
+  height:100vh; height:100dvh; min-height:0; overflow:hidden;
+  padding-bottom:calc(var(--sa-b) + var(--ns-8));
   display:flex; flex-direction:column;
 }
+/* 서랍장이 남는 높이를 다 먹고, 모자라면 자기 안에서 구른다 —
+   ⚠ min-height:0 이 없으면 flex 자식은 안 줄어든다(기본 min-height:auto) */
+.ns-chest{ flex:1 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:contain; }
 .ns-home{ display:flex; flex-direction:column; flex:1; min-height:0;
-  color:var(--ns-fg); font-size:16px; font-weight:500; line-height:1.5; }
+  color:var(--ns-fg); font-size:var(--ns-fs-16); font-weight:500; line-height:1.5; }
 
-/* 머리 — ☰ 왼쪽 · 앱 이름 오른쪽(벽에서 한 걸음 안으로) */
-.ns-hd{ display:flex; align-items:center; height:var(--ns-h-nav); flex:none;
-  padding-top:var(--sa-t); box-sizing:content-box; }
-.ns-hd .ham{ width:40px; height:40px; display:grid; place-items:center; font-size:20px;
+/* 머리 — ☰ 왼쪽 · 앱 이름 오른쪽(벽에서 한 걸음 안으로).
+   상세 화면(.sub)은 ‹ 뒤로 + 제목이 왼쪽에 붙는다 — 같은 48px 규격 */
+.ns-hd{ display:flex; align-items:center; height:var(--ns-h-nav); flex:none; }
+/* 상세 머리는 **붙박이**다(대표님 2026-08-11 «‹ 고객센터 부분도 고정, 그 안에서 출력»).
+   내용이 길어져도 ‹ 와 제목은 늘 그 자리 — 아래(내비바)는 네이티브가 웹뷰를 잘라 막고,
+   위는 이 sticky 가 막는다. 좌우 음수 여백은 #screen 패딩을 덮어 띠가 끝까지 가게 한다 */
+.ns-hd.sub{ gap:var(--ns-4); position:sticky; top:var(--sa-t); z-index:5;
+  background:var(--ns-bg); margin:0 calc(var(--ns-16) * -1) var(--ns-8);
+  padding:0 var(--ns-16); }
+.ns-hd.sub h1{ margin-left:0; padding-right:0; min-width:0; overflow:hidden;
+  text-overflow:ellipsis; white-space:nowrap; }
+/* 부제는 제목 «옆»에 — 두 줄로 쌓지 않는다(대표님 2026-08-11 «급식 경기초등학교 1줄로») */
+.ns-hd.sub h1 em{ display:inline; font-style:normal; font-size:var(--ns-fs-13);
+  font-weight:500; color:var(--ns-muted); margin-left:8px; }
+.ns-hd .ham{ width:44px; height:44px; min-height:0; padding:0; display:grid; place-items:center; font-size:23px;
   border:none; background:none; color:var(--ns-ink); border-radius:var(--ns-r-pill);
   margin-left:-4px; position:relative; }
+  /* ⚠ min-height:0 — style.css 전역 button{min-height:44px} 가 새어 들어온다(1261행).
+     ns- 버튼마다 원 규칙에서 직접 끊는다. .chip 누출과 같은 병 — 이름은 갈았지만
+     요소 선택자(button)는 이름을 못 간다 */
 .ns-hd .ham .badge{ position:absolute; top:2px; right:2px; min-width:16px; height:16px;
   border-radius:var(--ns-r-pill); background:var(--ns-off); color:#fff;
   font-size:10px; font-weight:800; display:grid; place-items:center; padding:0 4px; }
-.ns-hd h1{ margin-left:auto; padding-right:20px; font-size:17px; font-weight:700;
+.ns-hd h1{ margin-left:auto; padding-right:20px; font-size:var(--ns-fs-19); font-weight:700;
   color:var(--ns-ink); }
 
 /* ── 시계 + 전광판 = 칩 하나 ───────────────────────────────────────
    ⚠ 가림막(::before)은 **그림이 있을 때만** 켠다. 항상 켜두면 기본 테마의
      연한 파랑을 하얗게 씻어낸다(2026-08-11 실측 — 세 번 지적받고 찾았다). */
 .ns-now{ position:relative; border-radius:var(--ns-r); overflow:hidden;
-  margin-bottom:var(--ns-16); padding:22px 0 0;
-  background:var(--t-tint) no-repeat; background-image:var(--ns-art, none);
+  margin-bottom:var(--ns-16); padding:var(--ns-now-pt) 0 0;
+  background:var(--t-tint2) no-repeat; background-image:var(--ns-art, none);
   background-size:100% auto; background-position:center top; }
 .ns-now::before{ content:""; position:absolute; inset:0; pointer-events:none;
   opacity:var(--ns-scrim);
   background:linear-gradient(180deg,rgba(255,255,255,.34) 0%,rgba(255,255,255,.80) 46%,rgba(255,255,255,.94) 100%); }
 .ns-now > *{ position:relative; }
 .ns-clock{ display:flex; align-items:baseline; justify-content:center; gap:var(--ns-8);
-  padding:0 var(--ns-16) 14px; font-variant-numeric:tabular-nums; }
-.ns-clock .d{ font-size:14px; font-weight:600; color:var(--ns-muted); }
+  padding:0 var(--ns-16) var(--ns-row-pb); font-variant-numeric:tabular-nums; }
+.ns-clock .d{ font-size:var(--ns-fs-14); font-weight:600; color:var(--ns-muted); }
 .ns-clock .d .off{ color:var(--ns-off); font-weight:700; }   /* 토·일·공휴일 */
 .ns-clock .t{ font-size:var(--ns-clock); font-weight:700; line-height:1;
   letter-spacing:-1px; color:var(--t-ink); }
+/* 콜론 — <i> 라 기본 이탤릭으로 «기울어» 보였다(대표님 2026-08-11). 바로 세우고
+   고정폭 가운데 + 살짝 올림. 깜박임은 초마다 시계를 갈아끼우는 쪽(clockHM)이 클래스로 준다 */
+.ns-clock .t i{ font-style:normal; display:inline-block; width:.62ch; text-align:center;
+  transform:translateY(-.05em); }
+.ns-clock .t i.off{ opacity:0; }
+@media (prefers-reduced-motion:reduce){ .ns-clock .t i.off{ opacity:1; } }
 /* 전광판 — 오른쪽에서 왼쪽으로. 글자는 검정이 제일 잘 읽힌다(틴트 위 14.6:1) */
 .ns-mq{ height:var(--ns-h-band); display:flex; align-items:center; overflow:hidden;
   border-top:1px solid rgba(0,0,0,.08); }
 .ns-mq > span{ display:inline-block; white-space:nowrap; padding-left:100%;
-  font-size:14px; font-weight:700; color:var(--ns-ink);
-  animation:ns-flow 16s linear infinite; }
+  font-size:var(--ns-fs-14); font-weight:700; color:var(--ns-ink);
+  animation:ns-flow 30s linear infinite; }   /* 16s 는 눈이 못 따라간다(대표님 2026-08-11) */
 @keyframes ns-flow{ from{transform:translateX(0)} to{transform:translateX(-100%)} }
 @media (prefers-reduced-motion:reduce){ .ns-mq > span{ animation:none; padding-left:14px } }
 
 /* D-day — 가장 가까운 큰 행사 하나. 없으면 줄 자체가 없다 */
-.ns-dday{ display:flex; align-items:center; width:100%; height:var(--ns-h-dday);
+.ns-dday{ display:flex; align-items:center; width:100%; height:var(--ns-h-dday); min-height:0;
   padding:0 var(--ns-16); margin-bottom:var(--ns-16); border:none; text-align:left;
   background:var(--t-tint); border-radius:var(--ns-r); font:inherit; color:var(--ns-ink); }
 .ns-dday b{ font-weight:700; }
-.ns-dday .v{ margin-left:auto; color:var(--t-ink); font-size:14px; font-weight:700; }
+.ns-dday .v{ margin-left:auto; color:var(--t-ink); font-size:var(--ns-fs-14); font-weight:700; }
 
 /* ── 🗄️ 서랍장 — 우리 시그니처 ───────────────────────────────────
    앱 이름이 아이서랍이다. 화면에서도 서랍이 보여야 한다.
    몸통(진회색) 안에 앞판(흰색)이 **틈을 두고** 쌓이고, 앞판마다 손잡이와 두께가 있다. */
-.ns-lb{ font-size:14px; font-weight:700; color:var(--ns-muted); padding:0 var(--ns-8) var(--ns-8); }
+.ns-lb{ font-size:var(--ns-fs-14); font-weight:700; color:var(--ns-muted); padding:0 var(--ns-8) var(--ns-8); }
 .ns-chest{ background:var(--ns-chest); border:1px solid var(--ns-line);
   border-radius:var(--ns-r); box-shadow:var(--ns-sh);
-  padding:9px; display:flex; flex-direction:column; gap:9px; margin-bottom:var(--ns-16); }
+  padding:var(--ns-gap9); display:flex; flex-direction:column; gap:var(--ns-gap9); margin-bottom:var(--ns-16); }
 .ns-row{ display:flex; align-items:center; gap:12px; width:100%;
   background:var(--ns-canvas); border:1px solid var(--ns-line); border-radius:6px;
-  padding:20px 12px 14px; position:relative; text-align:left; font:inherit;
-  color:var(--ns-ink); box-shadow:0 2px 0 rgba(32,33,36,.08); min-height:80px; }
+  padding:var(--ns-row-pt) 12px var(--ns-row-pb); position:relative; text-align:left; font:inherit;
+  color:var(--ns-ink); box-shadow:0 2px 0 rgba(32,33,36,.08); min-height:var(--ns-row-mh); }
 .ns-row::before{ content:""; position:absolute; top:6px; left:50%; transform:translateX(-50%);
   width:28px; height:4px; border-radius:2px; background:#d3d7dd; }   /* 손잡이 */
 /* align-self 를 안 주면 부모 높이만큼 늘어난다(flex 기본 stretch) — 32×44 로 쟀다 */
@@ -150,13 +245,13 @@ body:has(.ns-home)::before, body:has(.ns-drawer)::before{ background:var(--ns-bg
 .ns-row .ns-c.nt{ background:#f1f3f4; color:var(--ns-muted); }  /* ⚠ n 은 이름칸 클래스라 충돌 — nt */
 .ns-row .ns-c .ti{ font-size:17px; }
 .ns-row .n{ flex:1; min-width:0; font-weight:600; }
-.ns-row .n em{ display:block; font-style:normal; font-size:13px; font-weight:500;
+.ns-row .n em{ display:block; font-style:normal; font-size:var(--ns-fs-13); font-weight:500;
   color:var(--ns-muted); margin-top:1px; }
-.ns-row .v{ font-size:14px; font-weight:700; color:var(--ns-muted);
+.ns-row .v{ font-size:var(--ns-fs-14); font-weight:700; color:var(--ns-muted);
   font-variant-numeric:tabular-nums; }
 .ns-row .v.ok{ color:var(--t-ink); }
 .ns-row .v.need{ color:var(--ns-off); }
-.ns-row .ar{ color:var(--ns-muted); font-size:13px; }
+.ns-row .ar{ color:var(--ns-muted); font-size:var(--ns-fs-13); }
 
 /* ── 하단 바 — 떠 있는 판. 배치 고정: [1fr | 48 | 1fr] ────────────
    ⚠ 좌우 글자 폭이 달라 가운데가 밀렸던 적이 있다. 가운데를 **고정폭**으로 박아야 한다.
@@ -164,12 +259,16 @@ body:has(.ns-home)::before, body:has(.ns-drawer)::before{ background:var(--ns-bg
 .ns-bar{ display:grid; grid-template-columns:1fr var(--ns-h-nav) 1fr; align-items:center;
   margin-top:auto; padding:var(--ns-8) var(--ns-16);
   background:var(--t-bar); border-radius:var(--ns-r);
-  position:sticky; bottom:0; z-index:2; }   /* 내용이 길어져도 화면 밖으로 안 밀린다 */
-.ns-bar button{ border:none; background:rgba(255,255,255,.14); color:#fff; font-family:inherit;
-  height:56px; border-radius:var(--ns-r); width:auto; padding:0 24px; justify-self:center;
+  flex:none; }
+  /* ⚠ sticky 를 걷어냈다(2026-08-11). 화면 높이를 못 박고 서랍장이 구르므로
+     바는 늘 제자리에 있다. sticky 로 띄우면 «내용 위에 겹쳐» 마지막 줄을 가린다. */
+/* ⚠ 알약 바탕은 **어둡게** 깐다. 흰 14% 를 얹으면 바 색이 밝아져서 그 위 흰 글씨가
+   4.51 → 3.57 로 떨어진다(밝은 테마 실측 2026-08-11). 어둡게 깔면 오히려 올라간다 */
+.ns-bar button{ border:none; background:rgba(0,0,0,.12); color:#fff; font-family:inherit;
+  height:var(--ns-act-h); border-radius:var(--ns-r); width:auto; padding:0 24px; justify-self:center;
   display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; }
 .ns-bar button i{ display:block; font-style:normal; font-size:21px; line-height:1; padding-bottom:1px; }
-.ns-bar button b{ font-size:13px; font-weight:800; line-height:1; }
+.ns-bar button b{ font-size:var(--ns-fs-13); font-weight:800; line-height:1; }
 .ns-bar button.plus{ width:var(--ns-h-nav); height:var(--ns-h-nav); padding:0;
   background:var(--ns-canvas); border-radius:var(--ns-r-pill); position:relative; }
 .ns-bar button.plus::before,.ns-bar button.plus::after{ content:""; position:absolute;
@@ -180,40 +279,55 @@ body:has(.ns-home)::before, body:has(.ns-drawer)::before{ background:var(--ns-bg
 /* ── 드로어 ────────────────────────────────────────────────────────
    ⚠ 상태바를 덮지 않는다. 바닥선은 **홈 하단 바와 같은 높이**에서 끝난다. */
 .ns-dim{ position:fixed; inset:0; background:rgba(32,33,36,.32); z-index:80; }
-.ns-drawer{ position:fixed; top:var(--sa-t); bottom:0; left:0; width:min(304px,84vw);
+.ns-drawer{ position:fixed; top:var(--sa-t); bottom:0; left:0;
+  width:min(304px, calc(100vw - 56px));   /* 320 폰에서도 뒤가 56px 보인다(구글 규격) */
   background:var(--ns-canvas); z-index:81; display:flex; flex-direction:column;
-  padding:var(--ns-16) var(--ns-16) calc(var(--sa-b) + var(--ns-8)); overflow-y:auto; }
+  padding:var(--ns-16) var(--ns-8) calc(var(--sa-b) + var(--ns-8)); overflow-y:auto; }
 /* 프로필 — 테마 면. 이름은 오른쪽, 서랍 바로가기는 그 옆 */
-.ns-me{ display:flex; flex-direction:column; gap:10px; padding:14px var(--ns-16);
+/* ⚠ 드로어는 flex 세로 통 — 640 미만 화면에서 내용이 넘치면 자식들이 shrink 로
+   조금씩 줄어든다. 이게 **정본(목업 320×640)과 같은 동작**이다 — 칩(32·flex:none)은
+   안 줄고 행 높이만 준다. flex:none 을 박아 스크롤로 밀어내지 말 것(밑선이 깨진다) */
+.ns-me{ display:flex; flex-direction:column; gap:var(--ns-me-g); padding:var(--ns-me-p) var(--ns-16);
   margin-bottom:var(--ns-8); background:var(--t-bar); border-radius:var(--ns-r); }
 .ns-me .top{ display:flex; align-items:center; gap:12px; justify-content:space-between; }
 .ns-me .av{ width:44px; height:44px; flex:none; border-radius:var(--ns-r-pill);
   background:var(--ns-canvas); display:grid; place-items:center; color:var(--t-bar); font-size:22px; }
-.ns-me .nm{ font-size:22px; font-weight:800; color:#fff; margin-left:auto; margin-right:10px; }
-.ns-me .go{ display:grid; place-items:center; width:38px; height:38px; flex:none;
+.ns-me .nm{ font-size:var(--ns-fs-22); font-weight:800; color:#fff; margin-left:auto; margin-right:10px; }
+/* ⚠ padding:0 — 옛 전역 button{padding:13px} 이 새면 아이콘이 원 안에서 3.5px 밀린다(실측) */
+.ns-me .go{ display:grid; place-items:center; width:38px; height:38px; min-height:0; padding:0; flex:none;
   border:none; border-radius:var(--ns-r-pill); background:rgba(255,255,255,.18);
   color:#fff; font-size:18px; }
-.ns-me .stats{ display:flex; flex-direction:column; gap:5px; }
+/* ⚠ 이름을 ns-stats 로 — 옛 style.css 의 `.stats b{font-size:19px~}` 가 새어 들어와
+   행이 38~45px 로 부풀었다(320 실측). `.chip` 누출과 같은 병 (STATUS ③) */
+.ns-stats{ display:flex; flex-direction:column; gap:5px; }
 /* ⚠ 라벨(「학교」)이 세로로 쪼개져 «학/교» 로 보였다 — flex:none 로 못 박고 값은 말줄임 */
-.ns-me .stats .s{ display:flex; align-items:center; justify-content:space-between; gap:10px;
-  background:rgba(255,255,255,.14); border-radius:6px; padding:8px 12px;
-  font-size:13px; font-weight:600; color:rgba(255,255,255,.92); }
-.ns-me .stats .s > :first-child{ flex:none; white-space:nowrap; }
-.ns-me .stats .s b{ flex:1; text-align:right; font-weight:700; color:#fff;
+.ns-stats .s{ display:flex; align-items:center; justify-content:space-between; gap:10px;
+  background:rgba(255,255,255,.14); border-radius:6px;
+  padding:clamp(5px, calc(-3.36px + 0.01357*var(--ns-ah)), 8px) 12px;
+  font-size:var(--ns-fs-13); font-weight:600; color:rgba(255,255,255,.92); line-height:1.5; }
+.ns-stats .s > :first-child{ flex:none; white-space:nowrap; }
+/* 누를 수 있는 줄 — 로그인·아이 등록. 손끝 크기(44)와 «눌림»을 준다 */
+.ns-stats button.s{ width:100%; min-height:44px; border:none; font-family:inherit; text-align:left; }
+.ns-stats button.s:active{ background:rgba(255,255,255,.26); }
+.ns-stats .s b{ flex:1; text-align:right; font-weight:700; color:#fff; font-size:inherit;
   font-variant-numeric:tabular-nums; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 /* 테마 — 프로필 바로 아래. 19벌이라 «지금 뭘 쓰는지»가 보여야 한다 */
-.ns-thm{ display:flex; align-items:center; gap:12px; width:100%; height:46px; padding:0 var(--ns-8);
+/* ── 드로어 세로 기준선 하나 (대표님 2026-08-11 「상자 정렬」 지적) ──
+   행 왼쪽 패딩 10px + 아이콘 자리 32px 고정 → 칩·아이콘 중심이 전부 같은 x.
+   테마(맨몸 아이콘)도 32px 상자에 넣고, 내정보(틴트판)는 판의 좌우 패딩을 0으로 */
+.ns-thm{ display:flex; align-items:center; gap:12px; width:100%; height:var(--ns-thm-h); min-height:0; padding:0 10px;
   margin-bottom:2px; border:none; border-radius:var(--ns-r-band); background:var(--t-tint);
-  color:var(--t-ink); font:inherit; font-size:14px; font-weight:700; text-align:left; }
+  color:var(--t-ink); font:inherit; font-size:var(--ns-fs-14); font-weight:700; text-align:left; }
+.ns-thm > .ti{ width:32px; flex:none; display:grid; place-items:center; }
 .ns-thm .nm{ flex:1; }
 .ns-thm .cur{ font-weight:600; opacity:.85; }
-.ns-thm .ar{ font-size:13px; opacity:.7; }
+.ns-thm .ar{ font-size:var(--ns-fs-13); opacity:.7; }
 /* 묶음 · 항목 */
-.ns-sec{ padding:20px var(--ns-8) 6px; font-size:13px; font-weight:700; color:var(--ns-muted); }
-.ns-item{ display:flex; align-items:center; gap:12px; width:100%; height:var(--ns-h-row);
+.ns-sec{ padding:var(--ns-sec-pt) 10px 6px; font-size:var(--ns-fs-13); font-weight:700; color:var(--ns-muted); }
+.ns-item{ display:flex; align-items:center; gap:12px; width:100%; height:var(--ns-h-row); min-height:0;
   padding:0 10px; margin-bottom:2px; border:none; background:none; text-align:left;
   border-radius:var(--ns-r-band); color:var(--ns-ink); font:inherit;
-  font-size:14px; font-weight:600; }
+  font-size:var(--ns-fs-14); font-weight:600; }
 .ns-item.on{ background:var(--t-tint); color:var(--t-ink); font-weight:700; }
 .ns-item .ns-c{ width:32px; height:32px; flex:none; align-self:center; border-radius:var(--ns-r);
   display:grid; place-items:center; }
@@ -224,6 +338,130 @@ body:has(.ns-home)::before, body:has(.ns-drawer)::before{ background:var(--ns-bg
   border-radius:var(--ns-r-pill); background:var(--ns-off); color:#fff;
   font-size:11px; font-weight:800; display:grid; place-items:center; }
 /* 바닥 — 틴트 판. 위(프로필)와 아래(여기)가 가운데 흰 메뉴를 감싼다 */
-.ns-foot{ margin-top:auto; background:var(--t-tint); border-radius:var(--ns-r); padding:var(--ns-8); }
+.ns-foot{ margin-top:auto; background:var(--t-tint); border-radius:var(--ns-r); padding:var(--ns-8) 0; }
 .ns-foot .ns-item{ color:var(--t-ink); font-weight:700; margin:0; }
 .ns-foot .ns-item .ns-c{ background:var(--ns-canvas); }
+
+/* ══════════════════════════════════════════════════════════════════════
+   공통 부품 — 나머지 화면이 쓰는 조각들 (2026-08-11)
+
+   홈·드로어에서 확정된 문법을 그대로 편다:
+     흰 카드 + 구글 선 + 옅은 그림자 · 32px 칩 · 파랑=행동/학교 · 자주=우리 아이
+   🔴 여기 없는 모양을 화면에서 새로 만들지 않는다. 필요하면 **이 구획에 먼저 추가**한다.
+   🔴 크기는 전부 변수다. px 상수는 아이콘·칩·배지처럼 «커지면 안 되는 것»만.
+   ══════════════════════════════════════════════════════════════════════ */
+
+/* ── 묶음 라벨 — 카드 «밖»에 둔다. 카드가 곧 묶음이 된다 ── */
+.ns-lbl{ font-size:var(--ns-fs-14); font-weight:700; color:var(--ns-muted);
+  padding:0 var(--ns-8) var(--ns-8); }
+.ns-lbl:not(:first-child){ padding-top:var(--ns-16); }
+
+/* ── 카드 — 흰 면. 안에 줄(.ns-li)이 쌓인다 ── */
+.ns-card{ background:var(--ns-canvas); border:1px solid var(--ns-line);
+  border-radius:var(--ns-r); box-shadow:var(--ns-sh);
+  margin-bottom:var(--ns-16); overflow:hidden; }
+.ns-card.pad{ padding:var(--ns-16); }
+
+/* ── 줄 — [칩][이름·부제][값][›] . 카드 안에서는 선으로 나뉜다 ── */
+.ns-li{ display:flex; align-items:center; gap:12px; width:100%; min-height:var(--ns-h-row);
+  padding:var(--ns-8) var(--ns-16); border:none; border-top:1px solid var(--ns-line);
+  background:none; text-align:left; font:inherit; font-size:var(--ns-fs-14);
+  color:var(--ns-ink); }
+.ns-card > .ns-li:first-child{ border-top:none; }
+.ns-li .ns-c{ width:32px; height:32px; flex:none; align-self:center;
+  border-radius:var(--ns-r); display:grid; place-items:center; }
+.ns-li .ns-c.b{ background:var(--t-tint); color:var(--t-ink); }
+.ns-li .ns-c.p{ background:var(--ns-plum-tint); color:var(--ns-plum-tx); }
+.ns-li .ns-c.nt{ background:#f1f3f4; color:var(--ns-muted); }
+.ns-li .n{ flex:1; min-width:0; font-weight:600; }
+.ns-li .n em{ display:block; font-style:normal; font-size:var(--ns-fs-13);
+  font-weight:500; color:var(--ns-muted); margin-top:1px; }
+.ns-li .v{ flex:none; font-size:var(--ns-fs-14); font-weight:700; color:var(--ns-muted);
+  font-variant-numeric:tabular-nums; }
+.ns-li .v.ok{ color:var(--t-ink); }
+.ns-li .v.need{ color:var(--ns-off); }
+.ns-li .ar{ flex:none; color:var(--ns-muted); font-size:var(--ns-fs-13); }
+.ns-li.on{ background:var(--t-tint); }
+
+/* ── 빈 칸 — «없다»고 말한다. 빈 줄로 두지 않는다 ── */
+.ns-empty{ padding:var(--ns-24) var(--ns-16); text-align:center;
+  font-size:var(--ns-fs-14); color:var(--ns-muted); }
+
+/* ── 버튼 — 파랑 채움이 기본, 흰 테두리가 보조 ── */
+.ns-btn{ display:flex; align-items:center; justify-content:center; gap:6px;
+  width:100%; height:var(--ns-act-h); min-height:0; padding:0 var(--ns-16);
+  border:none; border-radius:var(--ns-r); background:var(--t-bar); color:#fff;
+  font:inherit; font-size:var(--ns-fs-16); font-weight:700; }
+.ns-btn:disabled{ background:var(--ns-chest); color:var(--ns-muted); }
+.ns-btn.ghost{ background:var(--ns-canvas); color:var(--ns-ink);
+  border:1px solid var(--ns-line); }
+.ns-btn.tint{ background:var(--t-tint); color:var(--t-ink); border:none; }
+.ns-btn.danger{ background:none; color:var(--ns-off); font-weight:600;
+  font-size:var(--ns-fs-14); }
+.ns-btns{ display:flex; gap:var(--ns-8); margin-bottom:var(--ns-16); }
+.ns-btns .ns-btn{ flex:1; }
+
+/* ── 칩 줄 — 가로로 미는 필터·탭 ── */
+.ns-chips{ display:flex; gap:6px; overflow-x:auto; margin-bottom:var(--ns-16);
+  padding-bottom:2px; scrollbar-width:none; }
+.ns-chips::-webkit-scrollbar{ display:none; }
+.ns-chips button{ flex:none; height:34px; min-height:0; padding:0 14px;
+  border:1px solid var(--ns-line); border-radius:var(--ns-r-pill);
+  background:var(--ns-canvas); color:var(--ns-fg);
+  font:inherit; font-size:var(--ns-fs-14); font-weight:600; }
+.ns-chips button.on{ background:var(--t-tint); border-color:var(--t-tint);
+  color:var(--t-ink); font-weight:700; }
+
+/* ── 탭 — 화면 안 갈래. 밑줄 하나로 고른 것을 말한다 ── */
+.ns-tabs{ display:flex; gap:var(--ns-16); border-bottom:1px solid var(--ns-line);
+  margin-bottom:var(--ns-16); }
+.ns-tabs button{ flex:none; height:44px; min-height:0; padding:0 2px; border:none;
+  background:none; color:var(--ns-muted); font:inherit; font-size:var(--ns-fs-14);
+  font-weight:600; position:relative; }
+.ns-tabs button.on{ color:var(--t-ink); font-weight:700; }
+.ns-tabs button.on::after{ content:""; position:absolute; left:0; right:0; bottom:-1px;
+  height:3px; border-radius:2px 2px 0 0; background:var(--t-bar); }
+
+/* ── 안내 띠 — 틴트 위 검정. 시계 앞판과 같은 문법 ── */
+.ns-note{ display:flex; gap:10px; padding:var(--ns-8) var(--ns-16);
+  background:var(--t-tint); border-radius:var(--ns-r); margin-bottom:var(--ns-16);
+  font-size:var(--ns-fs-13); color:var(--ns-ink); line-height:1.6; }
+.ns-note .ti{ flex:none; color:var(--t-ink); font-size:16px; }
+
+/* ── 입력 ── */
+.ns-field{ display:block; margin-bottom:var(--ns-16); }
+.ns-field > span{ display:block; font-size:var(--ns-fs-13); font-weight:700;
+  color:var(--ns-muted); margin-bottom:6px; }
+.ns-in{ width:100%; height:48px; min-height:0; padding:0 14px;
+  border:1px solid var(--ns-line); border-radius:var(--ns-r);
+  background:var(--ns-canvas); color:var(--ns-ink);
+  font:inherit; font-size:var(--ns-fs-16); }
+.ns-in:focus{ outline:2px solid var(--t-bar); outline-offset:-2px; }
+textarea.ns-in{ height:auto; min-height:96px; padding:12px 14px; line-height:1.6; resize:vertical; }
+
+/* ── 테마 고르기 — 격자 2열 (다크 토글 없음) ────────────────────────
+   미리보기는 실제 홈 구조를 축소한 것이다 — 그림 위 시계 앞판, 서랍 앞판 둘, 하단 바.
+   ⚠ 19벌을 훑어야 하므로 캐러셀(옆 것만 살짝)이 아니라 격자다 */
+.ns-thgrid{ display:grid; grid-template-columns:1fr 1fr; gap:var(--ns-8);
+  margin-bottom:var(--ns-16); }
+.ns-th{ min-height:0; padding:0 0 var(--ns-8); border:2px solid transparent;
+  border-radius:var(--ns-r); background:var(--ns-canvas); box-shadow:var(--ns-sh);
+  font:inherit; overflow:hidden; }
+.ns-th.on{ border-color:var(--t-bar); }
+.ns-th b{ display:block; padding:var(--ns-8) 6px 0; font-size:var(--ns-fs-13);
+  font-weight:700; color:var(--ns-ink); }
+.ns-th .pv{ display:block; height:104px; padding:8px; background:var(--ns-bg) no-repeat top center/100% auto;
+  background-image:var(--ns-art, none); }
+.ns-th .pv-now{ display:block; height:34px; border-radius:5px; margin-bottom:5px;
+  background:color-mix(in srgb, var(--t-bar) 11%, var(--t-tint)); }
+.ns-th .pv-row{ display:block; height:14px; border-radius:3px; margin-bottom:4px;
+  background:var(--ns-canvas); border:1px solid var(--ns-line); }
+.ns-th .pv-bar{ display:block; height:18px; border-radius:5px; margin-top:5px;
+  background:var(--t-bar); }
+.ns-thact{ display:flex; flex-direction:column; gap:var(--ns-8); }
+
+/* ── 화면 아래 붙는 실행 줄 — 「넣기·취소」처럼 늘 보여야 하는 것 ── */
+.ns-actbar{ position:sticky; bottom:calc(var(--sa-b) + var(--ns-8)); z-index:3;
+  display:flex; gap:var(--ns-8); padding:var(--ns-8) 0;
+  background:linear-gradient(180deg, transparent, var(--ns-bg) 30%); }
+.ns-actbar .ns-btn{ flex:1; }
