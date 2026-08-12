@@ -2265,7 +2265,10 @@ const Screens = {
     return `
     <div class="kd-scr">
       <div class="kd-hd">
-        <button class="kd-bk" onclick="App.goBack()" aria-label="뒤로">‹</button>
+        <!-- 🔴 goBack() 금지 — 미션↔상세 발자국이 쌓이면 ‹ 가 그 사이를 무한히 돈다.
+             **부모 미션의 ‹ 는 홈(A모듈)이다**(2026-08-12 확정 → 08-13 kd 복원 때 원본째 되돌아가
+             다시 깨졌다. 옛 판을 통째로 붙여 넣을 때는 이 줄을 꼭 확인할 것). -->
+        <button class="kd-bk" onclick="App.goHome()" aria-label="뒤로">‹</button>
         <span class="ti">미션</span>
         <span class="kd-pill star">★ ${S.missionStars}</span>
       </div>
@@ -4117,9 +4120,12 @@ const Screens = {
                role="button" aria-label="${d}요일 — 눌러서 일정 넣기" onclick="if(!App.holdGuard()&&!App.dragGuard())App.planTap(event, ${i + 1})">
             ${hours.map(() => `<div class="wk-slot" style="height:${GRID.px * 2}px"></div>`).join("")}
             ${byDay[i].map((a) => `
+              <!-- 🔴 event.stopPropagation() 필수 — 블록 클릭이 **밑의 요일 칸까지 흘러가서**
+                   메뉴와 「새 일정 폼」이 **동시에** 열렸다. 메뉴에서 「이동」을 고르면 메뉴만 닫히고
+                   뒤에 남은 폼이 드러나 «왜 수정 화면이 뜨냐»가 됐다(2026-08-13 실측으로 잡음). -->
               <div class="blk ${S.planMove?.id === a.id ? "moving" : ""}"
-                   onclick="if(!App.holdGuard()&&!App.dragGuard())App.planMenu(${a.id}, ${i + 1})"
-                   onpointerdown="App.blockDown(event, ${a.id}, ${i + 1})"
+                   onclick="event.stopPropagation();if(!App.holdGuard()&&!App.dragGuard())App.planMenu(${a.id}, ${i + 1})"
+                   onpointerdown="event.stopPropagation();App.blockDown(event, ${a.id}, ${i + 1})"
                    style="top:${gridTop(a.start_time)}px;height:${Math.max(GRID.px, gridTop(a.end_time) - gridTop(a.start_time))}px;--tag:${planColor(a.color, a.name).v}">
                 <b>${esc(a.name)}</b>
                 <i class="grip" onpointerdown="App.gripDown(event, ${a.id}, ${i + 1})"></i>
