@@ -4114,7 +4114,7 @@ const Screens = {
         <div class="wk-axis">${hours.map((h) => `<div style="height:${GRID.px * 2}px"><span>${h}시</span></div>`).join("")}</div>
         ${DAY_KO.map((d, i) => `
           <div class="wk-col d${i} ${i % 2 ? "alt" : ""} ${i === todayCol ? "today" : ""}"
-               role="button" aria-label="${d}요일 — 눌러서 일정 넣기" onclick="App.planTap(event, ${i + 1})">
+               role="button" aria-label="${d}요일 — 눌러서 일정 넣기" onclick="if(!App.holdGuard()&&!App.dragGuard())App.planTap(event, ${i + 1})">
             ${hours.map(() => `<div class="wk-slot" style="height:${GRID.px * 2}px"></div>`).join("")}
             ${byDay[i].map((a) => `
               <div class="blk ${S.planMove?.id === a.id ? "moving" : ""}"
@@ -6365,7 +6365,24 @@ function drawerView(c) {
       ${badge ? `<span class="cnt">${badge}</span>` : ""}
     </button>`;
 
+  const kidSheet = !S.childSwitch ? "" : `
+  <div class="modal sheetwrap" style="z-index:60" onclick="App.childSwitchClose()">
+    <div class="sheet" onclick="event.stopPropagation()">
+      <div class="sheet-grip"></div>
+      <div class="sheet-hd"><b>자녀 전환</b></div>
+      <div style="max-height:46vh;overflow-y:auto">
+        ${STUB.children.map((k) => `
+        <button class="mp-row" style="width:100%" onclick="App.childSwitchClose();App.drawerClose();App.pickChild(${k.id})">
+          <span class="mp-i"><i aria-hidden="true" class="ti ti-user"></i></span>
+          <span class="n">${esc(k.nickname)}${k.grade ? `<em>${k.grade}학년${k.class_name ? ` ${esc(k.class_name)}반` : ""}</em>` : ""}</span>
+          ${k.id === S.currentChildId ? `<span class="v ok">지금</span>` : `<i aria-hidden="true" class="ti ti-chevron-right ar"></i>`}
+        </button>`).join("")}
+      </div>
+      <button class="msc-sub" onclick="App.childSwitchClose();App.drawerClose();App.childAddStart()">＋ 자녀 추가</button>
+    </div>
+  </div>`;
   return `
+  ${kidSheet}
   <div class="ns-dim" onclick="App.drawerClose()"></div>
   <nav class="ns-drawer"${S.art ? ` data-art="${jsq(S.art)}"` : ""} onclick="event.stopPropagation()">
 
@@ -6376,13 +6393,12 @@ function drawerView(c) {
         ${c ? `<button class="go" onclick="App.drawerClose();location.hash='#timeline'" aria-label="서랍">
           <i aria-hidden="true" class="ti ti-archive"></i></button>` : ""}
       </div>
-      <!-- 자녀 전환 (2026-08-12 대표님: 「자녀 변경 버튼은 어디 있어」) — 둘 이상일 때만.
-           칩 하나 = 아이 하나. 지금 아이는 채워진 칩. -->
+      <!-- 자녀 전환 (2026-08-13 대표님: 「화면 다 쓰지 말고 팝업으로. 셋째 들어가면 어쩔 건데」)
+           — 줄 하나만 차지하고, 누르면 시트가 뜬다. 몇 명이든 시트 안에서 구른다. -->
       ${c && STUB.children.length > 1 ? `
       <div class="ns-kids">
-        ${STUB.children.map((k) => `
-          <button class="kchip ${k.id === S.currentChildId ? "on" : ""}"
-            onclick="App.drawerClose();App.pickChild(${k.id})">${esc(k.nickname)}</button>`).join("")}
+        <button class="kchip on" onclick="App.childSwitchOpen()">
+          ${esc(c.nickname)} ▾ <span style="opacity:.75;font-weight:400">자녀 전환</span></button>
       </div>` : ""}
       ${c ? `<div class="ns-stats">
         <span class="s">학교<b>${esc(schoolName(c))}${c.grade ? ` · ${c.grade}학년` : ""}${c.class_name ? ` ${esc(c.class_name)}반` : ""}</b></span>
@@ -6881,8 +6897,7 @@ function mealTab() {
   ${typeTabs}
 
   <div class="ml-bar">
-    ${[["week", "주간"], ["month", "월간"]].map(([k, n]) =>
-      `<button class="ml-range ${S.mealRange === k ? "on" : ""}" onclick="App.mealRange('${k}')">${n}</button>`).join("")}
+    <!-- 월간 토글 폐지(2026-08-13) — 한 달 30줄은 목록이 아니라 벌이다. 주간 고정, 지난 것은 검색 -->
     <span class="ml-gap"></span>
     <button class="ml-alg" onclick="App.toggleAllergenBox()">
       ${S.myAllergens.length
@@ -6904,7 +6919,7 @@ function mealTab() {
   ${q
     ? `<div class="ml-lead">"${esc(q)}" — ${days.length}일</div>`
     : `<div class="ml-lead">${days.length
-        ? (S.mealRange === "week" ? "이번 주" : "이번 달")
+        ? "이번 주"
         : (mealsOf().length
             ? `방학 중 · 마지막 급식 ${fmtDate(mealsOf()[mealsOf().length - 1].date)}`
             : "아직 올라오지 않음")}</div>`}
@@ -6957,7 +6972,6 @@ function mealTab() {
   }).join("")}
 
   <div class="ml-foot">
-    <button onclick="App.mealRange('month')">지난 급식</button>
     <button onclick="App.mealSearchToggle()">${S.mealSearchOpen ? "검색 닫기" : "메뉴 검색"}</button>
   </div>
 
@@ -9824,7 +9838,15 @@ const App = {
     try {
       const r = await api(`/missions/${id}/${path}`, { method: "POST", ...(body ? { body } : {}) });
       S.missionBusy = null;
-      if (!r?.ok) { this.render(); toast(r?.error?.message || "잘 안 됐어요"); return null; }
+      if (!r?.ok) {
+        /* «이미 처리된 미션» = 앞선 요청이 (타임아웃 뒤에라도) 먹힌 것 — 실패로 되돌리면
+           화면과 서버가 어긋난다. 서버 상태를 다시 받아 그대로 따른다(2026-08-13 실측). */
+        if ((r?.error?.message || "").includes("이미 처리된")) {
+          await this.loadMissions(true);
+          return { already: true, status: "done" };
+        }
+        this.render(); toast(r?.error?.message || "잘 안 됐어요"); return null;
+      }
       /* 지갑 동기화(2026-08-12) — 응답에 coin 이 실려 오면 그대로 받고,
          잔액(stars)만 오면 그 숫자만 갈아끼운다. 안 하면 되돌리기 뒤 ★알약이 옛값으로 남는다. */
       if (r.data?.coin) S.coin = r.data.coin;
@@ -10824,6 +10846,8 @@ const App = {
     await this.loadBand(b);
   },
   drawerOpen() { S.drawer = true; this.render(); },
+  childSwitchOpen() { S.childSwitch = true; this.render(); },
+  childSwitchClose() { S.childSwitch = false; this.render(); },
   drawerClose() { S.drawer = false; this.render(); },
 
   /* ← 는 언제나 오늘 화면으로 (2026-08-03 «탈출 불가» 수정).

@@ -156,10 +156,9 @@ body::before{ background:var(--ns-bg); }   /* 상태바 자리 띠 — 옛 베�
 /* 서랍장이 남는 높이를 다 먹고, 모자라면 자기 안에서 구른다 —
    ⚠ min-height:0 이 없으면 flex 자식은 안 줄어든다(기본 min-height:auto) */
 .ns-chest{ flex:1 1 auto; min-height:0; overflow-y:auto; overscroll-behavior:contain;
-  /* 남는 높이는 앞판들이 나눠 먹는다 — 안 그러면 마지막 앞판 밑에 회색만 남는다
-     (2026-08-12 대표님: 「서랍 회색 부분이 아래가 길어졌고」). 넘치면 그대로 구른다. */
-  display:flex; flex-direction:column; }
-.ns-chest .ns-row{ flex:1 1 auto; max-height:calc(var(--ns-row-mh) * 1.25); }
+  /* 남는 높이는 **앞판 사이 간격**으로 나눈다(2026-08-13 대표님: 앞판을 늘렸더니 「틴트가 길어졌다」).
+     앞판 높이는 정본 clamp 그대로 — 늘리지도 줄이지도 않는다. 넘치면 그대로 구른다. */
+  display:flex; flex-direction:column; justify-content:space-between; }
 .ns-home{ display:flex; flex-direction:column; flex:1; min-height:0;
   color:var(--ns-fg); font-size:var(--ns-fs-16); font-weight:500; line-height:1.5; }
 
