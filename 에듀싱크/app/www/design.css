@@ -319,6 +319,13 @@ body::before{ background:var(--ns-bg); }   /* 상태바 자리 띠 — 옛 베�
 /* ── 드로어 세로 기준선 하나 (대표님 2026-08-11 「상자 정렬」 지적) ──
    행 왼쪽 패딩 10px + 아이콘 자리 32px 고정 → 칩·아이콘 중심이 전부 같은 x.
    테마(맨몸 아이콘)도 32px 상자에 넣고, 내정보(틴트판)는 판의 좌우 패딩을 0으로 */
+/* 자녀 전환 칩 (2026-08-12) — 둘 이상일 때만 프로필 카드 밑에 */
+.ns-kids{ display:flex; gap:8px; margin-top:10px; }
+.ns-kids .kchip{ flex:1; min-height:40px; padding:0 10px; border-radius:var(--ns-r);
+  border:1.5px solid rgba(255,255,255,.45); background:rgba(255,255,255,.14); color:#fff;
+  font-family:inherit; font-size:var(--ns-fs-14); font-weight:700; }
+.ns-kids .kchip.on{ background:#fff; color:var(--t-ink); border-color:#fff; }
+
 .ns-thm{ display:flex; align-items:center; gap:12px; width:100%; height:var(--ns-thm-h); min-height:0; padding:0 10px;
   margin-bottom:2px; border:none; border-radius:var(--ns-r-band); background:var(--t-tint);
   color:var(--t-ink); font:inherit; font-size:var(--ns-fs-14); font-weight:700; text-align:left; }

@@ -3115,7 +3115,32 @@ div.kd2-day { cursor: default; }
 .ms-mkbtn em { display: block; margin-top: 2px; font-size: 12.5px; font-style: normal; color: var(--muted); }
 .ms-fhint { margin: 8px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--muted); }
 
-/* (2026-08-12) 별 라인 카드는 듀오링고 캐논(kid.css .kd-path 다이얼)으로 옮겨 갔다 */
+/* ⭐ 하루 별 라인 — 구글 캐논(2026-08-12 두벌 확정: 부모=구글). 값은 서버(S.econ)가 준다 */
+.sl { margin-top: var(--ns-8); }
+.sl-hd { display: flex; align-items: baseline; justify-content: space-between; gap: var(--ns-8); }
+.sl-hd b { font-size: var(--ns-fs-16); font-weight: 700; }
+.sl-now { font-size: var(--ns-fs-19); font-weight: 700; color: var(--accent-ink); font-variant-numeric: tabular-nums; }
+.sl-dial { display: flex; align-items: center; gap: 12px; margin-top: var(--ns-8); }
+.sl-b { flex: none; width: 34px; height: 34px; min-height: 0; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  border: 1.5px solid var(--line); border-radius: 50%; background: var(--card);
+  color: var(--accent-ink); font-size: 19px; font-weight: 700; line-height: 1; }
+.sl-b[disabled] { opacity: .35; }
+.sl-bar { flex: 1 1 auto; height: 8px; border-radius: 99px; background: var(--chip); overflow: hidden; }
+.sl-bar i { display: block; height: 100%; border-radius: 99px; background: var(--t-bar); transition: width .25s; }
+.sl-sub { margin: var(--ns-8) 0 0; font-size: var(--ns-fs-13); line-height: 1.5; color: var(--muted); word-break: keep-all; }
+.sl-sub b { color: var(--ink); font-variant-numeric: tabular-nums; }
+
+/* 지난 이레(부모, 구글 캐논) — 초록=했다 · 분홍=놓쳤다 · 회색=그날 없었다 */
+.wk7 { margin-top: 12px; }
+.wk7 .dots { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.wk7 .d { text-align: center; font-size: 11px; color: var(--muted); font-weight: 700; }
+.wk7 .d i { display: grid; place-items: center; height: 30px; margin-bottom: 4px;
+  border-radius: var(--ns-r); border: 1px solid var(--line); background: var(--card);
+  font-style: normal; font-size: 14px; color: var(--muted); }
+.wk7 .d.on i { border-color: transparent; background: var(--done); color: var(--on-accent); }
+.wk7 .d.miss i { border-color: transparent; background: color-mix(in srgb, var(--danger) 14%, var(--card)); color: var(--danger); }
+.wk7 .d.today { color: var(--accent-ink); }
 
 /* 미션 액션바 (2026-08-10) — 바꾸기·고르기·만들기 세 입구를 한 줄로.
    흩어져 있던 것을 나란히 두는 게 이 개편의 요점이라, 셋의 생김새가 똑같아야 한다. */
@@ -5438,9 +5463,8 @@ body:has(.hv3-art)::before { background: var(--art-1); }   /* 상태바 가림�
   background: color-mix(in srgb, #E0A93E 22%, transparent); color: #7A5200; }
 :root[data-theme="dark"] .bk-pro { color: #FFD54A; }
 
-/* ═══ 미션 고르기 화면 (2026-08-03 · 2026-08-12 듀오링고 캐논으로 갈아입힘) ═══
-   학년대 탭 → 추천 3개 → 영역별 묶음 → 하단 「n개 담기」.
-   ⚠ 이 화면은 kd-scr 껍데기 안에서 그려진다 — 색·글꼴은 kid.css 토큰을 그대로 받는다. */
+/* ═══ 미션 고르기 화면 — 듀오링고 캐논(2026-08-13 재확정: 미션 세계는 부모도 듀오링고) ═══
+   kd-scr 껍데기 안에서 그려진다. 색·글꼴은 kid.css 토큰. 오늘한것·추가증정도 이 부품을 쓴다. */
 .mk-bands { display: flex; gap: 8px; margin: 2px 0 6px; }
 .mk-bands button { flex: 1; height: 44px; min-height: 0; border-radius: var(--kd-r-lg);
   border: 2.5px solid #DDE6D2; box-shadow: 0 3px 0 #DDE6D2;
@@ -5455,17 +5479,16 @@ body:has(.hv3-art)::before { background: var(--art-1); }   /* 상태바 가림�
   padding: 12px 14px; min-height: 0; border: 2.5px solid var(--kd-grass-line); border-radius: var(--kd-r-lg);
   box-shadow: 0 3px 0 var(--kd-grass-line);
   background: var(--kd-canvas); text-align: left; font-family: inherit; color: var(--kd-ink); }
-.mk-row:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--kd-grass-line); }
+button.mk-row:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--kd-grass-line); }
 .mk-row .bd { flex: 1; min-width: 0; }
 .mk-row .bd b { display: block; font-size: 15px; font-weight: 700; }
 .mk-row .bd em { display: block; font-style: normal; font-size: 12.5px; font-weight: 700;
   color: var(--kd-sub); margin-top: 2px; }
 .mk-mine { font-style: normal; font-size: 11px; font-weight: 700; color: var(--kd-grape-ink);
   background: var(--kd-grape-tint); border-radius: 6px; padding: 1px 6px; margin-right: 6px; }
-.mk-row .mk-add { flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid;
+.mk-row .mk-add { flex: none; min-width: 30px; height: 30px; border-radius: 999px; display: grid;
   place-items: center; border: 2px solid #FFE08A; background: var(--kd-sun-tint);
-  color: var(--kd-sun-ink); font-size: 17px; font-weight: 700; }
-/* 이미 담은 것 — 흐리게 + 「담김」. 지우지 않는다(어디 있었는지 알아야 다시 뺀다) */
+  color: var(--kd-sun-ink); font-size: 15px; font-weight: 700; }
 .mk-row.on { opacity: .6; border-color: #E4EBDA; box-shadow: 0 3px 0 #E4EBDA; background: #F6F8F2; }
 .mk-row .mk-in { flex: none; padding: 4px 10px; border-radius: 999px;
   background: var(--kd-grass); color: #fff; font-size: 12px; font-weight: 700; }
@@ -5473,7 +5496,6 @@ body:has(.hv3-art)::before { background: var(--art-1); }   /* 상태바 가림�
   margin-top: 18px; padding: 14px; min-height: 0; border: 2.5px dashed var(--kd-grape-line);
   border-radius: var(--kd-r-lg); background: var(--kd-grape-tint); color: var(--kd-grape-ink);
   font-family: inherit; font-size: 14.5px; font-weight: 700; }
-/* 담기 버튼 — 아래 고정. 목록이 길어 위로 올라가면 못 찾는다 */
 .mk-bot { position: sticky; bottom: 0; margin-top: 18px;
   padding: 10px 0 calc(var(--sa-b) + 10px);
   background: linear-gradient(180deg, transparent, var(--kd-cream) 40%); }
