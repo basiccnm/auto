@@ -113,6 +113,17 @@ _preview/
 *.bak
 *.bak-*
 *.bak_*
+# 2026-08-12: 같은 구멍이 **세 번째**로 뚫렸다 — `google_token.json.broken_20260806`.
+# `*token*.json` 은 «.json 으로 끝날 때»만 걸린다. 뒤에 뭐가 붙으면 그냥 통과한다.
+# 이번엔 푸시 직전에 잡아 히스토리에서 들어냈지만, 규칙으로 막아 둔다.
+# 이름에 token/secret/credential 이 들어가면 **뒤에 뭐가 붙든** 안 올라간다.
+*token*.json.*
+*token*.*.json
+*secret*.json*
+*credential*.json*
+*.broken_*
+*.old
+*.orig
 
 # ─── 2026-08-07 워커 소스 편입 ───
 # 시크릿 — .dev.vars 에 AUTH_SECRET · ADMIN_PASSWORD · 소셜 키가 들어 있다.
