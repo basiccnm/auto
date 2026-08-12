@@ -482,7 +482,8 @@ function regCheck(key, v) {
     case "email":
       return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? null : "이메일 형식이 맞지 않아요";
     case "phone":
-      if (!v) return null;                          // 선택 항목
+      /* 2026-08-12 대표님: 휴대폰 필수 — 빈 값도 잡는다 */
+      if (!v) return "휴대폰 번호를 넣어 주세요";
       return /^01\d{8,9}$/.test(v.replace(/-/g, "")) ? null : "휴대폰 번호를 확인해 주세요";
     default: return null;
   }
@@ -490,9 +491,8 @@ function regCheck(key, v) {
 // 필수 칸이 전부 통과했는지
 function regValid() {
   const r = S.reg;
-  const required = ["userid", "pw", "pw2", "name", "birth", "email"];
+  const required = ["userid", "pw", "pw2", "name", "birth", "email", "phone"];   // 휴대폰 필수(2026-08-12)
   if (required.some((k) => !r[k] || regCheck(k, r[k]))) return false;
-  if (r.phone && regCheck("phone", r.phone)) return false;
   return r.t1 && r.t2;
 }
 
@@ -2109,7 +2109,7 @@ const Screens = {
       ${field("name", "이름 *", { ph: "보호자 이름" })}
       ${field("birth", "생년월일 *", { ph: "19850312", mode: "numeric" })}
       ${field("email", "이메일 *", { ph: "비밀번호 찾기에 쓰여요" })}
-      ${field("phone", "휴대폰 (선택)", { ph: "01012345678", mode: "numeric" })}
+      ${field("phone", "휴대폰", { ph: "01012345678", mode: "numeric" })}
       <div class="check"><input type="checkbox" id="t1" ${r.t1 ? "checked" : ""} onchange="App.regSet('t1', this.checked)"><label for="t1">이용약관 동의 (필수)</label><a class="see" href="#terms">보기</a></div>
       <div class="check"><input type="checkbox" id="t2" ${r.t2 ? "checked" : ""} onchange="App.regSet('t2', this.checked)"><label for="t2">개인정보 수집·이용 동의 (필수)</label><a class="see" href="#policy">보기</a></div>
       <!-- 광고성 수신(선택, 2026-07-31) — 켜면 채널 셋이 나온다. 기본 전부 체크, 끄는 건 자유.
@@ -5451,8 +5451,8 @@ function parentMissionAdmin(c, coin) {
             <span class="pm-i">⭐</span>
             <b>${esc(x.title)}</b>
             ${had ? `<span class="pm-ok">＋1 줬어요</span>`
-                  : `<button class="pm-plus" ${S.giveBusy ? "disabled" : ""}
-                       onclick="App.missionBonus(${x.id})">＋1</button>`}
+                  : `<button class="pm-plus" ${S.giveBusy === x.id ? "disabled" : ""}
+                       onclick="App.missionBonus(${x.id})">${S.giveBusy === x.id ? "…" : "＋1"}</button>`}
           </div>`;
         }).join("")}
       <p class="pm-fine">한 미션에 한 번만 · 오늘 받은 것이 ${coin.limit}개를 넘으면 안 들어가요</p>
@@ -5467,12 +5467,28 @@ function parentMissionAdmin(c, coin) {
         <span class="pm-n">${all ? `${d} / ${all}` : "오늘 없음"}</span>
         ${d >= all && all > 0 ? `<span class="pm-ok">완료</span>` : ""}${extra || ""}
       </div>`;
+    /* 🔴 개수만 보여주면 부모는 **뭘 했는지** 모른다(2026-08-12 대표님: 「오늘 아이가 한 미션
+       확인도 안 됨」). 해낸 미션은 이름을 그대로 나열하고, 확인 기다리는 것은 눌러서 바로 간다. */
+    const doneRows = done.map((x) => `
+      <div class="pm-row">
+        <span class="pm-i">✅</span><b>${esc(x.title)}</b>
+        <span class="pm-ok">＋★${x.got || x.stars}</span>
+      </div>`).join("");
+    const waitRows = (S.missions || []).filter((x) => x.status === "waiting").map((x) => `
+      <button class="pm-row" style="width:100%;text-align:left;font-family:inherit"
+        onclick="App.msOpen(${x.id})">
+        <span class="pm-i">🙋</span><b>${esc(x.title)}</b>
+        <span class="pm-n">확인하기 ›</span>
+      </button>`).join("");
     return `<div class="gmp">${head("오늘 아이가 한 것", "모은 스탬프 ★" + coin.stars)}
       ${row("🌅", "아침 미션", sets.morning?.done || 0, sets.morning?.all || 0)}
       ${sc && sc.available === false ? "" : row("🏫", "학교 미션", sc?.done || 0, sc?.all || 0)}
       ${row("📚", "방과후 미션", sets.after?.done || 0, sets.after?.all || 0)}
       ${row("⚔️", "오늘의 미션", q?.done ? 1 : 0, 1,
             q?.done ? `<span class="pm-sub">${q.correct} / ${q.total} 맞힘</span>` : "")}
+      ${waitRows ? `<p class="pm-fine" style="margin-top:14px">확인을 기다려요</p>${waitRows}` : ""}
+      ${doneRows ? `<p class="pm-fine" style="margin-top:14px">오늘 해냈어요</p>${doneRows}`
+                 : `<p class="pm-none">아직 해낸 미션이 없어요</p>`}
     </div>`;
   }
 
@@ -10201,8 +10217,11 @@ const App = {
      ⚠ 자유 지급(＋3·＋5)은 없앴다 — 대표님 지시(08-08). */
   async missionBonus(assignId) {
     const c = cur();
-    if (!c?.server_id || S.giveBusy) return;
-    S.giveBusy = true; this.render();
+    /* ⚠ 잠금은 **누른 줄 하나만**(2026-08-12 대표님: 「＋1 누르면 왜 나머지 버튼도 비활성화」).
+       전역으로 잠그면 통신 도는 1~2초 동안 화면 전체가 죽은 것처럼 보인다.
+       같은 줄 두 번 누름만 막으면 된다 — 서버가 어차피 «한 미션에 한 번»을 지킨다. */
+    if (!c?.server_id || S.giveBusy === assignId) return;
+    S.giveBusy = assignId; this.render();
     try {
       const r = await api(`/children/${c.server_id}/mission-bonus`, { method: "POST", body: { assign_id: assignId } });
       if (!r?.ok) toast(r?.error?.message || "못 줬어요");
@@ -10213,7 +10232,7 @@ const App = {
           : r.data.capped ? "오늘은 여기까지예요" : "★1 얹어 줬어요!");
       }
     } catch (_) { toast("못 줬어요"); }
-    S.giveBusy = false;
+    S.giveBusy = null;
     this.render();
   },
 

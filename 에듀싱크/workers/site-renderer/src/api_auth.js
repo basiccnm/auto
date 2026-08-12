@@ -90,7 +90,8 @@ async function register(request, db, env) {
     ["name", name.length >= 1 && name.length <= 30, name.length > 30 ? "이름은 30자까지 넣을 수 있어요." : "이름을 입력해 주세요."],
     ["birth_ymd", RE_YMD.test(birthYmd), "생년월일을 YYYYMMDD로 입력해 주세요."],
     ["email", RE_EMAIL.test(email), "이메일 형식을 확인해 주세요."],
-    ["phone", !phone || RE_PHONE.test(phone), "휴대폰 번호를 확인해 주세요."],
+    // 2026-08-12 대표님: 휴대폰 필수 — 프론트만 막으면 직접 POST 로 우회된다
+    ["phone", !!phone && RE_PHONE.test(phone), phone ? "휴대폰 번호를 확인해 주세요." : "휴대폰 번호를 입력해 주세요."],
     ["agree_terms", b.agree_terms === true, "이용약관에 동의해 주세요."],
     ["agree_privacy", b.agree_privacy === true, "개인정보처리방침에 동의해 주세요."],
   ]);
