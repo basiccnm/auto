@@ -3018,6 +3018,15 @@ const Screens = {
           ].filter(([v]) => v != null);
           return st.length ? `<div class="stats">${st.map(([v, k]) => `<div><b>${v}</b><span>${k}</span></div>`).join("")}</div>` : "";
         })()}
+        ${(() => {
+          /* 웹과 같은 부가 정보(2026-08-13) — 있는 것만 조용한 한 줄로 */
+          const bits = [];
+          const d = sc.detail || {};
+          if (d.male_count != null && d.female_count != null) bits.push(`남 ${d.male_count} · 여 ${d.female_count}`);
+          if (d.afterschool_program_count != null) bits.push(`방과후 ${d.afterschool_program_count}개 프로그램`);
+          if (d.care_class_yn === "Y") bits.push("돌봄교실 운영");
+          return bits.length ? `<p class="mp-hint" style="margin-top:10px">${bits.join(" · ")}</p>` : "";
+        })()}
 
         <!-- 학년별 현황은 **자료가 있을 때만** 접이 카드를 그린다.
              펼쳤는데 아무것도 없으면 «앱이 고장났다»가 된다(2026-08-01: 실제로 빈 채로 열렸다). -->
