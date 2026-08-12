@@ -7898,6 +7898,7 @@ const App = {
     if (this._prev === "upload" && name !== "upload" && S.uploadStep === 1 && S.shots.length && !S.uploadBusy) {
       toast(`사진 ${S.shots.length}장이 아직 저장 전이에요 — 기록 넣기에서 「저장」을 눌러주세요`);
     }
+    const prevName = this._prev;   // ⚠ 아래 스크롤 유지 비교용 — 덮기 전에 붙잡는다
     this._prev = name;
     // 자녀가 하나도 없으면 어느 화면도 그릴 수 없다(전부 cur()를 읽는다) → 등록 화면으로 보낸다.
     // 예전엔 여기서 «face를 읽을 수 없다»로 앱이 통째로 멈췄다(2026-07-26 실측).
@@ -7949,10 +7950,16 @@ const App = {
     const kidNow = isChildToken() || S.kidMode;
     const asKid = WORLD.includes(name) || (kidNow && KID_ONLY.includes(name))
       ;
+    /* 🔴 같은 화면을 다시 그릴 때는 **스크롤을 지킨다**(2026-08-12 대표님 실사용:
+       「미션 선택을 하면 왜 미션이 다시 위로 올라가는거야」). innerHTML 교체 사이에 내용 높이가
+       잠깐 줄면 브라우저가 스크롤을 0으로 당긴다 — 도장 하나 찍을 때마다 맨 위로 튀었다.
+       다른 화면으로 넘어갈 때는 복원하지 않는다(새 화면은 맨 위부터가 맞다). */
+    const keepScroll = name === prevName ? (document.scrollingElement.scrollTop || 0) : null;
     const body = Screens[name]();
     document.getElementById("screen").innerHTML =
       (asKid ? `<div class="gmw">${body}</div>` : body)
       + planBar() + lunchSheet() + promoteSheet() + planKillView() + holdMenuView() + pwAskView();
+    /* 복원은 render 꼬리에서 한 번만 한다(아래 keepScroll 분기) — 두 곳에서 하면 값이 갈린다 */
 
     if (popBefore && popKey(document) === popBefore) {
       [...document.querySelectorAll(POPS)].forEach((e, i) => {
@@ -8046,7 +8053,11 @@ const App = {
        새 홈에 캐러셀이 없는데 3초마다 홈을 통째로 다시 그리고 있었다 — 보이는 것도 없이
        배터리만 쓰고, 그 순간 눌린 것·입력 중인 것을 날릴 수 있는 자리였다.
        startCarousel() 은 캐러셀이 돌아올 때를 위해 남겨둔다. */
-    window.scrollTo(0, 0);
+    /* 🔴 **같은 화면을 다시 그릴 땐 맨 위로 안 튄다**(2026-08-12 대표님 실사용:
+       도장 하나 찍을 때마다 목록이 맨 위로 올라갔다). 여기 무조건 scrollTo(0,0) 이 범인이었다 —
+       위의 keepScroll 복원을 이 줄이 도로 지웠다. 새 화면으로 넘어갈 때만 맨 위부터. */
+    if (keepScroll == null) window.scrollTo(0, 0);
+    else document.scrollingElement.scrollTop = keepScroll;
   },
   go(key) { const m = menuOf(key); if (m) { m.go(); this.render(); } },   // 원형 메뉴 → 해당 페이지
 

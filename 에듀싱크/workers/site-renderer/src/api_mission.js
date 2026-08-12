@@ -157,7 +157,9 @@ async function todayRows(db, childId, ymd) {
             m.title, m.area, m.minutes, m.verify, m.verify_hint, m.slot, m.stars, m.caution, m.why
        FROM mission_assign a JOIN missions m ON m.code = a.mission_code
       WHERE a.child_id = ? AND a.ymd = ?
-      ORDER BY (a.status='open') DESC, m.verify, a.id`
+      ORDER BY a.id`      /* 🔴 배정 순서 고정 — «안 한 것 먼저»로 재정렬했더니 도장을 찍는 순간
+                             줄이 자리를 바꿔 화면이 널뛰었다(2026-08-12 대표님 실사용 발견).
+                             한 일은 제자리에서 ✓ 로 바뀌어야 한다. */
   ).bind(childId, ymd).all();
   return results || [];
 }
