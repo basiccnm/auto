@@ -1,0 +1,232 @@
+{
+  "color": {
+    "background": {
+      "$type": "color",
+      "$value": "#f2f3f6"
+    },
+    "brand-tint": {
+      "$type": "color",
+      "$value": "#fff5f0"
+    },
+    "canvas": {
+      "$type": "color",
+      "$value": "#ffffff"
+    },
+    "error": {
+      "$type": "color",
+      "$value": "#fa2314"
+    },
+    "foreground": {
+      "$type": "color",
+      "$value": "#212124"
+    },
+    "hairline": {
+      "$type": "color",
+      "$value": "#eaebee"
+    },
+    "info": {
+      "$type": "color",
+      "$value": "#009ceb"
+    },
+    "marketing": {
+      "$type": "color",
+      "$value": "#ff6600"
+    },
+    "muted": {
+      "$type": "color",
+      "$value": "#868b94"
+    },
+    "on-primary": {
+      "$type": "color",
+      "$value": "#ffffff"
+    },
+    "primary": {
+      "$type": "color",
+      "$value": "#ff6f0f"
+    },
+    "primary-hover": {
+      "$type": "color",
+      "$value": "#ff9e66"
+    },
+    "primary-pressed": {
+      "$type": "color",
+      "$value": "#ff9e66"
+    },
+    "success": {
+      "$type": "color",
+      "$value": "#1aa174"
+    },
+    "surface": {
+      "$type": "color",
+      "$value": "#f7f8fa"
+    }
+  },
+  "typography": {
+    "family": {
+      "sans": {
+        "$type": "fontFamily",
+        "$value": "System"
+      }
+    },
+    "tiers": {
+      "body": {
+        "lineHeight": {
+          "$type": "string",
+          "$value": "150%"
+        },
+        "size": {
+          "$type": "dimension",
+          "$value": "16px"
+        },
+        "weight": {
+          "$type": "fontWeight",
+          "$value": 400
+        }
+      },
+      "body-small": {
+        "lineHeight": {
+          "$type": "string",
+          "$value": "150%"
+        },
+        "size": {
+          "$type": "dimension",
+          "$value": "14px"
+        },
+        "weight": {
+          "$type": "fontWeight",
+          "$value": 400
+        }
+      },
+      "h1": {
+        "lineHeight": {
+          "$type": "string",
+          "$value": "135%"
+        },
+        "size": {
+          "$type": "dimension",
+          "$value": "48px"
+        },
+        "weight": {
+          "$type": "fontWeight",
+          "$value": 700
+        }
+      },
+      "h2": {
+        "lineHeight": {
+          "$type": "string",
+          "$value": "135%"
+        },
+        "size": {
+          "$type": "dimension",
+          "$value": "42px"
+        },
+        "weight": {
+          "$type": "fontWeight",
+          "$value": 700
+        }
+      },
+      "h3": {
+        "lineHeight": {
+          "$type": "string",
+          "$value": "135%"
+        },
+        "size": {
+          "$type": "dimension",
+          "$value": "34px"
+        },
+        "weight": {
+          "$type": "fontWeight",
+          "$value": 700
+        }
+      },
+      "title": {
+        "lineHeight": {
+          "$type": "string",
+          "$value": "135%"
+        },
+        "size": {
+          "$type": "dimension",
+          "$value": "24px"
+        },
+        "weight": {
+          "$type": "fontWeight",
+          "$value": 700
+        }
+      }
+    }
+  },
+  "spacing": {
+    "lg": {
+      "$type": "dimension",
+      "$value": "12px"
+    },
+    "md": {
+      "$type": "dimension",
+      "$value": "8px"
+    },
+    "section": {
+      "$type": "dimension",
+      "$value": "64px"
+    },
+    "sm": {
+      "$type": "dimension",
+      "$value": "4px"
+    },
+    "xl": {
+      "$type": "dimension",
+      "$value": "16px"
+    }
+  },
+  "radius": {
+    "full": {
+      "$type": "dimension",
+      "$value": "9999px"
+    },
+    "md": {
+      "$type": "dimension",
+      "$value": "8px"
+    },
+    "sm": {
+      "$type": "dimension",
+      "$value": "6px"
+    }
+  },
+  "shadow": {},
+  "$extensions": {
+    "oh-my-design": {
+      "components": {
+        "box-button": {
+          "states": "primary, primary-low, secondary, danger, disabled, hover, keyboard",
+          "type": "button",
+          "use": "SEED action with five documented sizes"
+        },
+        "marketing-primary": {
+          "bg": "#ff6600",
+          "fg": "#ffffff",
+          "font": "14px / 500",
+          "height": "36px",
+          "padding": "4px 12px",
+          "radius": "9999px",
+          "states": "default on two public surfaces; hover not captured",
+          "type": "button",
+          "use": "Karrot marketing-site CTA"
+        },
+        "snackbar": {
+          "states": "default, success, warning, action focus",
+          "type": "toast",
+          "use": "SEED transient action feedback"
+        },
+        "tabs": {
+          "states": "selected, disabled, focus",
+          "type": "tab",
+          "use": "SEED category switching with indicator"
+        },
+        "text-field": {
+          "states": "outlined, underlined, focused, disabled, readonly, required, invalid",
+          "type": "input",
+          "use": "SEED single-line form field"
+        }
+      }
+    }
+  }
+}

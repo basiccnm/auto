@@ -1,0 +1,245 @@
+{
+  "color": {
+    "canvas": {
+      "$type": "color",
+      "$value": "#ffffff"
+    },
+    "canvas-dark": {
+      "$type": "color",
+      "$value": "#22242a"
+    },
+    "foreground": {
+      "$type": "color",
+      "$value": "#3c4043"
+    },
+    "foreground-inverse": {
+      "$type": "color",
+      "$value": "#e8e8e8"
+    },
+    "muted": {
+      "$type": "color",
+      "$value": "#5f6368"
+    },
+    "outline": {
+      "$type": "color",
+      "$value": "#dadce0"
+    },
+    "primary": {
+      "$type": "color",
+      "$value": "#1a73e8"
+    }
+  },
+  "typography": {
+    "family": {
+      "display": {
+        "$type": "fontFamily",
+        "$value": "Google Sans Display"
+      },
+      "search-system": {
+        "$type": "fontFamily",
+        "$value": "Arial"
+      },
+      "text": {
+        "$type": "fontFamily",
+        "$value": "Google Sans Text"
+      },
+      "ui": {
+        "$type": "fontFamily",
+        "$value": "Google Sans"
+      }
+    },
+    "tiers": {
+      "action": {
+        "lineHeight": {
+          "$type": "string",
+          "$value": "24px"
+        },
+        "size": {
+          "$type": "dimension",
+          "$value": "16px"
+        },
+        "tracking": {
+          "$type": "dimension",
+          "$value": "0.5px"
+        },
+        "use": {
+          "$type": "string",
+          "$value": "Business Profile CTA and action labels."
+        },
+        "weight": {
+          "$type": "fontWeight",
+          "$value": 500
+        }
+      },
+      "body": {
+        "lineHeight": {
+          "$type": "string",
+          "$value": "24px"
+        },
+        "size": {
+          "$type": "dimension",
+          "$value": "16px"
+        },
+        "use": {
+          "$type": "string",
+          "$value": "Business Profile cards, lists, and body copy."
+        },
+        "weight": {
+          "$type": "fontWeight",
+          "$value": 400
+        }
+      },
+      "display": {
+        "lineHeight": {
+          "$type": "string",
+          "$value": "56px"
+        },
+        "size": {
+          "$type": "dimension",
+          "$value": "48px"
+        },
+        "tracking": {
+          "$type": "dimension",
+          "$value": "-0.5px"
+        },
+        "use": {
+          "$type": "string",
+          "$value": "Business Profile section heading only."
+        },
+        "weight": {
+          "$type": "fontWeight",
+          "$value": 400
+        }
+      },
+      "search-field": {
+        "lineHeight": {
+          "$type": "string",
+          "$value": "22px"
+        },
+        "size": {
+          "$type": "dimension",
+          "$value": "16px"
+        },
+        "use": {
+          "$type": "string",
+          "$value": "Advanced Search text input; Arial system face."
+        },
+        "weight": {
+          "$type": "fontWeight",
+          "$value": 400
+        }
+      }
+    }
+  },
+  "spacing": {
+    "lg": {
+      "$type": "dimension",
+      "$value": "24px"
+    },
+    "md": {
+      "$type": "dimension",
+      "$value": "16px"
+    },
+    "sm": {
+      "$type": "dimension",
+      "$value": "8px"
+    },
+    "xl": {
+      "$type": "dimension",
+      "$value": "32px"
+    },
+    "xs": {
+      "$type": "dimension",
+      "$value": "4px"
+    }
+  },
+  "radius": {
+    "card": {
+      "$type": "dimension",
+      "$value": "24px"
+    },
+    "full": {
+      "$type": "dimension",
+      "$value": "1000px"
+    },
+    "nav": {
+      "$type": "dimension",
+      "$value": "4px"
+    },
+    "search-key": {
+      "$type": "dimension",
+      "$value": "8px"
+    }
+  },
+  "shadow": {
+    "flat": {
+      "$type": "string",
+      "$value": "none"
+    },
+    "search-key-hover": {
+      "$type": "string",
+      "$value": "rgba(23,23,23,0.24) 0px 1px 3px 0px"
+    }
+  },
+  "$extensions": {
+    "oh-my-design": {
+      "components": {
+        "business-card": {
+          "bg": "#ffffff",
+          "fg": "#3c4043",
+          "font": "16px / 400 / Google Sans Text",
+          "padding": "18px 18px 32px",
+          "radius": "24px",
+          "states": "disabled observed on the captured inactive image card",
+          "type": "card",
+          "use": "Business Profile scrolling image card only."
+        },
+        "business-nav": {
+          "fg": "#202124",
+          "font": "14px / 500 / Google Sans",
+          "height": "48px",
+          "padding": "0px 10px",
+          "radius": "4px",
+          "states": "default, hover, pressed, and focus observed on Business Profile menu item",
+          "type": "button",
+          "use": "Business Profile global navigation menu item."
+        },
+        "business-primary": {
+          "bg": "#1a73e8",
+          "fg": "#ffffff",
+          "font": "16px / 500 / Google Sans",
+          "height": "42px",
+          "padding": "8px 16px",
+          "radius": "1000px",
+          "states": "default, hover, pressed, and focus observed on Business Profile high-emphasis action",
+          "type": "button",
+          "use": "Business Profile high-emphasis action only."
+        },
+        "business-secondary": {
+          "bg": "#ffffff",
+          "border": "1px solid #dadce0",
+          "fg": "#1a73e8",
+          "font": "16px / 500 / Google Sans",
+          "height": "42px",
+          "padding": "8px 16px",
+          "radius": "1000px",
+          "states": "default, hover, pressed, and focus observed on Business Profile medium-emphasis action",
+          "type": "button",
+          "use": "Business Profile medium-emphasis action only."
+        },
+        "search-key": {
+          "bg": "#303134",
+          "border": "1px solid #303134",
+          "fg": "#e8eaed",
+          "font": "14px / 500 / Arial",
+          "height": "36px",
+          "padding": "0px 16px",
+          "radius": "8px",
+          "states": "default, hover, pressed, and focus observed on dark Search submit controls",
+          "type": "button",
+          "use": "Captured dark Search homepage submit key only."
+        }
+      }
+    }
+  }
+}

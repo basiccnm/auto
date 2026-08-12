@@ -1,0 +1,238 @@
+{
+  "color": {
+    "accent": {
+      "$type": "color",
+      "$value": "#1cb0f6"
+    },
+    "accent-lip": {
+      "$type": "color",
+      "$value": "#1899d6"
+    },
+    "beetle": {
+      "$type": "color",
+      "$value": "#ce82ff"
+    },
+    "canvas": {
+      "$type": "color",
+      "$value": "#ffffff"
+    },
+    "error": {
+      "$type": "color",
+      "$value": "#ff4b4b"
+    },
+    "foreground": {
+      "$type": "color",
+      "$value": "#4b4b4b"
+    },
+    "fox": {
+      "$type": "color",
+      "$value": "#ff9600"
+    },
+    "mask": {
+      "$type": "color",
+      "$value": "#89e219"
+    },
+    "on-primary": {
+      "$type": "color",
+      "$value": "#ffffff"
+    },
+    "primary": {
+      "$type": "color",
+      "$value": "#58cc02"
+    },
+    "primary-lip": {
+      "$type": "color",
+      "$value": "#58a700"
+    },
+    "warning": {
+      "$type": "color",
+      "$value": "#ffc800"
+    }
+  },
+  "typography": {
+    "family": {
+      "display": {
+        "$type": "fontFamily",
+        "$value": "Feather Bold"
+      },
+      "sans": {
+        "$type": "fontFamily",
+        "$value": "din-round"
+      }
+    },
+    "tiers": {
+      "body": {
+        "lineHeight": {
+          "$type": "number",
+          "$value": 1.5
+        },
+        "size": {
+          "$type": "dimension",
+          "$value": "17px"
+        },
+        "use": {
+          "$type": "string",
+          "$value": "Standard reading text"
+        },
+        "weight": {
+          "$type": "fontWeight",
+          "$value": 400
+        }
+      },
+      "button": {
+        "lineHeight": {
+          "$type": "number",
+          "$value": 1.2
+        },
+        "size": {
+          "$type": "dimension",
+          "$value": "15px"
+        },
+        "use": {
+          "$type": "string",
+          "$value": "CTA button labels (uppercase)"
+        },
+        "weight": {
+          "$type": "fontWeight",
+          "$value": 700
+        }
+      },
+      "display-hero": {
+        "lineHeight": {
+          "$type": "number",
+          "$value": 1.2
+        },
+        "size": {
+          "$type": "dimension",
+          "$value": "40px"
+        },
+        "tracking": {
+          "$type": "dimension",
+          "$value": "-0.5px"
+        },
+        "use": {
+          "$type": "string",
+          "$value": "Landing hero, big celebrations"
+        },
+        "weight": {
+          "$type": "fontWeight",
+          "$value": 700
+        }
+      },
+      "title": {
+        "lineHeight": {
+          "$type": "number",
+          "$value": 1.25
+        },
+        "size": {
+          "$type": "dimension",
+          "$value": "24px"
+        },
+        "use": {
+          "$type": "string",
+          "$value": "Section titles, modal headers"
+        },
+        "weight": {
+          "$type": "fontWeight",
+          "$value": 700
+        }
+      }
+    }
+  },
+  "spacing": {
+    "base": {
+      "$type": "dimension",
+      "$value": "16px"
+    },
+    "lg": {
+      "$type": "dimension",
+      "$value": "24px"
+    },
+    "md": {
+      "$type": "dimension",
+      "$value": "12px"
+    },
+    "sm": {
+      "$type": "dimension",
+      "$value": "8px"
+    },
+    "xl": {
+      "$type": "dimension",
+      "$value": "32px"
+    },
+    "xs": {
+      "$type": "dimension",
+      "$value": "4px"
+    },
+    "xxl": {
+      "$type": "dimension",
+      "$value": "48px"
+    }
+  },
+  "radius": {
+    "full": {
+      "$type": "dimension",
+      "$value": "9999px"
+    },
+    "lg": {
+      "$type": "dimension",
+      "$value": "16px"
+    },
+    "md": {
+      "$type": "dimension",
+      "$value": "12px"
+    },
+    "sm": {
+      "$type": "dimension",
+      "$value": "8px"
+    }
+  },
+  "shadow": {
+    "button-3d": {
+      "$type": "string",
+      "$value": "0 4px 0 0 #58a700"
+    },
+    "card": {
+      "$type": "string",
+      "$value": "0 2px 0 0 rgba(0,0,0,0.1)"
+    }
+  },
+  "$extensions": {
+    "oh-my-design": {
+      "components": {
+        "button-accent": {
+          "bg": "#1cb0f6",
+          "fg": "#ffffff",
+          "font": "15px / 700",
+          "padding": "14px 20px",
+          "radius": "12px",
+          "shadow": "0 4px 0 #1899d6",
+          "type": "button",
+          "use": "Alternative positive action, Super upsell, info CTA (uppercase)"
+        },
+        "button-primary": {
+          "active": "translateY(4px), lip collapses",
+          "bg": "#58cc02",
+          "disabled": "bg #e5e5e5, fg #afafaf, no lip",
+          "fg": "#ffffff",
+          "font": "15px / 700",
+          "height": "50px",
+          "padding": "14px 20px",
+          "radius": "12px",
+          "shadow": "0 4px 0 #58a700",
+          "type": "button",
+          "use": "Single primary action — CONTINUE, START, CHECK ANSWER (uppercase)"
+        },
+        "card": {
+          "bg": "#ffffff",
+          "border": "2px solid #e5e5e5",
+          "padding": "16px",
+          "radius": "16px",
+          "shadow": "none",
+          "type": "card",
+          "use": "Course units, skill tiles, list rows"
+        }
+      }
+    }
+  }
+}

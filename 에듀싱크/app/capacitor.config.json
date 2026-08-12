@@ -1,0 +1,8 @@
+{
+  "appId": "com.eduthink.app",
+  "appName": "학교퀘스트",
+  "webDir": "www",
+  "android": {
+    "adjustMarginsForEdgeToEdge": "disable"
+  }
+}

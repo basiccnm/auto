@@ -1,0 +1,210 @@
+{
+  "color": {
+    "canvas": {
+      "$type": "color",
+      "$value": "#ffffff"
+    },
+    "docs-layer": {
+      "$type": "color",
+      "$value": "#f9f9f8"
+    },
+    "ink": {
+      "$type": "color",
+      "$value": "#000000"
+    },
+    "muted": {
+      "$type": "color",
+      "$value": "#615d59"
+    },
+    "primary": {
+      "$type": "color",
+      "$value": "#0075de"
+    },
+    "primary-hover": {
+      "$type": "color",
+      "$value": "#005bab"
+    }
+  },
+  "typography": {
+    "family": {
+      "sans": {
+        "$type": "fontFamily",
+        "$value": "NotionInter"
+      }
+    },
+    "tiers": {
+      "action": {
+        "lineHeight": {
+          "$type": "number",
+          "$value": 24
+        },
+        "size": {
+          "$type": "dimension",
+          "$value": "16px"
+        },
+        "use": {
+          "$type": "string",
+          "$value": "Observed public marketing CTA"
+        },
+        "weight": {
+          "$type": "fontWeight",
+          "$value": 500
+        }
+      },
+      "body": {
+        "lineHeight": {
+          "$type": "number",
+          "$value": 24
+        },
+        "size": {
+          "$type": "dimension",
+          "$value": "16px"
+        },
+        "use": {
+          "$type": "string",
+          "$value": "Observed navigation, cards, and Help chrome"
+        },
+        "weight": {
+          "$type": "fontWeight",
+          "$value": 400
+        }
+      },
+      "heading": {
+        "lineHeight": {
+          "$type": "number",
+          "$value": 56
+        },
+        "size": {
+          "$type": "dimension",
+          "$value": "54px"
+        },
+        "tracking": {
+          "$type": "dimension",
+          "$value": "-1.875px"
+        },
+        "use": {
+          "$type": "string",
+          "$value": "Observed public marketing/product h2"
+        },
+        "weight": {
+          "$type": "fontWeight",
+          "$value": 700
+        }
+      },
+      "hero": {
+        "lineHeight": {
+          "$type": "number",
+          "$value": 100
+        },
+        "size": {
+          "$type": "dimension",
+          "$value": "96px"
+        },
+        "tracking": {
+          "$type": "dimension",
+          "$value": "-4.6px"
+        },
+        "use": {
+          "$type": "string",
+          "$value": "Observed marketing h1 at the captured viewport"
+        },
+        "weight": {
+          "$type": "fontWeight",
+          "$value": 600
+        }
+      },
+      "label": {
+        "lineHeight": {
+          "$type": "number",
+          "$value": 20
+        },
+        "size": {
+          "$type": "dimension",
+          "$value": "14px"
+        },
+        "use": {
+          "$type": "string",
+          "$value": "Observed menu trigger and Help dialog control"
+        },
+        "weight": {
+          "$type": "fontWeight",
+          "$value": 500
+        }
+      }
+    }
+  },
+  "spacing": {
+    "lg": {
+      "$type": "dimension",
+      "$value": "16px"
+    },
+    "md": {
+      "$type": "dimension",
+      "$value": "12px"
+    },
+    "sm": {
+      "$type": "dimension",
+      "$value": "8px"
+    },
+    "xl": {
+      "$type": "dimension",
+      "$value": "24px"
+    },
+    "xs": {
+      "$type": "dimension",
+      "$value": "4px"
+    }
+  },
+  "radius": {
+    "card": {
+      "$type": "dimension",
+      "$value": "12px"
+    },
+    "control": {
+      "$type": "dimension",
+      "$value": "8px"
+    },
+    "docs-input": {
+      "$type": "dimension",
+      "$value": "5px"
+    },
+    "pill": {
+      "$type": "dimension",
+      "$value": "9999px"
+    }
+  },
+  "shadow": {
+    "floating-action": {
+      "$type": "string",
+      "$value": "rgba(0,0,0,0.01) 0px 0.175px 1.041px, rgba(0,0,0,0.02) 0px 0.8px 2.925px, rgba(0,0,0,0.027) 0px 2.025px 7.847px, rgba(0,0,0,0.04) 0px 4px 18px"
+    }
+  },
+  "$extensions": {
+    "oh-my-design": {
+      "components": {
+        "help-search": {
+          "border": "1px solid rgba(0,0,0,0.08)",
+          "fg": "#000000",
+          "font": "16px/400 NotionInter",
+          "height": 36,
+          "padding": "7px 10px 7px 30px",
+          "radius": 5,
+          "states": "dialog-open focus style captured",
+          "type": "input",
+          "use": "Help language-picker search field"
+        },
+        "marketing-primary-action": {
+          "bg": "#0075de",
+          "fg": "#ffffff",
+          "font": "16px/500 NotionInter",
+          "height": 36,
+          "padding": "4px 14px",
+          "radius": 8,
+          "states": "hover/pressed/focus captured on marketing; values remain selector-specific",
+          "type": "button",
+          "use": "Global marketing CTA"
+        }
+      }
+    }
+  }
+}

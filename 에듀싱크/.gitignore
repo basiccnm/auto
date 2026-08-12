@@ -19,6 +19,10 @@ eduthink_config.json
 *.p12
 *token*.json
 *_token.txt
+# ⚠ 위 `*token*.json` 은 **인증 토큰**을 막으려는 것이다. 그런데 이름이 겹쳐서
+#   «디자인 토큰»(design/*/**.tokens.json)까지 같이 막고 있었다 — 그건 색·간격의 원본이라
+#   없으면 다시 못 만든다. 그 둘만 예외로 연다(2026-08-12).
+!design/**/*.tokens.json
 # wrangler.toml 은 커밋한다 — 시크릿은 `wrangler secret put` 으로 빠져 있다.
 # 평문 키를 [vars] 에 되돌려 넣지 말 것.
 
