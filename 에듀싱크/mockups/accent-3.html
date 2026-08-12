@@ -1,0 +1,244 @@
+<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>포인트 색 3안</title>
+<!-- 포인트 색 후보 3안 (2026-08-11) — 구조·크기·간격은 승인본 그대로, **색만** 다르다.
+     ⚠ 바꾼 것은 세 곳뿐: ＋버튼(면) · 전광판 바탕(옅은 틴트) · D-day 값(글자).
+        카드·선·글자는 구글 무채색 그대로다. -->
+<style>
+:root{
+  /* google.tokens.css 그대로 */
+  --color-canvas:#ffffff; --color-canvas-dark:#22242a;
+  --color-foreground:#3c4043; --color-foreground-inverse:#e8e8e8;
+  --color-muted:#5f6368; --color-outline:#dadce0; --color-primary:#1a73e8;
+  --type-body-size:16px; --type-body-weight:400; --type-body-lh:24px;
+  --type-display-size:48px; --type-display-weight:400; --type-display-lh:56px; --type-display-tracking:-0.5px;
+  --type-action-size:16px; --type-action-weight:500; --type-action-lh:24px; --type-action-tracking:0.5px;
+  --space-xs:4px; --space-sm:8px; --space-md:16px; --space-lg:24px; --space-xl:32px;
+  --radius-nav:4px; --radius-search-key:8px; --radius-card:24px; --radius-full:1000px;
+  --shadow-flat:none;
+  /* ── 🟡 우리가 더한 값 (구글 문서에 없음) — 2026-08-11 ──
+     문서 크기가 16 · 48 둘뿐이라 화면이 평평했다. 시계는 48로도 작아 보여 키운다. */
+  --our-clock-size:64px;
+
+  /* DESIGN 문서 §4 에 있고 토큰 파일엔 없는 값 */
+  --nav-ink:#202124; --nav-h:48px; --nav-size:14px; --nav-weight:500;
+  --btn-h:42px; --tint:#e8f1fd; --pressed:#185abc;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#3f3f3f;padding:24px;display:flex;gap:32px;flex-wrap:wrap;justify-content:center;
+  font-family:system-ui,-apple-system,"Malgun Gothic",sans-serif}
+.wrap{width:393px}
+.cap{color:#fff;font-size:13px;font-weight:700;margin-bottom:6px}
+.cap em{display:block;font-style:normal;font-weight:400;color:#c2c2c2;font-size:12px;margin-top:2px}
+.phone{width:393px;height:852px;overflow:hidden;display:flex;flex-direction:column;position:relative;
+  background:var(--color-canvas);color:var(--color-foreground);
+  font-size:var(--type-body-size);font-weight:var(--type-body-weight);line-height:var(--type-body-lh)}
+.sb{height:44px;flex:none;display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;font-size:13px;font-weight:500}
+.nb{height:20px;flex:none}
+.body{flex:1;overflow:hidden;padding:0 var(--space-md)}
+
+/* 머리 — ☰ 왼쪽 */
+.hd{display:flex;align-items:center;gap:var(--space-sm);height:var(--nav-h);flex:none;
+  padding:0 var(--space-sm)}
+.hd .ham{width:40px;height:40px;display:grid;place-items:center;font-size:20px;
+  border-radius:var(--radius-full);margin-left:-8px}
+.hd h1{font-size:var(--type-body-size);font-weight:var(--type-action-weight)}
+.hd .who{margin-left:auto;font-size:var(--nav-size);font-weight:var(--nav-weight);color:var(--color-muted)}
+
+/* ① 시계 — 한 줄, 가운데 정렬.
+   ⚠ 시간에 문서의 --type-display(48px)를 썼다. 문서엔 «섹션 제목용»이라 적혀 있지만,
+     이 화면에서 가장 큰 값이 필요한 자리가 여기다. 이게 없으면 전부 16px 이라 평평해진다. */
+.clock{display:flex;align-items:baseline;justify-content:center;gap:var(--space-sm);
+  padding:var(--space-md) 0 var(--space-lg);font-variant-numeric:tabular-nums}
+.clock .d{font-size:var(--nav-size);font-weight:var(--nav-weight);color:var(--color-muted)}
+.clock .t{font-size:var(--our-clock-size);font-weight:var(--type-display-weight);
+  line-height:1;letter-spacing:var(--type-display-tracking);color:var(--nav-ink)}
+
+/* ② 전광판 — 아래 카드와 다르게. 채운 띠 + 오른쪽에서 왼쪽으로 흐른다.
+   모서리는 알약(1000) → 4 로(대표님 지시 2026-08-11). --radius-nav 값이다. */
+.mq{height:36px;margin:0 0 var(--space-lg);border-radius:var(--radius-nav);
+  background:var(--tint);overflow:hidden;display:flex;align-items:center}
+.mq span{display:inline-block;white-space:nowrap;padding-left:100%;
+  font-size:var(--nav-size);font-weight:var(--nav-weight);color:var(--pressed);
+  animation:flow 14s linear infinite}
+@keyframes flow{from{transform:translateX(0)}to{transform:translateX(-100%)}}
+
+/* 카드 — 흰 바탕 + 1px 선. 그림자 없음(--shadow-flat:none)
+   ⚠ 모서리는 문서의 --radius-card(24px) 였는데 «너무 과하게 둥글다»는 지시로 8px 로 내렸다
+     (2026-08-11). 토큰에 있는 값은 4 · 8 · 24 · 알약 넷뿐이라 24 바로 아래가 8이다.
+     지어낸 값이 아니라 **문서 안에서 한 칸 내린 것**이다. */
+.lb{font-size:var(--nav-size);font-weight:var(--nav-weight);color:var(--color-muted);
+  padding:0 var(--space-sm) var(--space-sm)}
+.card{border:1px solid var(--color-outline);border-radius:var(--radius-search-key);
+  padding:var(--space-sm) var(--space-md);margin-bottom:var(--space-md)}
+.r{display:flex;align-items:center;gap:var(--space-md);min-height:var(--nav-h);
+  padding:var(--space-sm) 0;border-top:1px solid var(--color-outline)}
+.r:first-child{border-top:none}
+.r .em{width:24px;flex:none;font-size:18px;line-height:1;text-align:center}
+.r .n{flex:1;min-width:0;color:var(--nav-ink)}
+.r .n em{display:block;font-style:normal;font-size:var(--nav-size);color:var(--color-muted)}
+.r .v{font-size:var(--nav-size);font-weight:var(--nav-weight);color:var(--color-muted);
+  font-variant-numeric:tabular-nums}
+.r .st{display:flex;align-items:center;gap:2px;font-size:var(--nav-size);color:var(--color-muted);font-variant-numeric:tabular-nums}
+.r .st b{font-weight:var(--nav-weight);color:var(--nav-ink)}
+.r .ar{color:var(--color-muted);font-size:13px}
+.r .bx{width:20px;height:20px;flex:none;border:1px solid var(--color-outline);
+  border-radius:var(--radius-search-key)}
+
+/* D-day — 중강조 버튼 문법(흰 바탕 + 선 + 알약) */
+.dday{display:flex;align-items:center;height:var(--btn-h);padding:0 var(--space-md);
+  border:1px solid var(--color-outline);border-radius:var(--radius-full);margin-bottom:var(--space-lg)}
+.dday b{font-weight:var(--type-action-weight)}
+.dday .v{margin-left:auto;color:var(--color-primary);font-size:var(--nav-size);
+  font-weight:var(--nav-weight)}
+
+/* ③ 하단 — 이모지 셋. ＋ 만 채운 원 */
+.act{display:flex;align-items:center;justify-content:space-around;
+  padding:var(--space-sm) var(--space-md);border-top:1px solid var(--color-outline)}
+.act button{background:none;border:none;font:inherit;color:var(--color-foreground);
+  width:var(--nav-h);height:var(--nav-h);border-radius:var(--radius-full);
+  display:grid;place-items:center;font-size:22px}
+.act button.on{width:var(--btn-h);height:var(--btn-h);background:var(--color-primary);
+  color:var(--color-canvas);font-size:24px;font-weight:var(--type-action-weight)}
+
+/* ── 드로어 — 문서 §4 «navigation menu item» 그대로(48px · 4px · 14/500 · #202124) ── */
+.dim{position:absolute;inset:0;background:rgba(32,33,36,.32)}
+.dw{position:absolute;top:0;bottom:0;left:0;width:304px;background:var(--color-canvas);
+  display:flex;flex-direction:column;padding:var(--space-sm)}
+.dw .me{display:flex;align-items:center;gap:var(--space-md);padding:var(--space-md) var(--space-sm);
+  margin-bottom:var(--space-sm)}
+.dw .me .av{width:40px;height:40px;flex:none;border-radius:var(--radius-full);
+  background:var(--tint);display:grid;place-items:center;font-size:18px}
+.dw .me .n{font-size:var(--type-body-size);font-weight:var(--type-action-weight)}
+.dw .me .n em{display:block;font-style:normal;font-size:var(--nav-size);font-weight:400;
+  color:var(--color-muted)}
+.dw .sec{padding:var(--space-md) 10px var(--space-xs);font-size:var(--nav-size);
+  font-weight:var(--nav-weight);color:var(--color-muted)}
+.dw a{display:flex;align-items:center;gap:var(--space-md);height:var(--nav-h);padding:0 10px;
+  border-radius:var(--radius-nav);color:var(--nav-ink);text-decoration:none;
+  font-size:var(--nav-size);font-weight:var(--nav-weight)}
+.dw a.on{background:var(--tint);color:var(--pressed)}
+.dw a .em{width:20px;text-align:center;font-size:17px;line-height:1}
+.dw .foot{margin-top:auto;border-top:1px solid var(--color-outline);padding-top:var(--space-sm)}
+
+.navy{--color-primary:#2B4C7E; --tint:#EEF2F8; --pressed:#2B4C7E}
+.terra{--color-primary:#B04A22; --tint:#FBF0EC; --pressed:#B04A22}
+.plum{--color-primary:#8E2F5B; --tint:#F9EEF3; --pressed:#8E2F5B}
+.cap code{font-size:11px;opacity:.8}
+</style></head><body>
+<div class="wrap">
+  <div class="cap">깊은 남색 <code>#2B4C7E</code> · 대비 8.61:1<em>차분하고 믿음직. 베이지 아트와 고전적으로 잘 붙는다</em></div>
+  <div class="phone navy">
+    <div class="sb"><span>9:41</span><span>▲ ▮</span></div>
+    <div class="hd">
+      <span class="ham">☰</span>
+      <h1>아이서랍</h1>
+      <span class="who">콩 · 3학년 난초반</span>
+    </div>
+    <div class="body">
+
+      <div class="clock"><span class="d">2026년 8월 10일 월요일</span><span class="t">22:15</span></div>
+
+      <div class="mq"><span>방학기간 · 현재 일정 없음 &nbsp;·&nbsp; 개학식이 내일이에요 &nbsp;·&nbsp; 내일 준비물은 다 챙겼어요</span></div>
+
+      <div class="dday"><b>개학식</b><span class="v">내일 ›</span></div>
+
+      <div class="lb">오늘</div>
+      <div class="card">
+        <div class="r"><span class="em">🗓️</span><span class="n">오늘 일정<em>종일 · 여름방학</em></span><span class="v">1개</span><span class="ar">›</span></div>
+        <div class="r"><span class="em">🎒</span><span class="n">내일 준비물</span><span class="v">완료</span><span class="ar">›</span></div>
+        <div class="r"><span class="em">🏃</span><span class="n">방과후 · 학원</span><span class="v">없어요</span><span class="ar">›</span></div>
+      </div>
+
+      <div class="lb">오늘 미션 · 0 / 3</div>
+      <div class="card">
+        <div class="r"><span class="bx"></span><span class="n">모르는 것 하나 물어보기</span><span class="st">⭐<b>1</b></span></div>
+        <div class="r"><span class="bx"></span><span class="n">내일 배울 곳 훑어보기</span><span class="st">⭐<b>2</b></span></div>
+        <div class="r"><span class="bx"></span><span class="n">일기 세 줄 쓰기</span><span class="st">⭐<b>2</b></span></div>
+      </div>
+    </div>
+    <div class="act">
+      <button>📅</button>
+      <button class="on">＋</button>
+      <button>⭐</button>
+    </div>
+    <div class="nb"></div>
+  </div>
+</div>
+<div class="wrap">
+  <div class="cap">테라코타 <code>#B04A22</code> · 대비 5.46:1<em>따뜻하고 사람 냄새. 지금 베이지 계열과 같은 온도</em></div>
+  <div class="phone terra">
+    <div class="sb"><span>9:41</span><span>▲ ▮</span></div>
+    <div class="hd">
+      <span class="ham">☰</span>
+      <h1>아이서랍</h1>
+      <span class="who">콩 · 3학년 난초반</span>
+    </div>
+    <div class="body">
+
+      <div class="clock"><span class="d">2026년 8월 10일 월요일</span><span class="t">22:15</span></div>
+
+      <div class="mq"><span>방학기간 · 현재 일정 없음 &nbsp;·&nbsp; 개학식이 내일이에요 &nbsp;·&nbsp; 내일 준비물은 다 챙겼어요</span></div>
+
+      <div class="dday"><b>개학식</b><span class="v">내일 ›</span></div>
+
+      <div class="lb">오늘</div>
+      <div class="card">
+        <div class="r"><span class="em">🗓️</span><span class="n">오늘 일정<em>종일 · 여름방학</em></span><span class="v">1개</span><span class="ar">›</span></div>
+        <div class="r"><span class="em">🎒</span><span class="n">내일 준비물</span><span class="v">완료</span><span class="ar">›</span></div>
+        <div class="r"><span class="em">🏃</span><span class="n">방과후 · 학원</span><span class="v">없어요</span><span class="ar">›</span></div>
+      </div>
+
+      <div class="lb">오늘 미션 · 0 / 3</div>
+      <div class="card">
+        <div class="r"><span class="bx"></span><span class="n">모르는 것 하나 물어보기</span><span class="st">⭐<b>1</b></span></div>
+        <div class="r"><span class="bx"></span><span class="n">내일 배울 곳 훑어보기</span><span class="st">⭐<b>2</b></span></div>
+        <div class="r"><span class="bx"></span><span class="n">일기 세 줄 쓰기</span><span class="st">⭐<b>2</b></span></div>
+      </div>
+    </div>
+    <div class="act">
+      <button>📅</button>
+      <button class="on">＋</button>
+      <button>⭐</button>
+    </div>
+    <div class="nb"></div>
+  </div>
+</div>
+<div class="wrap">
+  <div class="cap">자주 <code>#8E2F5B</code> · 대비 7.76:1<em>셋 중 가장 우리만의 색. 교육앱에 거의 없는 색이라 눈에 남는다</em></div>
+  <div class="phone plum">
+    <div class="sb"><span>9:41</span><span>▲ ▮</span></div>
+    <div class="hd">
+      <span class="ham">☰</span>
+      <h1>아이서랍</h1>
+      <span class="who">콩 · 3학년 난초반</span>
+    </div>
+    <div class="body">
+
+      <div class="clock"><span class="d">2026년 8월 10일 월요일</span><span class="t">22:15</span></div>
+
+      <div class="mq"><span>방학기간 · 현재 일정 없음 &nbsp;·&nbsp; 개학식이 내일이에요 &nbsp;·&nbsp; 내일 준비물은 다 챙겼어요</span></div>
+
+      <div class="dday"><b>개학식</b><span class="v">내일 ›</span></div>
+
+      <div class="lb">오늘</div>
+      <div class="card">
+        <div class="r"><span class="em">🗓️</span><span class="n">오늘 일정<em>종일 · 여름방학</em></span><span class="v">1개</span><span class="ar">›</span></div>
+        <div class="r"><span class="em">🎒</span><span class="n">내일 준비물</span><span class="v">완료</span><span class="ar">›</span></div>
+        <div class="r"><span class="em">🏃</span><span class="n">방과후 · 학원</span><span class="v">없어요</span><span class="ar">›</span></div>
+      </div>
+
+      <div class="lb">오늘 미션 · 0 / 3</div>
+      <div class="card">
+        <div class="r"><span class="bx"></span><span class="n">모르는 것 하나 물어보기</span><span class="st">⭐<b>1</b></span></div>
+        <div class="r"><span class="bx"></span><span class="n">내일 배울 곳 훑어보기</span><span class="st">⭐<b>2</b></span></div>
+        <div class="r"><span class="bx"></span><span class="n">일기 세 줄 쓰기</span><span class="st">⭐<b>2</b></span></div>
+      </div>
+    </div>
+    <div class="act">
+      <button>📅</button>
+      <button class="on">＋</button>
+      <button>⭐</button>
+    </div>
+    <div class="nb"></div>
+  </div>
+</div></body></html>

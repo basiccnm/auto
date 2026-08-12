@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>자녀 앱 시안 ① 밝은 원색 + 라운드 (저학년)</title>
+<!-- ═══════════════════════════════════════════════════════════
+     자녀 앱 테마 시안 ① — 실코드 아님. 화면 4장(홈·미션·사진 인증·도장판)을 한 판에.
+     · 큰 글씨 · 큰 버튼 · 텍스트 최소 · 축하 연출 자리 확보 · 마스코트 없음
+     · 포인트 색은 --k 토큰 하나로 돈다 — 아이가 3색 중 고른다(홈의 색 칩).
+       이 판은 「파랑」을 고른 상태. 칩만 바꾸면 전체가 같이 바뀌는 구조.
+     ═══════════════════════════════════════════════════════════ -->
+<link rel="stylesheet" href="../app/www/fonts/tabler-subset.css">
+<style>
+:root{
+  /* 색 토큰 — 아이가 고르는 포인트 3종(코발트/틸/오렌지레드). 지금은 코발트. */
+  --k:#1D6BF3; --k-soft:#DCE9FF; --on-k:#fff;
+  --bg:#FFFFFF; --card:#F3F5F8; --ink:#1A2233; --muted:#66738A;
+  --done:#13A94C; --star:#FFB300;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,"Pretendard","Malgun Gothic",sans-serif;background:#CBD3DE;
+  display:flex;gap:12px;padding:12px;color:var(--ink)}
+.ph{width:360px;height:800px;background:var(--bg);border-radius:28px;overflow:hidden;
+  flex:none;display:flex;flex-direction:column;box-shadow:0 8px 24px rgba(0,0,0,.15)}
+.cap{font-size:12px;font-weight:800;color:#333;padding:0 2px 6px}
+.wrap{flex:none}
+.body{flex:1;padding:20px 18px;display:flex;flex-direction:column;overflow:hidden}
+button{font:inherit;border:0;cursor:pointer}
+
+/* 큰 글씨 4단 — 아이 기준 */
+h1{font-size:30px;font-weight:900;letter-spacing:-.03em}
+.sub{font-size:16px;color:var(--muted);font-weight:700}
+
+/* ── ① 홈 ── */
+.star-pill{display:inline-flex;align-items:center;gap:8px;background:var(--card);
+  border-radius:999px;padding:10px 18px;font-size:20px;font-weight:900;margin:14px 0 22px}
+.star-pill i{color:var(--star);font-style:normal;font-size:24px}
+.big-btn{display:flex;align-items:center;gap:14px;width:100%;min-height:92px;border-radius:26px;
+  background:var(--card);padding:0 20px;margin-bottom:14px;text-align:left}
+.big-btn b{font-size:22px;font-weight:900;flex:1}
+.big-btn .ic{width:56px;height:56px;border-radius:50%;background:var(--k-soft);color:var(--k);
+  display:grid;place-items:center;font-size:28px;flex:none}
+.big-btn.done{background:var(--k);color:var(--on-k)}
+.big-btn.done .ic{background:rgba(255,255,255,.25);color:#fff}
+.big-btn .st{font-size:16px;font-weight:900}
+.meal{margin-top:auto;background:var(--card);border-radius:20px;padding:16px 18px}
+.meal b{font-size:18px;font-weight:900}
+.meal span{display:block;font-size:15px;color:var(--muted);font-weight:700;margin-top:4px}
+.pickrow{display:flex;align-items:center;gap:10px;margin-top:16px}
+.pickrow span{font-size:14px;font-weight:800;color:var(--muted)}
+.chip{width:34px;height:34px;border-radius:50%;border:3px solid transparent}
+.chip.c1{background:#1D6BF3}.chip.c2{background:#00A88E}.chip.c3{background:#FF5A2C}
+.chip.on{border-color:var(--ink)}
+
+/* ── ② 미션 목록 ── */
+.q{border-radius:26px;background:var(--card);padding:20px;margin-bottom:14px}
+.q b{font-size:24px;font-weight:900;display:block}
+.q .r{display:flex;align-items:center;gap:8px;margin-top:6px;font-size:16px;font-weight:800;color:var(--muted)}
+.q .r i{color:var(--star);font-style:normal}
+.do{margin-top:14px;width:100%;min-height:64px;border-radius:18px;background:var(--k);
+  color:var(--on-k);font-size:22px;font-weight:900}
+.q.done{background:var(--k-soft)}
+.q.done .do{background:var(--done);pointer-events:none}
+/* 축하 자리 — 완료 순간 카드가 이걸로 바뀐다(컨페티 + 큰 도장) */
+.hooray{border-radius:26px;background:var(--k);color:#fff;padding:26px 20px;text-align:center;margin-bottom:14px;position:relative;overflow:hidden}
+.hooray b{font-size:28px;font-weight:900;display:block}
+.hooray span{font-size:17px;font-weight:800;opacity:.9;display:block;margin-top:6px}
+.hooray .stamp{width:84px;height:84px;margin:14px auto 0;border-radius:50%;border:5px solid #fff;
+  display:grid;place-items:center;font-size:40px;transform:rotate(-6deg)}
+.confetti i{position:absolute;width:10px;height:10px;border-radius:2px;font-style:normal}
+.confetti i:nth-child(1){left:12%;top:14%;background:#FFB300;transform:rotate(20deg)}
+.confetti i:nth-child(2){right:14%;top:20%;background:#00E0A4;transform:rotate(-15deg)}
+.confetti i:nth-child(3){left:22%;bottom:18%;background:#FF7DAE;transform:rotate(40deg)}
+.confetti i:nth-child(4){right:20%;bottom:12%;background:#8AD0FF;transform:rotate(-30deg)}
+
+/* ── ③ 사진 인증 ── */
+.shot{flex:1;border-radius:26px;background:var(--card);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:14px;margin:18px 0}
+.shot .lens{width:120px;height:120px;border-radius:50%;background:var(--k);color:#fff;
+  display:grid;place-items:center;font-size:54px}
+.shot b{font-size:22px;font-weight:900}
+.send{width:100%;min-height:72px;border-radius:22px;background:var(--k);color:#fff;
+  font-size:24px;font-weight:900}
+
+/* ── ④ 도장판 ── */
+.board{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:18px}
+.cell{aspect-ratio:1;border-radius:50%;display:grid;place-items:center;font-size:26px;
+  border:3px dashed #C9D2E0;color:#C9D2E0}
+.cell.on{border:4px solid var(--star);color:var(--star);background:#FFF7E0;transform:rotate(-5deg)}
+.cell.today{border:4px solid var(--k);color:var(--k);background:var(--k-soft);transform:scale(1.12)}
+.goal{margin-top:auto;background:var(--k-soft);border-radius:22px;padding:18px;text-align:center}
+.goal b{font-size:20px;font-weight:900;color:var(--k)}
+.goal span{display:block;font-size:15px;font-weight:800;color:var(--muted);margin-top:4px}
+</style>
+</head>
+<body>
+
+<div class="wrap"><div class="cap">① 홈 — 오늘</div>
+<div class="ph"><div class="body">
+  <h1>오늘</h1>
+  <div class="star-pill"><i>★</i>37개 모았어요</div>
+  <button class="big-btn done"><span class="ic"><i class="ti ti-check"></i></span><b>방 정리</b><span class="st">다 했다!</span></button>
+  <button class="big-btn"><span class="ic"><i class="ti ti-camera"></i></span><b>저녁 양치</b><span class="st">사진 찍기</span></button>
+  <button class="big-btn"><span class="ic"><i class="ti ti-plus"></i></span><b>책 10분 읽기</b></button>
+  <div class="meal"><b>오늘 점심</b><span>기장밥 · 쇠고기무국 · 김치볶음</span></div>
+  <div class="pickrow"><span>내 색</span>
+    <button class="chip c1 on" aria-label="파랑"></button>
+    <button class="chip c2" aria-label="초록"></button>
+    <button class="chip c3" aria-label="주황"></button>
+  </div>
+</div></div></div>
+
+<div class="wrap"><div class="cap">② 미션 — 완료 순간(축하 연출 자리)</div>
+<div class="ph"><div class="body">
+  <h1>오늘 미션</h1>
+  <div style="height:14px"></div>
+  <div class="hooray"><span class="confetti"><i></i><i></i><i></i><i></i></span>
+    <b>참 잘했어요!</b><span>방 정리 끝 · 도장 쾅</span>
+    <span class="stamp"><i class="ti ti-check"></i></span>
+  </div>
+  <div class="q"><b>저녁 양치</b><div class="r"><i>★</i>도장 1개 · 사진으로 보여주기</div>
+    <button class="do">사진 찍기</button></div>
+  <div class="q"><b>책 10분 읽기</b><div class="r"><i>★</i>도장 2개</div>
+    <button class="do">다 했어요!</button></div>
+</div></div></div>
+
+<div class="wrap"><div class="cap">③ 사진 인증</div>
+<div class="ph"><div class="body">
+  <h1>저녁 양치</h1>
+  <p class="sub">이 닦는 모습을 찍어서 보여주세요</p>
+  <div class="shot"><span class="lens"><i class="ti ti-camera"></i></span><b>눌러서 찍기</b></div>
+  <button class="send">엄마한테 보내기</button>
+</div></div></div>
+
+<div class="wrap"><div class="cap">④ 도장판</div>
+<div class="ph"><div class="body">
+  <h1>도장판</h1>
+  <p class="sub">8월 · 37개</p>
+  <div class="board">
+    <span class="cell on">★</span><span class="cell on">★</span><span class="cell on">★</span><span class="cell on">★</span><span class="cell on">★</span>
+    <span class="cell on">★</span><span class="cell on">★</span><span class="cell on">★</span><span class="cell on">★</span><span class="cell on">★</span>
+    <span class="cell on">★</span><span class="cell on">★</span><span class="cell today">★</span><span class="cell">★</span><span class="cell">★</span>
+    <span class="cell">★</span><span class="cell">★</span><span class="cell">★</span><span class="cell">★</span><span class="cell">★</span>
+  </div>
+  <div class="goal"><b>3개만 더 모으면 40개!</b><span>엄마랑 정한 선물이 기다려요</span></div>
+</div></div></div>
+
+</body>
+</html>

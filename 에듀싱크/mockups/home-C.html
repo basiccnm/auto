@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>시안 C — 아이가 주인공</title>
+<!-- ═══════════════════════════════════════════════════════════
+     홈 시안 C 「아이가 주인공」 (2026-08-02)
+     부모가 매일 앱을 여는 이유는 급식이 아니라 아이라는 쪽에 건다.
+     · 시그니처 = 도장판. 오늘 미션이 실제로 찍힌다.
+     · 서랍 사진은 가장자리까지(7/27 방향서 ③). 여백 안에 가두지 않는다.
+     · 유아틱해지는 순간 실패다 — 색은 둘, 캐릭터·스티커 없음, 도장만 인주색.
+     ═══════════════════════════════════════════════════════════ -->
+<link rel="stylesheet" href="../app/www/fonts/tabler-subset.css">
+<style>
+:root{
+  --bg:#E9E2D9; --card:#FFFFFF; --ink:#241F1A; --muted:#5E5648; --line:#DBD2C6;
+  --accent:#9E3B26;                       /* 인주 — 도장이 시그니처라 색이 개념에서 나온다 */
+
+  --on-accent:#fff;
+  --sp1:4px; --sp2:8px; --sp3:12px; --sp4:16px; --sp5:24px; --sp6:40px;
+  --frame:420px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Noto Sans KR","Malgun Gothic",sans-serif;
+  background:#CEC6BB; color:var(--ink); font-size:15px; line-height:1.5;
+}
+#app{max-width:var(--frame);min-height:100vh;margin:0 auto;background:var(--bg);
+  padding:0 var(--sp4) 96px;overflow-x:hidden}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;text-align:left}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+
+/* ── 아이 ─────────────────────────────────────────────── */
+.top{display:flex;align-items:center;justify-content:flex-end;padding:var(--sp3) 0}
+.top .set{font-size:13px;color:var(--muted)}
+.who{display:flex;align-items:center;gap:var(--sp3);padding-bottom:var(--sp5)}
+.who .face{width:56px;height:56px;border-radius:50%;flex:none;display:grid;place-items:center;
+  font-size:24px;font-weight:800;color:var(--on-accent);
+  background:linear-gradient(150deg,#B85A3E,#8C3220)}
+.who .nm{min-width:0}
+.who h1{font-size:22px;font-weight:800;letter-spacing:-.03em;display:flex;align-items:center;gap:var(--sp1)}
+.who h1 i{font-size:15px;color:var(--muted)}
+.who .sc{font-size:13px;color:var(--muted);margin-top:1px}
+
+/* ── 시그니처: 도장판 ─────────────────────────────────── */
+.stamps{margin-bottom:var(--sp5)}
+.stamps .hd{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:var(--sp3)}
+.stamps h2{font-size:13px;font-weight:700;color:var(--muted)}
+.stamps .cnt{font-size:13px;font-weight:700;color:var(--accent);font-variant-numeric:tabular-nums}
+.board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--sp3)}
+.board button{display:flex;flex-direction:column;align-items:center;gap:var(--sp2);min-width:0}
+.mark{width:100%;aspect-ratio:1;max-width:88px;border-radius:50%;display:grid;place-items:center;
+  position:relative}
+/* 찍힌 도장 — 이중 링, 인주색, 살짝 기울어 손으로 찍은 티가 난다 */
+.mark.on{border:2.5px solid var(--accent);color:var(--accent);
+  box-shadow:inset 0 0 0 2px var(--bg),inset 0 0 0 3.5px var(--accent);
+  transform:rotate(-4deg)}
+.board button:nth-child(2) .mark.on{transform:rotate(3deg)}
+.mark.on span{font-size:15px;font-weight:800;letter-spacing:-.02em}
+/* 아직 안 찍힌 칸 — 비어 있다는 것이 곧 오늘 할 일이다 */
+.mark.off{border:1.5px dashed var(--line);color:var(--muted)}
+.mark.off i{font-size:22px}
+.board .lb{font-size:13px;color:var(--muted);text-align:center;max-width:100%;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.board button.todo .lb{color:var(--ink);font-weight:700}
+.waiting{display:flex;align-items:center;gap:var(--sp2);margin-top:var(--sp3);
+  font-size:13.5px;color:var(--accent);font-weight:700}
+.waiting i{font-size:16px}
+
+/* ── 서랍 — 사진은 가장자리까지. 좌우 여백 0 ──────────── */
+.drawer{margin:0 calc(var(--sp4) * -1) var(--sp5)}
+.drawer .hd{display:flex;align-items:baseline;justify-content:space-between;
+  padding:0 var(--sp4) var(--sp3)}
+.drawer h2{font-size:13px;font-weight:700;color:var(--muted)}
+.drawer .all{font-size:13px;color:var(--muted)}
+.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:2px}
+.tiles i{aspect-ratio:1;display:block;position:relative;overflow:hidden}
+.tiles i:nth-child(1){background:linear-gradient(155deg,#C9B79C,#8E7B60)}
+.tiles i:nth-child(2){background:linear-gradient(155deg,#A8B2A0,#6B7A68)}
+.tiles i:nth-child(3){background:linear-gradient(155deg,#C4A9A2,#8A6A62)}
+.tiles i b{position:absolute;left:0;right:0;bottom:0;padding:18px 8px 6px;color:#fff;
+  font-size:12px;font-weight:400;font-style:normal;
+  background:linear-gradient(transparent,rgba(0,0,0,.55));
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ── 오늘의 학교 — 아이 아래로 내려간다 ───────────────── */
+section{margin-bottom:var(--sp5)}
+section h2{font-size:13px;font-weight:700;color:var(--muted);margin-bottom:var(--sp3)}
+.dl{display:grid;grid-template-columns:56px minmax(0,1fr);gap:var(--sp3) var(--sp3)}
+.dl dt{font-size:13px;color:var(--muted);padding-top:1px}
+.dl dd{font-size:15px;min-width:0}
+.dl dd .sub{color:var(--muted);font-size:13px}
+
+.rows button{display:grid;grid-template-columns:46px minmax(0,1fr) auto;align-items:center;
+  gap:var(--sp3);width:100%;padding:var(--sp3) 0;border-bottom:1px solid var(--line)}
+.rows button:first-of-type{border-top:1px solid var(--line)}
+.rows .d{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.rows .n{font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rows .dd{font-size:13px;font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
+.rows button.soon .dd{color:var(--accent)}
+
+.ad{height:76px;border:1px dashed var(--line);border-radius:10px;display:grid;place-items:center;
+  color:var(--muted);font-size:12.5px;background:var(--card);margin-bottom:var(--sp5)}
+
+/* ── 하단 대화창 ─────────────────────────────────────── */
+.dock{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:100%;max-width:var(--frame);
+  display:flex;align-items:center;gap:var(--sp2);padding:var(--sp3) var(--sp4);
+  background:var(--card);border-top:1px solid var(--line)}
+.dock .f{width:26px;height:26px;border-radius:50%;flex:none;display:grid;place-items:center;
+  font-size:13px;font-weight:800;color:var(--on-accent);
+  background:linear-gradient(150deg,#B85A3E,#8C3220)}
+.dock .m{flex:1;min-width:0;font-size:13.5px;color:var(--muted);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dock .b{flex:none;font-size:12px;font-weight:800;color:var(--on-accent);background:var(--accent);
+  border-radius:999px;padding:1px 6px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div class="top"><button class="set">설정</button></div>
+
+  <div class="who">
+    <span class="face">하</span>
+    <button class="nm">
+      <h1>하늘<i class="ti ti-chevron-down"></i></h1>
+      <div class="sc">나래초등학교 3학년</div>
+    </button>
+  </div>
+
+  <div class="stamps">
+    <div class="hd"><h2>오늘 미션</h2><span class="cnt">2 / 3</span></div>
+    <div class="board">
+      <button><span class="mark on"><span>정리</span></span><span class="lb">방 정리</span></button>
+      <button><span class="mark on"><span>양치</span></span><span class="lb">저녁 양치</span></button>
+      <button class="todo"><span class="mark off"><i class="ti ti-plus"></i></span><span class="lb">책 10분 읽기</span></button>
+    </div>
+    <div class="waiting"><i class="ti ti-camera"></i>사진 1장이 확인을 기다립니다</div>
+  </div>
+
+  <div class="drawer">
+    <div class="hd"><h2>서랍</h2><span class="all">42장 전체보기</span></div>
+    <div class="tiles">
+      <i><b>2학기 독서왕 상장</b></i>
+      <i><b>가을 운동회</b></i>
+      <i><b>1학기 통지표</b></i>
+    </div>
+  </div>
+
+  <section>
+    <h2>오늘 학교</h2>
+    <dl class="dl">
+      <dt>급식</dt>
+      <dd>기장밥 · 쇠고기무국<br><span class="sub">돈육김치볶음 · 알감자조림 · 배추김치</span></dd>
+      <dt>수업</dt>
+      <dd>국어 · 수학 · 통합 · 통합 · 창체</dd>
+      <dt>방과후</dt>
+      <dd>축구교실 <span class="sub">15:30</span></dd>
+      <dt>내일</dt>
+      <dd>리코더 · 물감세트</dd>
+    </dl>
+  </section>
+
+  <div class="ad">광고</div>
+
+  <section class="rows">
+    <h2>다가오는 일정</h2>
+    <button class="soon"><span class="d">10.17</span><span class="n">가을 현장체험학습</span><span class="dd">D-3</span></button>
+    <button><span class="d">10.24</span><span class="n">학부모 공개수업</span><span class="dd">D-10</span></button>
+    <button><span class="d">11.3</span><span class="n">2학기 중간평가</span><span class="dd">D-20</span></button>
+  </section>
+
+</div>
+
+<div class="dock">
+  <span class="f">하</span>
+  <span class="m">엄마 오늘 축구 끝나고 데리러 와?</span>
+  <span class="b">1</span>
+</div>
+</body>
+</html>

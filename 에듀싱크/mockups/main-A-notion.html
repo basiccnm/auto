@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>아이서랍 A모듈 — 노션 문법</title>
+<!--
+  ══════════════════════════════════════════════════════════════
+  A모듈(부모앱) 메인 + 드로어 — design/노션/notion.tokens.css (2026-08-11)
+
+  🔴 화면 구조·문구는 지금 앱 그대로. 색·카드·글꼴만 갈아입혔다.
+  🔴 아래 :root 값 **바깥의 색·간격·모서리는 한 개도 쓰지 않았다.**
+
+  ⚠ 문서의 한계 — 이 MD 는 **노션 홈페이지(공개 마케팅 페이지) 실측**이다.
+     드로어(사이드바) 규격은 문서에 **없다.** 그래서 드로어는 지어내지 않고
+     문서에 있는 값(줄 글꼴 14/500 · 컨트롤 모서리 8 · docs-layer #f9f9f8)으로만 짰다.
+     실제 노션 앱의 사이드바 치수가 필요하면 그 화면을 실측한 문서가 따로 있어야 한다.
+
+  ⚠ 글꼴 = **시스템 글꼴**. 문서 §3: NotionInter 는 공개 라이선스가 확인되지 않았고,
+     계산된 스택의 어떤 폴백도 NotionInter 로 렌더되지 않는다고 적혀 있다.
+     → 우리는 넣을 수 없다. 굵기(400/500/700)로만 위계를 만든다.
+  ══════════════════════════════════════════════════════════════
+-->
+<style>
+:root{
+  /* notion.tokens.css 그대로 */
+  --color-canvas:#ffffff; --color-docs-layer:#f9f9f8;
+  --color-ink:#000000; --color-muted:#615d59;
+  --color-primary:#0075de; --color-primary-hover:#005bab;
+  --type-body-size:16px; --type-body-weight:400; --type-body-lh:24px;
+  --type-label-size:14px; --type-label-weight:500; --type-label-lh:20px;
+  --type-action-size:16px; --type-action-weight:500; --type-action-lh:24px;
+  --space-xs:4px; --space-sm:8px; --space-md:12px; --space-lg:16px; --space-xl:24px;
+  --radius-control:8px; --radius-card:12px; --radius-docs-input:5px; --radius-pill:9999px;
+  /* DESIGN 문서 §4·§6 에 적힌 값 — 토큰 파일엔 없다 */
+  --card-border:rgba(0,0,0,0.1); --card-ink:rgba(0,0,0,0.898);
+  --tab-on:rgba(0,0,0,0.95); --tab-off:rgba(0,0,0,0.54);
+  --secondary-bg:#e6f3fe;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#3f3f3f;padding:24px;display:flex;gap:32px;flex-wrap:wrap;justify-content:center;
+  font-family:system-ui,-apple-system,"Malgun Gothic",sans-serif}
+.wrap{width:393px}
+.cap{color:#fff;font-size:13px;font-weight:700;margin-bottom:6px}
+.cap em{display:block;font-style:normal;font-weight:400;color:#c2c2c2;font-size:12px;margin-top:2px}
+.phone{width:393px;height:852px;overflow:hidden;display:flex;flex-direction:column;position:relative;
+  background:var(--color-canvas);color:var(--color-ink);
+  font-size:var(--type-body-size);font-weight:var(--type-body-weight);line-height:var(--type-body-lh)}
+.sb{height:44px;flex:none;display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;font-size:13px;font-weight:500}
+.nb{height:20px;flex:none}
+.body{flex:1;overflow:hidden;padding:0 var(--space-lg)}
+
+/* 머리 — ☰ 가 왼쪽. 드로어 앱의 기본 자리다 */
+.hd{display:flex;align-items:center;gap:var(--space-md);padding:var(--space-sm) 0 var(--space-lg)}
+.hd .ham{font-size:20px;width:32px;height:32px;display:grid;place-items:center;
+  border-radius:var(--radius-control);margin-left:-6px}
+.hd h1{font-size:var(--type-body-size);font-weight:600}
+.hd .who{margin-left:auto;font-size:var(--type-label-size);font-weight:var(--type-label-weight);
+  color:var(--color-muted)}
+
+/* 지금 상태 — 문서에 큰 제목이 54px 뿐이라 그건 안 쓴다. 값은 굵기로 세운다 */
+.now{padding:var(--space-sm) 0 var(--space-xl)}
+.now .t{font-size:32px;font-weight:600;letter-spacing:-1px;line-height:1.1;
+  font-variant-numeric:tabular-nums}
+.now .d{margin-top:var(--space-xs);font-size:var(--type-label-size);
+  font-weight:var(--type-label-weight);color:var(--color-muted)}
+
+/* 카드 — 흰 바탕 + 1px 테두리 + 12px. **그림자 없다**(문서 §6: 공개면은 평평하다) */
+.card{border:1px solid var(--card-border);border-radius:var(--radius-card);
+  padding:var(--space-lg);margin-bottom:var(--space-md);color:var(--card-ink)}
+.lb{font-size:var(--type-label-size);font-weight:var(--type-label-weight);
+  color:var(--color-muted);margin-bottom:var(--space-sm)}
+.r{display:flex;align-items:center;gap:var(--space-md);padding:var(--space-md) 0;
+  border-top:1px solid var(--card-border)}
+.r:first-child{border-top:none;padding-top:0}
+.r:last-child{padding-bottom:0}
+.r .em{width:24px;flex:none;font-size:17px;line-height:1;text-align:center}
+.r .n{flex:1;min-width:0}
+.r .n em{display:block;font-style:normal;font-size:var(--type-label-size);
+  color:var(--color-muted);margin-top:2px}
+.r .v{font-size:var(--type-label-size);font-weight:var(--type-label-weight);
+  color:var(--color-muted);font-variant-numeric:tabular-nums}
+.r .ar{color:var(--color-muted);font-size:13px}
+.r .bx{width:20px;height:20px;flex:none;border:1px solid var(--card-border);
+  border-radius:var(--radius-docs-input)}
+.r .st{font-size:var(--type-label-size);font-weight:var(--type-label-weight);
+  color:var(--color-muted);font-variant-numeric:tabular-nums}
+
+/* D-day — 부드러운 파랑 면(문서 §4 secondary) */
+.dday{display:flex;align-items:center;background:var(--secondary-bg);
+  border-radius:var(--radius-card);padding:var(--space-md) var(--space-lg);margin-bottom:var(--space-md)}
+.dday b{font-weight:500}
+.dday .v{margin-left:auto;color:var(--color-primary-hover);
+  font-size:var(--type-label-size);font-weight:var(--type-label-weight)}
+
+/* 하단 — 파랑은 여기 하나. 나머지는 글자만 */
+.act{display:flex;align-items:center;gap:var(--space-sm);
+  padding:var(--space-md) var(--space-lg);border-top:1px solid var(--card-border)}
+.act .g{flex:none;height:36px;padding:0 var(--space-md);border:none;background:none;
+  color:var(--color-muted);font:var(--type-label-weight) var(--type-label-size)/1 inherit;
+  border-radius:var(--radius-control)}
+.act .on{flex:1;height:36px;border:1px solid transparent;border-radius:var(--radius-control);
+  background:var(--color-primary);color:#fff;
+  font:var(--type-action-weight) var(--type-action-size)/1 inherit;padding:4px 14px}
+
+/* ── 드로어 (문서에 규격 없음 — 위 토큰만으로 짰다) ── */
+.dim{position:absolute;inset:0;background:rgba(0,0,0,0.1)}
+.dw{position:absolute;top:0;bottom:0;left:0;width:300px;background:var(--color-docs-layer);
+  display:flex;flex-direction:column;padding:var(--space-lg)}
+.dw .me{display:flex;align-items:center;gap:var(--space-md);padding:var(--space-md);
+  border-radius:var(--radius-control)}
+.dw .me .av{width:36px;height:36px;flex:none;border-radius:var(--radius-pill);
+  background:var(--color-canvas);border:1px solid var(--card-border);
+  display:grid;place-items:center;font-size:17px}
+.dw .me .n{font-size:var(--type-body-size);font-weight:600}
+.dw .me .n em{display:block;font-style:normal;font-size:var(--type-label-size);
+  font-weight:400;color:var(--color-muted);margin-top:1px}
+.dw .sec{margin-top:var(--space-lg);padding:0 var(--space-md) var(--space-xs);
+  font-size:var(--type-label-size);font-weight:var(--type-label-weight);color:var(--color-muted)}
+.dw a{display:flex;align-items:center;gap:var(--space-md);padding:var(--space-sm) var(--space-md);
+  border-radius:var(--radius-control);color:var(--tab-off);text-decoration:none;
+  font-size:var(--type-body-size)}
+.dw a.on{background:var(--color-canvas);color:var(--tab-on);font-weight:500}
+.dw a .em{width:20px;text-align:center;font-size:16px;line-height:1}
+.dw .foot{margin-top:auto;padding:var(--space-md);border-top:1px solid var(--card-border)}
+.dw .foot a{padding-left:0}
+</style>
+</head>
+<body>
+
+<!-- ══════════ A모듈 홈 ══════════ -->
+<div class="wrap">
+  <div class="cap">A모듈 · 부모앱 홈 — 노션<em>시스템 글꼴 · 흰 바탕 · 1px 테두리 카드 12px · 그림자 없음 · 파랑 #0075de 는 행동에만</em></div>
+  <div class="phone">
+    <div class="sb"><span>9:41</span><span>▲ ▮</span></div>
+    <div class="body">
+      <div class="hd">
+        <span class="ham">☰</span>
+        <h1>아이서랍</h1>
+        <span class="who">콩 · 3학년 난초반</span>
+      </div>
+
+      <div class="now">
+        <div class="t">22:15</div>
+        <div class="d">8월 10일 월요일 · 방학기간 · 현재 일정 없음</div>
+      </div>
+
+      <div class="dday"><b>개학식</b><span class="v">내일 ›</span></div>
+
+      <div class="lb">오늘</div>
+      <div class="card">
+        <div class="r"><span class="em">🗓️</span><span class="n">오늘 일정<em>종일 · 여름방학</em></span><span class="v">1개</span><span class="ar">›</span></div>
+        <div class="r"><span class="em">🎒</span><span class="n">내일 준비물</span><span class="v">완료</span><span class="ar">›</span></div>
+        <div class="r"><span class="em">🏃</span><span class="n">방과후 · 학원</span><span class="v">없어요</span><span class="ar">›</span></div>
+      </div>
+
+      <div class="lb">오늘 미션 · 0 / 3</div>
+      <div class="card">
+        <div class="r"><span class="bx"></span><span class="n">모르는 것 하나 물어보기</span><span class="st">★1</span></div>
+        <div class="r"><span class="bx"></span><span class="n">내일 배울 곳 훑어보기</span><span class="st">★2</span></div>
+        <div class="r"><span class="bx"></span><span class="n">일기 세 줄 쓰기</span><span class="st">★2</span></div>
+      </div>
+    </div>
+    <div class="act">
+      <button class="g">달력</button>
+      <button class="on">새로 넣기</button>
+      <button class="g">미션</button>
+    </div>
+    <div class="nb"></div>
+  </div>
+</div>
+
+<!-- ══════════ A모듈 드로어 열린 상태 ══════════ -->
+<div class="wrap">
+  <div class="cap">A모듈 · 드로어 열린 상태<em>⚠ 문서에 사이드바 규격이 없어 위 토큰(라벨 14/500 · 모서리 8 · #f9f9f8)만으로 짬</em></div>
+  <div class="phone">
+    <div class="sb"><span>9:41</span><span>▲ ▮</span></div>
+    <div class="body">
+      <div class="hd"><span class="ham">☰</span><h1>아이서랍</h1></div>
+      <div class="now"><div class="t">22:15</div><div class="d">8월 10일 월요일</div></div>
+    </div>
+    <div class="nb"></div>
+
+    <div class="dim"></div>
+    <div class="dw">
+      <div class="me">
+        <span class="av">🌱</span>
+        <span class="n">콩<em>경기초 3학년 난초반</em></span>
+      </div>
+
+      <div class="sec">학교</div>
+      <a href="#" class="on"><span class="em">🍚</span>급식</a>
+      <a href="#"><span class="em">📋</span>시간표</a>
+      <a href="#"><span class="em">🏫</span>학교정보</a>
+      <a href="#"><span class="em">💬</span>커뮤니티</a>
+
+      <div class="sec">우리 아이</div>
+      <a href="#"><span class="em">🗄️</span>서랍</a>
+      <a href="#"><span class="em">📄</span>서류</a>
+      <a href="#"><span class="em">✉️</span>대화 · 알림</a>
+
+      <div class="foot">
+        <a href="#"><span class="em">⚙️</span>내 정보 · 설정</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+</body>
+</html>

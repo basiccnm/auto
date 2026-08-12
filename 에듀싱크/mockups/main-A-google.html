@@ -1,0 +1,376 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>아이서랍 A모듈 — 파랑 + 자주</title>
+<!--
+  ══════════════════════════════════════════════════════════════
+  A모듈(부모앱) 메인 + 드로어 (2026-08-11)
+
+  뼈대 = design/구글 (☰ 왼쪽 · 시계 한 줄 가운데 · 전광판 띠 · 묶음 카드 · 드로어 48px)
+  색   = 두 계열만 — 구글 파랑(#1a73e8) + 자주(#8E2F5B). 대표님 확정 2026-08-11.
+         바탕은 흰색으로 되돌림(「회색은 아닌 것 같다」).
+
+  역할 분담:
+    파랑 = 행동·학교  (＋버튼 · D-day · 드로어 선택 · 일정 칩)
+    자주 = 우리 아이  (전광판 · 미션 · 서랍 칩)
+
+  ── 🟡 우리가 더한 값 (문서에 없음 — 전부 대비 실측) ──
+  ① 파랑글자 #185abc(6.51) · 자주글자 #6E2246(9.42 on 틴트) — 면색을 글자로 안 쓴다
+  ② 틴트 — 파랑 #e8f1fd(구글 문서 pressed 관측값) · 자주 #F8EFF4
+  ③ 시계 64px · 굵기 한 단 올림(본문 500 · 값 700 · 시계 700) — 「글꼴이 너무 얇다」
+  ④ 카드: 흰 면 + 구글 선(#dadce0) + 옅은 그림자 — 「백지 같다」 지시로 그림자만 유지
+  ⑤ 파랑 면 + 흰 글자 = 4.51:1 실측 ✅ (버튼에 그대로 사용 가능)
+  ══════════════════════════════════════════════════════════════
+-->
+<style>
+  /* 쉬는 날 — 토·일·공휴일. #d93025 은 틴트 위 4.19 로 미달이라 한 단 어둡게 */
+:root{
+  --off:#c5221f;
+  --art:none;   /* 기본 = 그림 없음 · 연한 파랑 틴트 */
+  /* ── 구글 토큰 ── */
+  --canvas:#ffffff; --bg:#f2f3f6; --chest:#dfe2e8; --ink:#202124; --fg:#3c4043; --muted:#5f6368; --hairline:#dadce0;
+  --blue:#1a73e8; --blue-tx:#185abc; --blue-tint:#e8f1fd;
+  --nav-h:48px; --btn-h:42px; --radius-nav:4px; --radius-card:8px; --radius-full:1000px;
+  /* ── 자주 계열 (우리 색) ── */
+  --plum:#8E2F5B; --plum-tx:#6E2246; --plum-tint:#F8EFF4;
+  /* ── 🟡 우리가 더한 값 ── */
+  --card-sh:0 1px 2px rgba(0,0,0,.05), 0 2px 10px rgba(0,0,0,.05);
+  --nb-h:20px;                 /* 하단 제스처바 (실앱에선 --sa-b) */
+  --foot-gap:var(--s-sm);      /* 홈 하단바·드로어 내정보의 «밑선» — 이 하나로 묶인다 */
+
+  /* ══ 크기 반응 체계 (2026-08-11 대표님 지시) ══════════════════
+     기준 = 제일 작은 화면 320×640. 거기서 완전히 들어가는 값이 하한(clamp min),
+     393×852(목업 정본)에서 지금 확정된 생김새 그대로(가운데 값이 정확히 일치),
+     큰 화면에선 상한(clamp max)에 걸려 «요소가 아니라 여백»이 늘어난다.
+     cqw/cqh = 폰 틀(container) 기준 % — 목업·실앱 어디서든 같은 식이 돈다.
+     ⚠ 칩 32 · 아이콘 20 · ＋버튼 48 · 아바타 44 는 여기 안 태운다 — 고정 px */
+  --s-xs:4px;
+  --s-sm:clamp(6px, 2.04cqw, 9px);      /* 393에서 8 */
+  --s-md:clamp(12px, 4.07cqw, 17px);    /* 393에서 16 */
+  --s-lg:clamp(18px, 6.1cqw, 25px);     /* 393에서 24 */
+  /* 글자 — 이름 = 393px(정본)에서의 크기 */
+  --fs-13:clamp(12px,   calc(7.6px  + 1.37cqw), 13.5px);
+  --fs-14:clamp(13px,   calc(8.6px  + 1.37cqw), 14.5px);
+  --fs-16:clamp(14.5px, calc(7.9px  + 2.05cqw), 16.5px);
+  --fs-17:clamp(15.5px, calc(8.9px  + 2.05cqw), 17.5px);
+  --fs-22:clamp(20px,   calc(11.2px + 2.74cqw), 23px);
+  --clock:clamp(48px, 16.3cqw, 74px);   /* 393에서 64 */
+  /* 세로 — 1차식이 (640 → 하한값) · (852 → 지금 확정값) 두 점을 정확히 지난다.
+     852 위로는 상한에 걸려 더 안 큰다. 320×640에서 전부 들어가는 걸 실측으로 확인할 것 */
+  --now-pt:clamp(10px, calc(-26.2px + 5.66cqh), 22px);
+  --mq-h:clamp(30px, calc(-6.2px + 5.66cqh), 42px);
+  --dday-h:clamp(36px, calc(11.9px + 3.77cqh), 44px);
+  --row-pt:clamp(10px, calc(-20.2px + 4.72cqh), 20px);
+  --row-pb:clamp(8px, calc(-10.1px + 2.83cqh), 14px);
+  --r-mh:clamp(40px, calc(3.8px + 5.66cqh), 52px);
+  --act-h:clamp(44px, calc(7.8px + 5.66cqh), 56px);
+  --gap9:clamp(5px, calc(-7.1px + 1.89cqh), 9px);
+  --me-p:clamp(8px, calc(-10.1px + 2.83cqh), 14px);
+  --me-g:clamp(6px, calc(-6.1px + 1.89cqh), 10px);
+  --dwrow-h:clamp(38px, calc(-10.3px + 7.55cqh), 54px);
+  --thm-h:clamp(32px, calc(-10.3px + 6.6cqh), 46px);
+  --sec-pt:clamp(6px, calc(-36.3px + 6.6cqh), 20px);
+}
+
+/* ── 테마 19벌: 기본(파랑) + 그림 18 ── */
+:root{--t-ink:var(--blue-tx); --t-bar:var(--blue); --t-tint:var(--blue-tint); --scrim:0;
+  /* 진한 틴트 — 시계 앞판 전용(대표님 2026-08-11 「너무 옅다」). 틴트에 바 색을 11% 섞는다.
+     기본 파랑이면 #e8f1fd → ≈#d2e3fc(구글 blue-100). 19벌 전부 자동 파생 — 값 19개 안 적는다 */
+  --t-tint2:color-mix(in srgb, var(--t-bar) 11%, var(--t-tint))}
+[data-art]{--scrim:1}   /* 그림이 있을 때만 가림막을 켠다 */
+[data-art="theme_01"]{--t-ink:#5E2000;--t-bar:#5E2000;--t-tint:#F8E1D5}
+[data-art="theme_02"]{--t-ink:#73671A;--t-bar:#847514;--t-tint:#F8F3D5}
+[data-art="theme_03"]{--t-ink:#4E702E;--t-bar:#57822D;--t-tint:#E8F8D8}
+[data-art="theme_04"]{--t-ink:#162348;--t-bar:#111F48;--t-tint:#D5DFF8}
+[data-art="theme_05"]{--t-ink:#865530;--t-bar:#A76432;--t-tint:#F8E4D5}
+[data-art="theme_06"]{--t-ink:#993316;--t-bar:#992908;--t-tint:#F8DDD5}
+[data-art="theme_07"]{--t-ink:#29405B;--t-bar:#243D5B;--t-tint:#DAE8F8}
+[data-art="theme_08"]{--t-ink:#174928;--t-bar:#124925;--t-tint:#D5F8E2}
+[data-art="theme_09"]{--t-ink:#103370;--t-bar:#062D70;--t-tint:#D5E2F8}
+[data-art="theme_10"]{--t-ink:#3C6E65;--t-bar:#3F8073;--t-tint:#DFF8F3}
+[data-art="theme_11"]{--t-ink:#835455;--t-bar:#A46364;--t-tint:#F8E5E5}
+[data-art="theme_12"]{--t-ink:#002976;--t-bar:#002976;--t-tint:#D5E2F8}
+[data-art="theme_13"]{--t-ink:#7E5A4A;--t-bar:#9B6A55;--t-tint:#F8E9E2}
+[data-art="theme_14"]{--t-ink:#461D0B;--t-bar:#461906;--t-tint:#F8E0D5}
+[data-art="theme_15"]{--t-ink:#21668C;--t-bar:#1D7DB3;--t-tint:#D5ECF8}
+[data-art="theme_16"]{--t-ink:#71633D;--t-bar:#877443;--t-tint:#F8F1DF}
+[data-art="theme_17"]{--t-ink:#6E5585;--t-bar:#8C67AC;--t-tint:#EFE4F8}
+[data-art="theme_18"]{--t-ink:#532597;--t-bar:#4C1A97;--t-tint:#E3D5F8}
+
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#3f3f3f;padding:24px;display:flex;gap:32px;flex-wrap:wrap;justify-content:center;
+  font-family:system-ui,-apple-system,"Malgun Gothic",sans-serif}
+.wrap{width:393px}
+.cap{color:#fff;font-size:13px;font-weight:700;margin-bottom:6px;min-height:58px}
+.cap em{display:block;font-style:normal;font-weight:400;color:#c2c2c2;font-size:12px;margin-top:2px}
+.phone{width:393px;height:852px;overflow:hidden;display:flex;flex-direction:column;position:relative;
+  container-type:size;   /* cqw/cqh 의 기준 — 실앱에선 화면 전체가 이 역할 */
+  background:var(--bg);color:var(--fg);font-size:var(--fs-16);font-weight:500;line-height:1.5}
+.sb{height:44px;flex:none;display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;font-size:13px;font-weight:600}
+.nb{height:var(--nb-h);flex:none}
+.body{flex:1;overflow:hidden;padding:0 var(--s-md)}
+
+/* 머리 — ☰ 왼쪽 */
+.hd{display:flex;align-items:center;gap:var(--s-sm);height:var(--nav-h);flex:none;padding:0 var(--s-sm)}
+.hd .ham{width:40px;height:40px;display:grid;place-items:center;font-size:20px;
+  border-radius:var(--radius-full);margin-left:8px;color:var(--ink)}  /* 안쪽으로(대표님) */
+.hd h1{font-size:var(--fs-17);font-weight:700;color:var(--ink);margin-left:auto;padding-right:20px}  /* 제일 오른쪽에서 한 걸음 안으로(대표님) */
+.hd .who{margin-left:auto;font-size:var(--fs-14);font-weight:600;color:var(--muted)}
+
+/* 시계+전광판 — 한 칩 (대표님 2026-08-11: 「하나로 합쳐서 칩 하나로」) */
+.now{position:relative;border-radius:var(--radius-card);margin-bottom:var(--s-md);
+  overflow:hidden;background:var(--t-tint2) no-repeat;background-size:100% auto;background-position:center top;
+  background-image:var(--art);padding:var(--now-pt) 0 0}
+/* 가림막 — 그림이 18종이라 밝기가 제각각. 이게 없으면 어떤 테마에선 글자가 죽는다 */
+.now::before{content:'';position:absolute;inset:0;pointer-events:none;opacity:var(--scrim,0);
+  background:linear-gradient(180deg,rgba(255,255,255,.34) 0%,rgba(255,255,255,.80) 46%,rgba(255,255,255,.94) 100%)}
+.now > *{position:relative}
+.clock{display:flex;align-items:baseline;justify-content:center;gap:var(--s-sm);
+  padding:0 var(--s-md) var(--row-pb);font-variant-numeric:tabular-nums}
+.clock .d{font-size:var(--fs-14);font-weight:600;color:var(--muted)}
+.clock .d .off{color:var(--off);font-weight:700}  /* 토·일·공휴일 */
+.clock .t{font-size:var(--clock);font-weight:700;line-height:1;letter-spacing:-1px;
+  color:var(--t-ink)}
+.mq{height:var(--mq-h);display:flex;align-items:center;overflow:hidden;
+  border-top:1px solid rgba(24,90,188,.12)}
+.mq span{display:inline-block;white-space:nowrap;padding-left:100%;
+  font-size:var(--fs-14);font-weight:700;color:var(--ink);animation:flow 30s linear infinite}  /* 검정이 더 잘 보인다(대표님) — 틴트 위 14.6:1 */
+@keyframes flow{from{transform:translateX(0)}to{transform:translateX(-100%)}}
+
+/* D-day — 파랑 틴트 */
+.dday{display:flex;align-items:center;height:var(--dday-h);padding:0 var(--s-md);
+  background:var(--t-tint);border-radius:var(--radius-card);margin-bottom:var(--s-md)}
+.dday b{font-weight:700;color:var(--ink)}
+.dday .v{margin-left:auto;color:var(--t-ink);font-size:var(--fs-14);font-weight:700}
+
+/* 묶음 라벨 */
+.lb{font-size:var(--fs-14);font-weight:700;color:var(--muted);padding:0 var(--s-sm) var(--s-sm)}
+
+/* 서랍장 — 몸통(어두운 틀) 안에 앞판이 틈을 두고 쌓인다. 앱 이름이 아이서랍이다 */
+.card.drawer{background:var(--chest);border:1px solid var(--hairline);border-radius:var(--radius-card);
+  box-shadow:var(--card-sh);padding:var(--gap9);display:flex;flex-direction:column;gap:var(--gap9);margin-bottom:var(--s-md)}
+.card.drawer .r{background:var(--canvas);border:1px solid var(--hairline);border-radius:6px;
+  border-top:none;margin:0;padding:var(--row-pt) 12px var(--row-pb);position:relative;min-height:0;
+  box-shadow:0 2px 0 rgba(32,33,36,.08)}   /* 아래 두께 — 앞판이 살짝 떠 있다 */
+.card.drawer .r::before{content:'';position:absolute;top:6px;left:50%;transform:translateX(-50%);
+  width:28px;height:4px;border-radius:2px;background:#d3d7dd}   /* 손잡이 */
+
+/* 카드 — 흰 면 + 선 + 옅은 그림자 */
+.card{background:var(--canvas);border:1px solid var(--hairline);border-radius:var(--radius-card);
+  box-shadow:var(--card-sh);padding:var(--s-sm) var(--s-md);margin-bottom:var(--s-md)}
+.r{display:flex;align-items:center;gap:12px;min-height:var(--r-mh);
+  padding:var(--s-sm) 0;border-top:1px solid var(--hairline)}
+.r:first-child{border-top:none}
+/* 아이콘 칩 — 파랑·자주·회색 셋만 */
+/* 36px 은 한 줄짜리 줄에서 상자가 «카드 속 카드»로 읽혔다(방과후 지적) → 32px */
+.ic{width:20px;height:20px;display:block;flex:none}
+.chip.b{color:var(--t-ink)} .chip.p{color:var(--plum-tx)} .chip.nt{color:var(--muted)}
+.r .chip{width:32px;height:32px;flex:none;border-radius:var(--radius-card);
+  display:grid;place-items:center;font-size:16px}
+.chip.b{background:var(--t-tint)}
+.chip.p{background:var(--plum-tint)}
+.chip.nt{background:#f1f3f4}  /* ⚠ n 은 이름칸 클래스라 충돌 — nt 로 */
+.r .n{flex:1;min-width:0;font-weight:600;color:var(--ink)}
+.r .n em{display:block;font-style:normal;font-size:var(--fs-13);font-weight:500;color:var(--muted)}
+.r .v{font-size:var(--fs-14);font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
+.r .v.ok{color:var(--t-ink)}
+.r .ar{color:var(--muted);font-size:var(--fs-13)}
+.r .bx{width:22px;height:22px;flex:none;border:1.5px solid var(--hairline);
+  border-radius:6px;background:var(--canvas)}
+.r .st{display:flex;align-items:center;gap:2px;font-size:var(--fs-14);font-weight:700;
+  color:var(--ink);font-variant-numeric:tabular-nums}
+
+/* ══ 하단 바 — 확정(2026-08-11). 배치 구조를 바꾸지 말 것 ══
+   그리드 [1fr | 48px | 1fr] — 달력·미션은 각자 절반의 정중앙, ＋는 화면 정중앙 */
+.act{display:grid;grid-template-columns:1fr var(--nav-h) 1fr;align-items:center;
+  padding:var(--s-sm) var(--s-md);background:var(--t-bar);
+  margin:0 var(--s-md) var(--foot-gap);border-radius:var(--radius-card)}
+.act button{border:none;background:rgba(0,0,0,.12);color:#fff;font-family:inherit;
+  height:var(--act-h);border-radius:var(--radius-card);width:auto;padding:0 24px;justify-self:center;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.act button i{display:block;color:#fff;font-style:normal;font-size:21px;line-height:1;
+  padding-bottom:1px}  /* 이모지는 아래로 처져 보여 1px 보정 */
+.act button i .ic{width:24px;height:24px}
+.act button i .ic{width:24px;height:24px}
+.act button b{font-size:var(--fs-13);font-weight:800;line-height:1}
+/* ＋ 는 글자가 아니라 CSS 막대 둘 — 글자는 자기 여백이 있어 가운데가 안 맞는다 */
+.act button.on{width:var(--nav-h);height:var(--nav-h);border-radius:var(--radius-full);
+  background:var(--canvas);padding:0;position:relative;font-size:0}
+.act button.on::before,.act button.on::after{content:'';position:absolute;top:50%;left:50%;
+  background:var(--t-bar);border-radius:1px;transform:translate(-50%,-50%)}
+.act button.on::before{width:18px;height:2.5px}
+.act button.on::after{width:2.5px;height:18px}
+
+/* ── 드로어 — 구글 규격(48px·모서리4·14px) ── */
+.dim{position:absolute;inset:0;background:rgba(32,33,36,.32)}
+.dw{position:absolute;top:44px;bottom:0;left:0;width:min(304px, calc(100% - 56px));background:var(--canvas);
+  display:flex;flex-direction:column;
+  /* 밑선 = 제스처바 + --foot-gap — 홈 하단바(.act)와 같은 식. 어느 크기에서든 같은 y 에 떨어진다 */
+  padding:var(--s-md) var(--s-sm) calc(var(--nb-h) + var(--foot-gap))}
+/* 프로필 — 파랑 면을 아래로 키우고 «남은 기간·상태»까지 담는다(대표님 2026-08-11).
+   흰 글자 on 파랑 4.51:1 ✅ · 안쪽 칸은 흰 반투명 면 위 흰 글자 */
+.dw .me{display:flex;flex-direction:column;gap:var(--me-g);padding:var(--me-p) var(--s-md);margin:0 0 var(--s-sm);
+  background:var(--t-bar);border-radius:var(--radius-card)}
+.dw .me .top{display:flex;align-items:center;gap:12px;justify-content:space-between}
+.dw .me .av{width:44px;height:44px;flex:none;border-radius:var(--radius-full);
+  background:var(--canvas);display:grid;place-items:center;color:var(--t-bar)}
+.dw .me .av .ic{width:24px;height:24px}
+.dw .me .n{font-size:var(--fs-22);font-weight:800;color:#fff;margin-left:auto;margin-right:10px}
+/* 서랍 — 프로필 안 바로가기(우리 아이 12년이 여기 있다). 흰 반투명 알약 */
+.dw .me .go{display:flex;align-items:center;justify-content:center;width:38px;height:38px;
+  flex:none;border-radius:var(--radius-full);background:rgba(255,255,255,.18);
+  text-decoration:none;color:#fff}  /* 우측이되 벽에서 14px 앞으로 */
+.dw .me .n em{display:block;font-style:normal;font-size:var(--fs-13);font-weight:500;color:rgba(255,255,255,.92)}
+.dw .me .stats{display:flex;flex-direction:column;gap:5px}
+.dw .me .stats .s{display:flex;align-items:center;justify-content:space-between;
+  background:rgba(255,255,255,.14);border-radius:6px;padding:clamp(5px, calc(-4.1px + 1.42cqh), 8px) 12px;
+  font-size:var(--fs-13);font-weight:600;color:rgba(255,255,255,.92)}
+.dw .me .stats .s b{font-weight:700;color:#fff;font-variant-numeric:tabular-nums}
+/* 테마 — 프로필 바로 아래. 지금 고른 테마 이름을 같이 보여준다(19벌이라 뭘 쓰는지 알아야 한다) */
+/* 세로 기준선 하나 — 행 패딩 10 + 아이콘 자리 32 고정(2026-08-11 「상자 정렬」) */
+.dw .thm{display:flex;align-items:center;gap:12px;height:var(--thm-h);padding:0 10px;margin-top:2px;
+  border-radius:var(--radius-nav);background:var(--t-tint);color:var(--t-ink);
+  text-decoration:none;font-size:var(--fs-14);font-weight:700}
+.dw .thm > .ic{margin:0 6px}   /* 20px 아이콘을 32px 자리 가운데에 — 칩 중심과 같은 x */
+.dw .thm span{flex:1}
+.dw .thm em{font-style:normal;font-weight:600;opacity:.85}
+.dw .thm i{font-style:normal;font-size:var(--fs-13);opacity:.7}
+.dw .sec{padding:var(--sec-pt) 10px 6px;font-size:var(--fs-13);font-weight:700;color:var(--muted)}
+.dw a{display:flex;align-items:center;gap:12px;height:var(--dwrow-h);padding:0 10px;margin-bottom:2px;
+  border-radius:var(--radius-nav);color:var(--ink);text-decoration:none;font-size:var(--fs-14);font-weight:600}
+.dw a.on{background:var(--t-tint);color:var(--t-ink);font-weight:700}
+.dw a .chip{width:32px;height:32px;flex:none;border-radius:var(--radius-card);
+  display:grid;place-items:center;font-size:16px}
+.dw .foot{margin-top:auto;background:var(--t-tint);border-radius:var(--radius-card);padding:var(--s-sm) 0}
+.dw .foot a{color:var(--t-ink);font-weight:700}
+.dw .foot .chip{background:var(--canvas)}  /* 틴트 안이라 칩은 흰 면으로 */
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<g id="i-cal"><rect x="4" y="5" width="16" height="16" rx="2"/><path d="M8 3v4M16 3v4M4 11h16"/></g>
+<g id="i-star"><path d="M12 3.5l2.7 5.5 6.1.9-4.4 4.3 1 6-5.4-2.9-5.4 2.9 1-6-4.4-4.3 6.1-.9z"/></g>
+<g id="i-drawer"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 001 1h12a1 1 0 001-1V8M10 13h4"/></g>
+<g id="i-bag"><path d="M8 7V5a4 4 0 018 0v2"/><rect x="4" y="7" width="16" height="13" rx="2"/><path d="M9 12h6"/></g>
+<g id="i-run"><path d="M3 12h4l3 8 4-16 3 8h4"/></g>
+<g id="i-target"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/></g>
+<g id="i-meal"><path d="M4 11h16v1a8 8 0 01-16 0zM2 20h20"/></g>
+<g id="i-table"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 10v10M15 10v10"/></g>
+<g id="i-school"><path d="M3 21h18M5 21V8l7-4 7 4v13M10 21v-5h4v5"/></g>
+<g id="i-chat"><path d="M4 5h16v11H9l-5 4z"/><path d="M8 9h8M8 12.5h5"/></g>
+<g id="i-file"><path d="M14 3v5h5M6 3h8l5 5v13H6z"/><path d="M9 13h6M9 17h4"/></g>
+<g id="i-mail"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 8l9 6 9-6"/></g>
+<g id="i-help"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 115 0c0 1.6-2.5 2-2.5 3.6"/><path d="M12 17h.01"/></g>
+<g id="i-set"><path d="M4 8h9M17 8h3M4 16h3M11 16h9"/><circle cx="15" cy="8" r="2"/><circle cx="9" cy="16" r="2"/></g>
+<g id="i-palette"><path d="M12 21a9 9 0 110-18c4.97 0 9 3.58 9 8 0 2.21-1.79 4-4 4h-1.5a1.5 1.5 0 00-1.06 2.56A1.5 1.5 0 0112 21z"/><circle cx="7.5" cy="10.5" r="1" fill="currentColor" stroke="none"/><circle cx="11" cy="7" r="1" fill="currentColor" stroke="none"/><circle cx="15.5" cy="8.5" r="1" fill="currentColor" stroke="none"/></g>
+<g id="i-user"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0116 0"/></g>
+</defs></svg>
+
+<!-- ══════════ 홈 ══════════ -->
+<div class="wrap">
+  <div class="cap">A모듈 홈 — 파랑 + 자주<em>흰 바탕 · 파랑=행동·학교 / 자주=우리 아이 · 굵기 유지 · 옅은 그림자 유지</em></div>
+  <div class="phone">
+    <div class="sb"><span>9:41</span><span>▲ ▮</span></div>
+    <div class="hd">
+      <span class="ham">☰</span>
+      <h1>아이서랍</h1>
+    </div>
+    <div class="body">
+
+      <div class="now">
+        <div class="clock"><span class="d">8월 10일 <span>월요일</span></span><span class="t">22:15</span></div>
+        <div class="mq"><span>방학기간 · 현재 일정 없음 &nbsp;·&nbsp; 개학식이 내일이에요 &nbsp;·&nbsp; 내일 준비물은 다 챙겼어요</span></div>
+      </div>
+
+      <div class="dday"><b>개학식</b><span class="v">내일 ›</span></div>
+
+      <div class="lb">오늘</div>
+      <div class="card drawer">
+        <div class="r"><span class="chip b"><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-cal"/></svg></span><span class="n">오늘 일정<em>종일 · 여름방학</em></span><span class="v">1개</span><span class="ar">›</span></div>
+        <div class="r"><span class="chip b"><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-bag"/></svg></span><span class="n">내일 준비물</span><span class="v ok">완료</span><span class="ar">›</span></div>
+        <div class="r"><span class="chip nt"><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-run"/></svg></span><span class="n">방과후 · 학원</span><span class="v">없어요</span><span class="ar">›</span></div>
+        <div class="r"><span class="chip p"><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-target"/></svg></span><span class="n">오늘 미션</span><span class="v">0 / 3</span><span class="ar">›</span></div>
+      </div>
+    </div>
+    <div class="act">
+      <button><i>📅</i><b>달력</b></button>
+      <button class="on">＋</button>
+      <button><i>⭐</i><b>미션</b></button>
+    </div>
+    <div class="nb"></div>
+  </div>
+</div>
+
+<!-- ══════════ 드로어 ══════════ -->
+<div class="wrap">
+  <div class="cap">A모듈 드로어<em>선택 = 파랑 틴트 · 학교 메뉴 = 파랑 칩 · 우리 아이 = 자주 칩</em></div>
+  <div class="phone">
+    <div class="sb"><span>9:41</span><span>▲ ▮</span></div>
+    <div class="hd"><span class="ham">☰</span><h1>아이서랍</h1></div>
+    <div class="body">
+      <div class="now">
+        <div class="clock"><span class="d">8월 16일 <span class="off">일요일</span></span><span class="t">22:15</span></div>
+        <div class="mq"><span>방학기간 · 현재 일정 없음</span></div>
+      </div>
+    </div>
+    <div class="nb"></div>
+
+    <div class="dim"></div>
+    <div class="dw">
+      <div class="me">
+        <div class="top">
+          <span class="av"><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-user"/></svg></span>
+          <span class="n">콩</span>
+          <a href="#" class="go" aria-label="서랍"><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-drawer"/></svg></a>
+        </div>
+        <div class="stats">
+          <span class="s">학교<b>경기초등학교 · 3학년 난초반</b></span>
+          <span class="s">이용권<b>무료체험 · 44일 남음</b></span>
+          <span class="s">자녀폰<b>연결 안 됨</b></span>
+        </div>
+      </div>
+
+      <a href="#" class="thm"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-palette"/></svg><span>테마</span><em>기본</em><i>›</i></a>
+
+      <div class="sec">학교</div>
+      <a href="#" class="on"><span class="chip b"><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-meal"/></svg></span>급식</a>
+      <a href="#"><span class="chip b"><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-table"/></svg></span>시간표</a>
+      <a href="#"><span class="chip b"><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-school"/></svg></span>학교정보</a>
+      <a href="#"><span class="chip b"><svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-chat"/></svg></span>커뮤니티</a>
+
+      <div class="sec">우리 아이</div>
+      <a href="#"><span class="chip p"><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-file"/></svg></span>서류</a>
+      <a href="#"><span class="chip p"><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-mail"/></svg></span>대화 · 알림</a>
+      <a href="#"><span class="chip p"><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-help"/></svg></span>고객센터 · 문의</a>
+
+      <div class="foot">
+        <a href="#"><span class="chip b"><svg class="ic " viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><use href="#i-set"/></svg></span>내 정보 · 설정</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ── 검증용 프레임 — 정본(393×852) 두 벌을 세 크기로 복제해 같은 CSS 로 렌더한다.
+   320×640 = 최소 기준(대표님 2026-08-11). 여기서 넘치면 실패다. ── */
+(function(){
+  const sizes=[[412,915],[360,800],[320,640]];
+  const originals=[...document.querySelectorAll('.wrap')];
+  for(const [w,h] of sizes){
+    for(const src of originals){
+      const c=src.cloneNode(true);
+      const isHome=!c.querySelector('.dw');
+      c.style.width=w+'px';
+      c.querySelector('.cap').innerHTML=`${w}×${h} — ${isHome?'홈':'드로어'}<em>검증용 · 정본은 393×852</em>`;
+      const p=c.querySelector('.phone');
+      p.style.width=w+'px'; p.style.height=h+'px';
+      document.body.appendChild(c);
+    }
+  }
+})();
+</script>
+</body>
+</html>

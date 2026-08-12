@@ -1,0 +1,469 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>블록1 자녀기록 — 목업 v1</title>
+<style>
+/* 목업은 오프라인에서도 열리게 시스템 폰트 사용 — 실제 앱은 Pretendard */
+:root{
+  --ink:#16233B; --inkSoft:#2B3648; --muted:#8A94A6; --muted2:#6B7688;
+  --green:#2E7D5B; --greenDark:#256A4C; --greenBg:#E7F1EC; --greenBd:#CFE6DA;
+  --bg:#F3F5F8; --card:#fff; --border:#E6E9EF;
+  --c1:#2E7D5B; --c2:#2A4A7F; --c3:#6B4E9E;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Pretendard Variable',Pretendard,-apple-system,BlinkMacSystemFont,system-ui,sans-serif;background:#E9ECF1;color:var(--ink);-webkit-font-smoothing:antialiased}
+
+/* ===== 목업 뷰어 셸 ===== */
+.viewer{max-width:1700px;margin:0 auto;padding:18px 14px 60px}
+.vhead{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;margin-bottom:6px}
+.vhead h1{margin:0;font-size:19px;font-weight:800;letter-spacing:-.02em}
+.vhead .meta{font-size:12.5px;color:var(--muted2)}
+.vnote{margin:0 0 16px;font-size:12.5px;color:var(--muted2);line-height:1.65}
+.vnote b{color:var(--ink)}
+.stage{display:flex;gap:16px;overflow-x:auto;padding-bottom:14px;align-items:flex-start}
+.frame{flex:0 0 auto;width:360px}
+.fcap{display:flex;align-items:center;gap:7px;margin-bottom:7px;padding:0 2px}
+.fnum{width:20px;height:20px;border-radius:6px;background:var(--ink);color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex:none}
+.fttl{font-size:13px;font-weight:800;letter-spacing:-.01em}
+.fsub{font-size:11.5px;color:var(--muted);margin-left:auto}
+.phone{width:360px;height:760px;background:var(--bg);border:1px solid #D6DBE3;border-radius:22px;overflow-y:auto;overflow-x:hidden;position:relative;box-shadow:0 6px 22px rgba(22,35,59,.10)}
+.phone::-webkit-scrollbar{width:0}
+
+/* ===== 앱 공통 ===== */
+.tbar{position:sticky;top:0;z-index:20;background:var(--green);color:#fff;padding:11px 14px;display:flex;align-items:center;gap:9px}
+.tbar .bk{font-size:17px;opacity:.9}
+.tbar .tt{font-size:15px;font-weight:800;letter-spacing:-.02em}
+.tbar .rt{margin-left:auto;font-size:12px;opacity:.9}
+.wrap{padding:13px 13px 92px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:15px}
+.card + .card{margin-top:11px}
+.sect{margin:17px 2px 9px;font-size:12px;font-weight:800;color:var(--muted2);letter-spacing:.01em}
+.pill{display:inline-flex;align-items:center;gap:4px;padding:4px 9px;border-radius:999px;font-size:11px;font-weight:800}
+.p-on{background:var(--greenBg);color:var(--greenDark)}
+.p-warn{background:#FBF1DC;color:#8A6516}
+.p-mut{background:#EEF0F4;color:var(--muted2)}
+.btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:13px;border-radius:12px;border:0;background:var(--green);color:#fff;font-size:14px;font-weight:800;font-family:inherit;cursor:pointer}
+.btn.gh{background:#fff;border:1px solid var(--border);color:var(--ink)}
+.btn.sm{padding:9px 13px;width:auto;font-size:12.5px;border-radius:10px}
+.row{display:flex;align-items:center;gap:10px}
+.gap{margin-top:11px}
+.mut{color:var(--muted2)}
+.tiny{font-size:11.5px;line-height:1.6}
+.lbl{font-size:12px;font-weight:800;color:var(--muted2);margin-bottom:6px}
+.inp{width:100%;padding:12px;border:1px solid var(--border);border-radius:11px;font-size:14.5px;font-family:inherit;background:#fff}
+
+/* 자녀 스위처 2×2 (기존 헤더 패턴 재사용, 최대 3명) */
+.sw{display:grid;grid-template-columns:1fr 1fr;gap:7px;background:var(--green);padding:11px 13px}
+.chip{display:flex;align-items:center;gap:6px;padding:8px 10px;border-radius:12px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.22);color:#fff;font-size:12.5px;font-weight:800;cursor:pointer}
+.chip.on{background:#fff;color:var(--ink);border-color:#fff}
+.chip .no{width:17px;height:17px;border-radius:5px;background:#F2C14E;color:#4A3708;font-size:10.5px;font-weight:900;display:flex;align-items:center;justify-content:center;flex:none}
+.chip .nm{margin-left:auto;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip.add{border-style:dashed;background:none;justify-content:center;font-size:11.5px;line-height:1.25;text-align:center}
+
+/* 타임라인 — 칩줄+검색줄을 한 덩어리로 sticky (수정1) */
+.stickybar{position:sticky;top:41px;z-index:15;background:var(--bg);border-bottom:1px solid var(--border);padding-bottom:11px;box-shadow:0 2px 8px rgba(22,35,59,.05)}
+.filt{display:flex;gap:6px;overflow-x:auto;padding:10px 13px 0;background:none;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.filt::-webkit-scrollbar{height:0}
+.filt::after{content:'';flex:none;width:3px}          /* 마지막 칩 우측 여백 — 잘림 방지 */
+.fc{flex:none;padding:7px 12px;border-radius:999px;border:1px solid var(--border);background:#fff;font-size:12px;font-weight:700;color:var(--muted2);cursor:pointer;white-space:nowrap}
+.fc.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+.srch{margin:9px 13px 0;position:relative}
+.srch input{width:100%;padding:11px 12px 11px 34px;border:1px solid var(--border);border-radius:11px;font-size:13.5px;font-family:inherit}
+.srch span{position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:13px;opacity:.5}
+.yh{display:flex;align-items:center;gap:8px;margin:18px 2px 9px}
+.yh b{font-size:13.5px;font-weight:800}
+.yh i{flex:1;height:1px;background:var(--border)}
+.yh em{font-style:normal;font-size:11.5px;color:var(--muted)}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.th{position:relative;aspect-ratio:3/4;border-radius:10px;overflow:hidden;background:#DDE3EC;display:flex;align-items:center;justify-content:center;font-size:26px;cursor:pointer}
+.th .tag{position:absolute;left:4px;bottom:4px;padding:2px 6px;border-radius:6px;background:rgba(22,35,59,.78);color:#fff;font-size:9.5px;font-weight:800}
+.th.lock{background:#EDF0F5}
+.th.lock::after{content:'🔒';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:20px;background:rgba(243,245,248,.72)}
+
+/* FAB */
+.fab{position:absolute;right:15px;bottom:17px;z-index:30;width:56px;height:56px;border-radius:18px;background:var(--green);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(46,125,91,.42);font-size:21px;cursor:pointer;border:0}
+.fab small{font-size:8.5px;font-weight:800;margin-top:-2px}
+.fab.locked{background:#94A0B2;box-shadow:0 6px 18px rgba(148,160,178,.4)}
+
+/* 주간 뷰 */
+.wk{display:grid;grid-template-columns:26px repeat(7,1fr);font-size:9.5px}
+.wk .hd{text-align:center;padding:5px 0;font-weight:800;color:var(--muted2);border-bottom:1px solid var(--border)}
+.wk .tm{color:var(--muted);text-align:right;padding-right:4px;line-height:30px;height:30px;font-size:9px}
+.wk .cel{border-left:1px solid #F0F2F6;border-bottom:1px solid #F4F6F9;height:30px;position:relative}
+.ev{position:absolute;left:1px;right:1px;border-radius:5px;padding:3px 3px;color:#fff;font-size:8.5px;font-weight:800;line-height:1.2;overflow:hidden;cursor:pointer}
+
+/* 바텀시트 */
+.sheet{position:absolute;left:0;right:0;bottom:0;z-index:40;background:#fff;border-radius:20px 20px 0 0;padding:18px 16px 20px;box-shadow:0 -8px 26px rgba(22,35,59,.18)}
+.sheet .hnd{width:36px;height:4px;border-radius:99px;background:#DDE2EA;margin:0 auto 13px}
+.dim{position:absolute;inset:0;background:rgba(22,35,59,.34);z-index:39}
+
+.warn{background:#FBF4E9;border:1px solid #F0E3C8;border-radius:12px;padding:11px 12px;font-size:11.5px;color:#8A6516;line-height:1.6}
+.note{background:var(--greenBg);border:1px solid var(--greenBd);border-radius:12px;padding:11px 12px;font-size:11.5px;color:var(--greenDark);line-height:1.6}
+.chk{display:flex;gap:9px;align-items:flex-start;padding:12px;border:1.5px solid var(--greenBd);border-radius:12px;background:var(--greenBg)}
+.chk input{margin-top:2px;width:17px;height:17px;accent-color:var(--green);flex:none}
+.chk label{font-size:12.5px;line-height:1.55;font-weight:700;color:var(--greenDark)}
+.legend{display:flex;gap:10px;flex-wrap:wrap;font-size:10.5px;color:var(--muted2);margin-top:9px}
+.legend i{display:inline-block;width:9px;height:9px;border-radius:3px;margin-right:3px;vertical-align:-1px}
+.ad{border:1px dashed #C9D0DA;border-radius:12px;padding:15px;text-align:center;font-size:11px;color:var(--muted);background:#fff}
+</style>
+</head>
+<body>
+<div class="viewer">
+
+<div class="vhead">
+  <h1>블록1 「자녀기록」 목업 v1</h1>
+  <span class="meta">360px 기준 · 지시서 v3 2절 스펙 · 2026-07-19</span>
+</div>
+<p class="vnote">
+  <b>보시는 법:</b> 각 화면은 실제 폰 너비(360px) 그대로입니다. 안에서 스크롤됩니다. 가로로 밀면 5개 화면이 이어집니다.<br>
+  <b>반영된 결정:</b> 자녀 <b>최대 3명</b>(2×2 그리드 유지) · 인원별 추가과금 폐지 → <b>"이용권 하나로 자녀 3명까지"</b> · 무료 <b>기록 20건</b> 초과 시 업로드만 잠금(열람·삭제는 항상 가능) · 자녀 데이터 화면은 <b>광고 청정 구역</b> · 학교 서식 내리고 <b>홈페이지 바로가기</b>로 교체.<br>
+  <b>게이팅 확정:</b> 개방 기간엔 체험 만료 무시하고 전원 개방 → 전환일에 전원 체험 7일 일괄 재부여(연착륙). 플래그는 <code>FREE_OPEN_UNTIL</code>로 통합.<br>
+  <b>v1.1 반영(6건):</b> ①칩줄+검색줄 sticky·가로스크롤 ②"종류가 다른 사진은 나눠서" 안내 ③시간축 자동 확장(토 9시 축구) ④전체삭제 이중 확인(⑥) ⑤광고 최하단 고정 ⑥[이용권 연장] PG 미연동 숨김
+</p>
+
+<div class="stage">
+
+<!-- ========== ① 마이페이지 ========== -->
+<div class="frame">
+  <div class="fcap"><span class="fnum">1</span><span class="fttl">마이페이지 — 자녀기록의 집</span><span class="fsub">FEATURE_MYPAGE 켬</span></div>
+  <div class="phone">
+    <div class="tbar"><span class="tt">마이페이지</span><span class="rt">⚙️</span></div>
+
+    <div class="sw">
+      <div></div>
+      <div class="chip add">＋ 자녀<br>등록</div>
+      <div class="chip"><span class="no">②</span><span class="nm">둘째</span></div>
+      <div class="chip on"><span class="no">①</span><span class="nm">서준이</span></div>
+    </div>
+
+    <div class="wrap">
+      <div class="card">
+        <div class="row">
+          <div>
+            <div style="font-size:16px;font-weight:800;letter-spacing:-.02em">김서준</div>
+            <div class="tiny mut" style="margin-top:3px">서울숭미초등학교 · 3학년 1반</div>
+          </div>
+          <span class="pill p-on" style="margin-left:auto">이용중 D-42</span>
+        </div>
+        <div class="gap" style="display:flex;gap:7px">
+          <button class="btn sm gh" style="flex:1;opacity:.35;text-decoration:line-through">이용권 연장</button>
+          <button class="btn sm gh" style="flex:1">프로필 수정</button>
+        </div>
+        <div class="tiny" style="margin-top:7px;color:#8A6516;background:#FBF4E9;border:1px solid #F0E3C8;border-radius:9px;padding:7px 9px">⚙️ <b>[이용권 연장]은 PG 미연동 동안 숨김</b> — 실제 화면엔 안 보이고 [프로필 수정]만 폭 100%로 (v4 1-1)</div>
+        <div class="note" style="margin-top:11px">🎁 <b>개학 전까지 무료 개방 중</b><br>이용권 하나로 자녀 3명까지 쓸 수 있어요.</div>
+      </div>
+
+      <div class="sect">기록 타임라인</div>
+      <div class="card" style="padding:13px">
+        <div class="row" style="margin-bottom:10px">
+          <b style="font-size:13px">최근 기록</b>
+          <span class="tiny mut" style="margin-left:auto">12건 · 전체보기 ›</span>
+        </div>
+        <div class="grid3">
+          <div class="th">🏅<span class="tag">상장</span></div>
+          <div class="th">📄<span class="tag">통지표</span></div>
+          <div class="th">🎨<span class="tag">활동</span></div>
+        </div>
+      </div>
+
+      <div class="sect">방과후 · 활동</div>
+      <div class="card" style="padding:13px">
+        <div class="row">
+          <span style="font-size:19px">🎒</span>
+          <div>
+            <div style="font-size:13.5px;font-weight:800">이번 주 3개 일정</div>
+            <div class="tiny mut" style="margin-top:2px">수학학원 · 태권도 · 피아노</div>
+          </div>
+          <span class="mut" style="margin-left:auto">›</span>
+        </div>
+      </div>
+
+      <div class="sect">설정</div>
+      <div class="card" style="padding:4px 13px">
+        <div class="row" style="padding:13px 0;border-bottom:1px solid var(--border)"><span style="font-size:13.5px;font-weight:700">🔒 내 아이 데이터, 이렇게 보호합니다</span><span class="mut" style="margin-left:auto">›</span></div>
+        <div class="row" style="padding:13px 0;border-bottom:1px solid var(--border)"><span style="font-size:13.5px;font-weight:700">개인정보처리방침</span><span class="mut" style="margin-left:auto">›</span></div>
+        <div class="row" style="padding:13px 0"><span style="font-size:13.5px;font-weight:700;color:#C0392B">자녀·데이터 전체 삭제</span><span class="pill" style="margin-left:auto;background:#FBE9E7;color:#C0392B">이중 확인 →⑥</span></div>
+      </div>
+
+      <div class="tiny mut" style="margin-top:14px;text-align:center;line-height:1.7">이 화면에는 광고가 표시되지 않습니다<br>(자녀 데이터 화면 = 광고 청정 구역)</div>
+    </div>
+
+    <button class="fab">＋<small>기록</small></button>
+  </div>
+</div>
+
+<!-- ========== ② 기록 타임라인 ========== -->
+<div class="frame">
+  <div class="fcap"><span class="fnum">2</span><span class="fttl">기록 타임라인</span><span class="fsub">무료 20건 초과 상태</span></div>
+  <div class="phone">
+    <div class="tbar"><span class="bk">‹</span><span class="tt">서준이의 기록</span><span class="rt">20/20</span></div>
+
+    <div class="stickybar">
+      <div class="filt">
+        <div class="fc on">전체</div><div class="fc">상장</div><div class="fc">통지표</div>
+        <div class="fc">성적표</div><div class="fc">자격증</div><div class="fc">활동</div><div class="fc">기타</div>
+      </div>
+      <div class="srch"><span>🔍</span><input placeholder="제목으로 검색"></div>
+    </div>
+
+    <div class="wrap" style="padding-top:0">
+      <div class="warn" style="margin-top:12px">🔒 무료로는 <b>기록 20건</b>까지 올릴 수 있어요. <b>이미 올린 기록은 언제든 보고 지울 수 있어요</b> — 새로 올리기만 잠깁니다.</div>
+
+      <div class="yh"><b>3학년 1학기</b><em>8건</em><i></i></div>
+      <div class="grid3">
+        <div class="th">🏅<span class="tag">상장</span></div>
+        <div class="th">📄<span class="tag">통지표</span></div>
+        <div class="th">🎨<span class="tag">활동</span></div>
+        <div class="th">📜<span class="tag">자격증</span></div>
+        <div class="th">🏅<span class="tag">상장</span></div>
+        <div class="th">📊<span class="tag">성적표</span></div>
+      </div>
+
+      <div class="yh"><b>2학년 2학기</b><em>7건</em><i></i></div>
+      <div class="grid3">
+        <div class="th">🏅<span class="tag">상장</span></div>
+        <div class="th">📄<span class="tag">통지표</span></div>
+        <div class="th">🎨<span class="tag">활동</span></div>
+      </div>
+
+      <div class="yh"><b>2학년 1학기</b><em>5건</em><i></i></div>
+      <div class="grid3">
+        <div class="th">📄<span class="tag">통지표</span></div>
+        <div class="th">🏅<span class="tag">상장</span></div>
+        <div class="th">🎨<span class="tag">활동</span></div>
+      </div>
+    </div>
+
+    <button class="fab locked">🔒<small>기록</small></button>
+  </div>
+</div>
+
+<!-- ========== ②-b 업로드 시트 ========== -->
+<div class="frame">
+  <div class="fcap"><span class="fnum">2b</span><span class="fttl">업로드 — 종류 탭 1번 + 백필</span><span class="fsub">사진→종류→저장</span></div>
+  <div class="phone">
+    <div class="tbar"><span class="bk">‹</span><span class="tt">서준이의 기록</span><span class="rt">12/20</span></div>
+    <div class="filt">
+      <div class="fc on">전체</div><div class="fc">상장</div><div class="fc">통지표</div><div class="fc">성적표</div><div class="fc">자격증</div>
+    </div>
+    <div class="wrap" style="padding-top:12px;opacity:.45">
+      <div class="yh"><b>3학년 1학기</b><em>8건</em><i></i></div>
+      <div class="grid3">
+        <div class="th">🏅</div><div class="th">📄</div><div class="th">🎨</div>
+      </div>
+    </div>
+
+    <div class="dim"></div>
+    <div class="sheet">
+      <div class="hnd"></div>
+      <div style="font-size:15.5px;font-weight:800;letter-spacing:-.02em">사진 3장을 올려요</div>
+      <div class="tiny mut" style="margin-top:4px">종류만 골라주시면 나머지는 자동으로 채워드려요</div>
+
+      <div style="display:flex;gap:6px;margin-top:13px">
+        <div class="th" style="width:60px;aspect-ratio:3/4">🏅</div>
+        <div class="th" style="width:60px;aspect-ratio:3/4">🏅</div>
+        <div class="th" style="width:60px;aspect-ratio:3/4">📄</div>
+      </div>
+
+      <div class="lbl" style="margin-top:15px">종류</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <div class="fc on">상장</div><div class="fc">통지표</div><div class="fc">성적표</div>
+        <div class="fc">자격증</div><div class="fc">활동</div><div class="fc">기타</div>
+      </div>
+      <div class="tiny mut" style="margin-top:7px">종류가 다른 사진은 나눠서 올려주세요</div>
+
+      <div class="lbl" style="margin-top:15px">시기 <span style="font-weight:600;color:var(--muted)">— 3장 모두 이 시기로</span></div>
+      <div style="display:flex;gap:6px">
+        <select class="inp" style="flex:1"><option>3학년</option><option>2학년</option><option>1학년</option></select>
+        <select class="inp" style="flex:1"><option>1학기</option><option>2학기</option></select>
+      </div>
+      <div class="tiny mut" style="margin-top:7px">제목은 <b>"3학년 1학기 상장"</b>으로 자동 저장돼요</div>
+
+      <button class="btn" style="margin-top:15px">3장 저장하기</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== ③ 방과후·활동 ========== -->
+<div class="frame">
+  <div class="fcap"><span class="fnum">3</span><span class="fttl">방과후 · 활동</span><span class="fsub">주간 뷰 14~22시</span></div>
+  <div class="phone">
+    <div class="tbar"><span class="bk">‹</span><span class="tt">방과후 · 활동</span><span class="rt">＋</span></div>
+    <div class="sw">
+      <div></div><div class="chip add">＋ 자녀<br>등록</div>
+      <div class="chip"><span class="no">②</span><span class="nm">둘째</span></div>
+      <div class="chip on"><span class="no">①</span><span class="nm">서준이</span></div>
+    </div>
+
+    <div class="wrap">
+      <div class="card" style="padding:11px 9px">
+        <div class="wk">
+          <div class="hd"></div><div class="hd">월</div><div class="hd">화</div><div class="hd">수</div><div class="hd">목</div><div class="hd">금</div><div class="hd">토</div><div class="hd">일</div>
+
+          <div class="tm">9</div><div class="cel"></div><div class="cel"></div><div class="cel"></div><div class="cel"></div><div class="cel"></div><div class="cel"><div class="ev" style="background:#6B4E9E;top:0;height:58px">축구교실<br>9~11</div></div><div class="cel"></div>
+          <div class="tm">10</div><div class="cel"></div><div class="cel"></div><div class="cel"></div><div class="cel"></div><div class="cel"></div><div class="cel"></div><div class="cel"></div>
+          <div class="tm">11</div><div class="cel"></div><div class="cel"></div><div class="cel"></div><div class="cel"></div><div class="cel"></div><div class="cel"></div><div class="cel"></div>
+          <div class="tm">12</div><div class="cel"></div><div class="cel"></div><div class="cel"></div><div class="cel"></div><div class="cel"></div><div class="cel"></div><div class="cel"></div>
+          <div class="tm">13</div><div class="cel"></div><div class="cel"></div><div class="cel"></div><div class="cel"></div><div class="cel"></div><div class="cel"></div><div class="cel"></div>
+          <div class="tm">14</div><div class="cel"></div><div class="cel"></div><div class="cel"></div><div class="cel"></div><div class="cel"></div><div class="cel"></div><div class="cel"></div>
+          <div class="tm">15</div><div class="cel"></div><div class="cel"><div class="ev" style="background:#6B4E9E;top:0;height:58px">태권도<br>15~17</div></div><div class="cel"></div><div class="cel"><div class="ev" style="background:#6B4E9E;top:0;height:58px">태권도<br>15~17</div></div><div class="cel"></div><div class="cel"></div><div class="cel"></div>
+          <div class="tm">16</div><div class="cel"><div class="ev" style="background:#2E7D5B;top:0;height:58px">수학학원<br>16~18</div></div><div class="cel"></div><div class="cel"><div class="ev" style="background:#2E7D5B;top:0;height:58px">수학학원<br>16~18</div></div><div class="cel"></div><div class="cel"><div class="ev" style="background:#2A4A7F;top:0;height:28px">피아노</div></div><div class="cel"></div><div class="cel"></div>
+          <div class="tm">17</div><div class="cel"></div><div class="cel"></div><div class="cel"></div><div class="cel"></div><div class="cel"></div><div class="cel"></div><div class="cel"></div>
+          <div class="tm">18</div><div class="cel"></div><div class="cel"></div><div class="cel"></div><div class="cel"></div><div class="cel"></div><div class="cel"></div><div class="cel"></div>
+          <div class="tm">19</div><div class="cel"></div><div class="cel"></div><div class="cel"></div><div class="cel"></div><div class="cel"></div><div class="cel"></div><div class="cel"></div>
+          <div class="tm">20</div><div class="cel"></div><div class="cel"></div><div class="cel"></div><div class="cel"></div><div class="cel"></div><div class="cel"></div><div class="cel"></div>
+        </div>
+        <div class="legend">
+          <span><i style="background:#2E7D5B"></i>학원</span>
+          <span><i style="background:#2A4A7F"></i>방과후</span>
+          <span><i style="background:#6B4E9E"></i>활동</span>
+        </div>
+        <div class="tiny mut" style="margin-top:8px;padding-top:8px;border-top:1px dashed var(--border)">기본 시간축은 <b>14~22시</b>. 토요일 축구교실(9시)처럼 <b>범위 밖 일정이 있으면 축이 자동으로 넓어집니다.</b></div>
+      </div>
+
+      <div class="sect">등록된 일정</div>
+      <div class="card" style="padding:4px 13px">
+        <div class="row" style="padding:12px 0;border-bottom:1px solid var(--border)">
+          <i style="width:9px;height:9px;border-radius:3px;background:#2E7D5B;flex:none"></i>
+          <div><div style="font-size:13.5px;font-weight:800">수학학원</div><div class="tiny mut">월·수 16:00~18:00</div></div>
+          <span class="pill p-on" style="margin-left:auto">진행중</span>
+        </div>
+        <div class="row" style="padding:12px 0;border-bottom:1px solid var(--border)">
+          <i style="width:9px;height:9px;border-radius:3px;background:#6B4E9E;flex:none"></i>
+          <div><div style="font-size:13.5px;font-weight:800">태권도</div><div class="tiny mut">화·목 15:00~17:00</div></div>
+          <span class="pill p-on" style="margin-left:auto">진행중</span>
+        </div>
+        <div class="row" style="padding:12px 0">
+          <i style="width:9px;height:9px;border-radius:3px;background:#2A4A7F;flex:none"></i>
+          <div><div style="font-size:13.5px;font-weight:800">여름 피아노 특강</div><div class="tiny mut">금 16:00~17:00 · ~8/22</div></div>
+          <span class="pill p-warn" style="margin-left:auto">D-34</span>
+        </div>
+      </div>
+
+      <div class="note gap">📅 <b>유효기간이 지나면 자동으로 사라져요.</b> 방학 특강도 학기 학원과 똑같이 등록하시면 됩니다.</div>
+
+      <button class="btn gap">＋ 일정 등록</button>
+    </div>
+  </div>
+</div>
+
+<!-- ========== ④ 자녀 프로필 ========== -->
+<div class="frame">
+  <div class="fcap"><span class="fnum">4</span><span class="fttl">자녀 프로필 등록</span><span class="fsub">보호자 동의 필수</span></div>
+  <div class="phone">
+    <div class="tbar"><span class="bk">‹</span><span class="tt">자녀 등록</span></div>
+    <div class="wrap">
+      <div class="card">
+        <div class="lbl">이름</div>
+        <input class="inp" placeholder="김서준">
+        <div class="tiny mut" style="margin-top:6px">기록 화면에서만 보여요. 별도로 안전하게 보관합니다.</div>
+
+        <div class="lbl" style="margin-top:15px">출생연도 <span style="font-weight:600;color:var(--muted)">— 선택</span></div>
+        <select class="inp"><option>선택 안 함</option><option>2017년</option><option>2016년</option></select>
+
+        <div class="lbl" style="margin-top:15px">학교</div>
+        <input class="inp" value="서울숭미초등학교" readonly style="background:#F7F8FA;color:var(--muted2)">
+
+        <div class="lbl" style="margin-top:15px">학년 · 반</div>
+        <div style="display:flex;gap:7px">
+          <select class="inp" style="flex:1"><option>3학년</option></select>
+          <select class="inp" style="flex:1"><option>1반</option></select>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="chk">
+          <input type="checkbox" id="cs" checked>
+          <label for="cs">본인은 보호자이며 자녀 기록의<br>등록·보관에 동의합니다. <b>(필수)</b></label>
+        </div>
+        <div class="tiny mut" style="margin-top:10px;line-height:1.7">· 이름은 <b>기록과 분리해서</b> 보관합니다<br>· 광고는 자녀 데이터에 접근할 수 없습니다<br>· 언제든 <b>원본까지 전부 삭제</b>할 수 있습니다</div>
+        <div style="margin-top:9px;font-size:11.5px;color:var(--green);font-weight:800">내 아이 데이터, 이렇게 보호합니다 ›</div>
+      </div>
+
+      <div class="note">이용권 하나로 <b>자녀 3명까지</b> 등록할 수 있어요.</div>
+
+      <button class="btn gap">등록하기</button>
+      <div class="tiny mut" style="text-align:center;margin-top:10px">등록하면 <b>1주일 무료 체험</b>이 시작돼요</div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== ⑤ 학교 상세 — 홈페이지 카드 ========== -->
+<div class="frame">
+  <div class="fcap"><span class="fnum">5</span><span class="fttl">학교정보 — 서식 → 홈페이지</span><span class="fsub">기존 화면 변경분</span></div>
+  <div class="phone">
+    <div class="tbar"><span class="bk">‹</span><span class="tt">서울숭미초등학교</span><span class="rt">🔗</span></div>
+    <div class="wrap">
+      <div class="card">
+        <div style="font-size:12px;font-weight:800;color:var(--muted2);margin-bottom:11px">연락처 · 위치</div>
+        <div class="row" style="padding:9px 0;border-bottom:1px solid var(--border)"><span class="tiny mut" style="width:62px;flex:none">전화</span><span style="font-size:13.5px;font-weight:700">02-123-4567</span></div>
+        <div class="row" style="padding:9px 0;border-bottom:1px solid var(--border)"><span class="tiny mut" style="width:62px;flex:none">주소</span><span style="font-size:13px;font-weight:700;line-height:1.5">서울 관악구 숭실로 12</span></div>
+        <div class="row" style="padding:9px 0"><span class="tiny mut" style="width:62px;flex:none">홈페이지</span><span style="font-size:12.5px;font-weight:700;color:var(--green);word-break:break-all">sungmi.sen.es.kr ↗</span></div>
+      </div>
+
+      <div class="sect">연간 수업일수</div>
+      <div class="card" style="padding:13px">
+        <div class="row"><span style="font-size:13.5px;font-weight:700">2026학년도</span><b style="margin-left:auto;font-size:15px">190일</b></div>
+      </div>
+
+      <div class="sect">서식 · 가정통신문</div>
+      <div class="card" style="border-color:var(--greenBd);background:var(--greenBg)">
+        <div class="row" style="align-items:flex-start">
+          <span style="font-size:22px">🏫</span>
+          <div>
+            <div style="font-size:13.5px;font-weight:800;color:var(--greenDark);line-height:1.5">서식·가정통신문은<br>학교 홈페이지에서 받으세요</div>
+            <div class="tiny" style="color:var(--greenDark);opacity:.8;margin-top:6px;line-height:1.6">학교마다 양식이 달라서, 우리 학교 공식 서식을 쓰시는 게 정확해요.</div>
+          </div>
+        </div>
+        <button class="btn gap">홈페이지 바로가기 ↗</button>
+      </div>
+      <div class="tiny mut" style="margin-top:8px;padding:0 3px;line-height:1.6">※ 홈페이지 정보가 없는 학교(전국 59개교)에서는 이 카드가 표시되지 않습니다.</div>
+
+      <div class="sect">다이어리</div>
+      <div class="card" style="padding:13px">
+        <div class="row"><span style="font-size:19px">📔</span><div><div style="font-size:13.5px;font-weight:800">월별 일정에 메모를 남겨보세요</div><div class="tiny mut" style="margin-top:2px">달력에서 날짜를 누르면 바로 써져요</div></div></div>
+      </div>
+
+      <div class="sect">광고</div>
+      <div class="ad">애드센스 — <b>콘텐츠 최하단 고정</b><br>공개 정보 화면에만 · 이용권 활성 시 전체 제거</div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== ⑥ 전체 삭제 이중 확인 ========== -->
+<div class="frame">
+  <div class="fcap"><span class="fnum">6</span><span class="fttl">자녀·데이터 전체 삭제</span><span class="fsub">복구 불가 — 이중 확인</span></div>
+  <div class="phone">
+    <div class="tbar" style="background:#C0392B"><span class="bk">‹</span><span class="tt">전체 삭제</span></div>
+    <div class="wrap">
+      <div class="card" style="border-color:#F0C9C3;background:#FBE9E7">
+        <div style="font-size:15.5px;font-weight:800;color:#C0392B;letter-spacing:-.02em;line-height:1.45">정말 전부 지울까요?<br>되돌릴 수 없어요</div>
+        <div class="tiny" style="margin-top:10px;color:#8C2F23;line-height:1.75">
+          아래가 <b>즉시 영구 삭제</b>됩니다.<br>
+          · 자녀 <b>2명</b>의 프로필과 이름<br>
+          · 업로드한 기록 <b>27건</b> — <b>원본 사진 포함</b><br>
+          · 방과후·활동 일정 <b>3개</b><br>
+          · 시간표 개인 설정·개인일정 전부
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="lbl">확인을 위해 <b style="color:#C0392B">전체삭제</b> 를 입력해 주세요</div>
+        <input class="inp" placeholder="전체삭제" style="border-color:#E8B4AC">
+        <button class="btn" style="margin-top:12px;background:#D9D9DE;color:#fff">영구 삭제하기</button>
+        <div class="tiny mut" style="text-align:center;margin-top:8px">문구가 정확히 일치해야 버튼이 켜져요</div>
+      </div>
+
+      <button class="btn gh gap">취소하고 돌아가기</button>
+
+      <div class="tiny mut" style="margin-top:14px;line-height:1.7;padding:0 3px">※ 삭제 후에는 고객센터로도 복구할 수 없습니다. 기록을 남기고 싶으시면 먼저 이미지를 내려받아 주세요.</div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /stage -->
+</div>
+</body>
+</html>

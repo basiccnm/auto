@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>시안 B — 조용한 서류함</title>
+<!-- ═══════════════════════════════════════════════════════════
+     홈 시안 B 「조용한 서류함」 (2026-08-02)
+     7/27 디자인방향서의 정공법. 면을 나누지 않고 여백과 글자 크기만으로 위계를 만든다.
+     · 카드·테두리·그림자 0. 배경 한 겹 위에 바로 글.
+     · 간격은 4·8·12·16·24·40 여섯 값만. 그 사이 값을 만들지 않는다.
+     · 빈 칸을 지우지 않는다 — 「없음」이 자리를 지키는 것이 이 안의 주장이다.
+     ═══════════════════════════════════════════════════════════ -->
+<link rel="stylesheet" href="../app/www/fonts/tabler-subset.css">
+<style>
+:root{
+  --bg:#E2E1DE; --card:#FFFFFF; --ink:#1A1A19; --muted:#56564F; --line:#D0CFCA;
+  --accent:#1F3A5F;                       /* 공문 도장 남색 — 오늘·D-day 두 곳에만 */
+
+  --on-accent:#fff;
+  --sp1:4px; --sp2:8px; --sp3:12px; --sp4:16px; --sp5:24px; --sp6:40px;
+  --frame:420px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Noto Sans KR","Malgun Gothic",sans-serif;
+  background:#C6C5C2; color:var(--ink); font-size:15px; line-height:1.5;
+}
+#app{max-width:var(--frame);min-height:100vh;margin:0 auto;background:var(--bg);
+  padding:0 var(--sp5) 96px}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;text-align:left}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+
+/* ── 상단 — 이름만. 아이콘도 상자도 없다 ─────────────── */
+.top{display:flex;align-items:baseline;justify-content:space-between;padding:var(--sp5) 0 0}
+.top .kid{font-size:15px;font-weight:700}
+.top .kid i{font-size:13px;color:var(--muted);margin-left:var(--sp1)}
+.top .set{font-size:13px;color:var(--muted)}
+
+/* ── 오늘이 어떤 날인가 — 화면에 큰 글씨는 이것 하나 ─── */
+.head{padding:var(--sp5) 0 var(--sp6)}
+.head .when{font-size:13px;color:var(--muted);margin-bottom:var(--sp2)}
+.head h1{font-size:28px;font-weight:800;letter-spacing:-.035em;line-height:1.25}
+.head .dd{display:inline-block;font-size:13px;font-weight:700;color:var(--accent);margin-top:var(--sp2)}
+
+/* ── 구역 — 나누는 것은 여백과 글자 크기뿐 ───────────── */
+section{margin-bottom:var(--sp6)}
+section h2{font-size:13px;font-weight:700;color:var(--muted);margin-bottom:var(--sp3)}
+
+/* 라벨 / 값 두 칸. 표가 아니라 여백으로 만든 두 칸이다.
+   ⚠ 1fr 은 min-content 바닥이 있다 — 긴 급식 메뉴가 칸을 밀어낸다. minmax(0,1fr). */
+.dl{display:grid;grid-template-columns:60px minmax(0,1fr);gap:var(--sp3) var(--sp4)}
+.dl dt{font-size:13px;color:var(--muted);padding-top:1px}
+.dl dd{font-size:15px;min-width:0}
+.dl dd .sub{color:var(--muted);font-size:13px}
+.dl dd.none{color:var(--muted)}          /* 빈 칸도 자리를 지킨다 */
+.dl dd b{font-weight:700}
+
+/* 일정 — 눌러야 하는 덩어리라 경계를 갖는다. 1px 선 하나, 그림자 없음 */
+.rows button{display:grid;grid-template-columns:46px minmax(0,1fr) auto;align-items:center;
+  gap:var(--sp3);width:100%;padding:var(--sp3) 0;border-bottom:1px solid var(--line)}
+.rows button:first-child{border-top:1px solid var(--line)}
+.rows .d{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.rows .n{font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rows .dd{font-size:13px;color:var(--muted);font-variant-numeric:tabular-nums}
+.rows button.soon .dd{color:var(--accent);font-weight:700}
+.rows button:active{background:color-mix(in srgb,var(--ink) 4%,var(--bg))}
+
+/* 그 밖 — 숫자와 이름 한 줄씩. 아이콘 상자 없음 */
+.plain button{display:flex;align-items:baseline;gap:var(--sp3);width:100%;
+  padding:var(--sp3) 0;border-bottom:1px solid var(--line)}
+.plain button:first-child{border-top:1px solid var(--line)}
+.plain .n{font-size:15px;flex:1;min-width:0}
+.plain .v{font-size:15px;color:var(--muted);font-variant-numeric:tabular-nums}
+.plain .v.on{color:var(--accent);font-weight:700}
+.plain button:active{background:color-mix(in srgb,var(--ink) 4%,var(--bg))}
+
+/* ── 광고 — 이 화면에서 유일하게 면을 가진 것이라 가장 조용히 ── */
+.ad{height:76px;border:1px solid var(--line);border-radius:10px;display:grid;place-items:center;
+  color:var(--muted);font-size:12.5px;margin-bottom:var(--sp6)}
+
+/* ── 하단 대화창 ─────────────────────────────────────── */
+.dock{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:100%;max-width:var(--frame);
+  display:flex;align-items:center;gap:var(--sp3);padding:var(--sp3) var(--sp5);
+  background:var(--bg);border-top:1px solid var(--line)}
+.dock .m{flex:1;min-width:0;font-size:13.5px;color:var(--muted);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dock .m b{color:var(--ink);font-weight:700}
+.dock .b{flex:none;font-size:12.5px;font-weight:700;color:var(--accent)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div class="top">
+    <button class="kid">하늘<i class="ti ti-chevron-down"></i></button>
+    <button class="set">설정</button>
+  </div>
+
+  <div class="head">
+    <div class="when">10월 14일 화요일</div>
+    <h1>가을 현장체험학습<br>사흘 남았습니다</h1>
+    <div class="dd">10월 17일 금요일</div>
+  </div>
+
+  <section>
+    <h2>오늘</h2>
+    <dl class="dl">
+      <dt>급식</dt>
+      <dd><b>기장밥 · 쇠고기무국</b><br><span class="sub">돈육김치볶음 · 알감자조림 · 배추김치</span></dd>
+      <dt>수업</dt>
+      <dd>국어 · 수학 · 통합 · 통합 · 창체</dd>
+      <dt>방과후</dt>
+      <dd>축구교실 <span class="sub">15:30 운동장</span></dd>
+      <dt>알림장</dt>
+      <dd class="none">없음</dd>
+    </dl>
+  </section>
+
+  <section>
+    <h2>내일 챙길 것</h2>
+    <dl class="dl">
+      <dt>준비물</dt>
+      <dd>리코더 · 물감세트</dd>
+      <dt>서식</dt>
+      <dd class="none">낼 것 없음</dd>
+    </dl>
+  </section>
+
+  <div class="ad">광고</div>
+
+  <section class="rows">
+    <h2>다가오는 일정</h2>
+    <button class="soon"><span class="d">10.17</span><span class="n">가을 현장체험학습</span><span class="dd">D-3</span></button>
+    <button><span class="d">10.24</span><span class="n">학부모 공개수업</span><span class="dd">D-10</span></button>
+    <button><span class="d">11.3</span><span class="n">2학기 중간평가</span><span class="dd">D-20</span></button>
+  </section>
+
+  <section class="plain">
+    <h2>그 밖</h2>
+    <button><span class="n">미션</span><span class="v on">2/3</span></button>
+    <button><span class="n">서랍</span><span class="v">42</span></button>
+    <button><span class="n">알림</span><span class="v on">2</span></button>
+    <button><span class="n">체험학습·출결서식</span><span class="v">—</span></button>
+  </section>
+
+</div>
+
+<div class="dock">
+  <span class="m"><b>하늘</b> 엄마 오늘 축구 끝나고 데리러 와?</span>
+  <span class="b">1</span>
+</div>
+</body>
+</html>

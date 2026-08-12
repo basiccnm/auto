@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>학교퀘스트 B모듈 v2 — 오후 4시의 운동장</title>
+<link rel="stylesheet" href="maple.css">
+<!--
+  ══════════════════════════════════════════════════════════════
+  B모듈(자녀앱) 홈 v2 (2026-08-12) — «오후 4시의 운동장»
+
+  v1(정본)의 약점: 흰 바탕 + 회색 2px 테두리 + 원색 듀오그린 = 앙상하고 병원 같다.
+  이 앱의 정체성은 «하교 후»다 — 화면 자체를 오후의 작은 운동장으로 만든다.
+
+  듀오링고 문법은 유지: 2px 테두리 = 떠 있음 · 입술(0 4px 0 진한색) = 눌림 · 그림자 없음.
+  바꾼 것은 «색이 사는 자리»다:
+    ① 바탕 — 흰색 → 하늘(#E8F4FF)에서 크림(#FFFDF6)으로 내려오는 오후 하늘
+    ② 카드 테두리 — 회색 한 벌 → **카드마다 제 색**(사탕 테두리 + 아주 옅은 속)
+       미션 = 잔디초록 · 아침 = 노을주황 · 방과후 = 하늘파랑 · 상점 = 포도보라
+    ③ 진행바 — 가는 회색 줄 → 통통한 「오늘의 길」(끝에 깃발)
+    ④ 칩 — 납작한 글자 → 사탕 알약(제 색 입술)
+  잉크 = #33404F (듀오 회색보다 따뜻한 남색 — 사탕색들과 안 싸운다)
+  ══════════════════════════════════════════════════════════════
+-->
+<style>
+:root{
+  /* ── 팔레트 «오후 4시의 운동장» ── */
+  --sky:#E8F4FF;        /* 오후 하늘 */
+  --cream:#FFFDF6;      /* 운동장 모래 크림 */
+  --ink:#33404F;        /* 따뜻한 남색 잉크 */
+  --sub:#8A93A6;        /* 흐린 글자 */
+  --grass:#58CC02;  --grass-lip:#46A302;  --grass-tint:#F0FAE4;  --grass-line:#B7E88C;
+  --sun:#FFC800;    --sun-lip:#E5A500;    --sun-ink:#8A5B00;
+  --dawn:#FF9600;   --dawn-tint:#FFF4E3;  --dawn-line:#FFD9A0;   --dawn-ink:#A85E00;
+  --pool:#1CB0F6;   --pool-tint:#E9F6FF;  --pool-line:#A6DFFF;   --pool-ink:#0E7DB8;
+  --grape:#CE82FF;  --grape-tint:#F7EFFF; --grape-line:#E3C6FF;  --grape-ink:#8A4DBF;
+  --mint:#22C39A;   --mint-tint:#E6F9F3;  --mint-line:#A6E9D5;   --mint-ink:#0E7A5F;   /* 학교 */
+  --fire:#FF7A45;   --fire-tint:#FFEFE8;
+  --canvas:#FFFFFF;
+  --r-sm:10px; --r-md:14px; --r-lg:18px; --r-full:999px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#3f3f3f;padding:24px;display:flex;gap:32px;flex-wrap:wrap;justify-content:center}
+.wrap{width:393px}
+.cap{color:#fff;font-size:13px;font-weight:700;margin-bottom:6px;min-height:34px;
+  font-family:system-ui,"Malgun Gothic",sans-serif}
+.cap em{display:block;font-style:normal;font-weight:400;color:#c2c2c2;font-size:12px;margin-top:2px}
+.phone{width:393px;height:852px;overflow:hidden;display:flex;flex-direction:column;
+  position:relative;
+  font-family:"Maple",system-ui,"Malgun Gothic",sans-serif;color:var(--ink);
+  /* ① 오후 하늘 — 위 하늘, 아래 크림. 화면이 곧 장면이다 */
+  background:linear-gradient(180deg,var(--sky) 0%,var(--sky) 18%,var(--cream) 42%)}
+.sb{height:44px;flex:none;display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;font-size:13px;font-weight:600}
+.nb{height:20px;flex:none}
+.body{flex:1;overflow:hidden;padding:0 16px}
+
+/* 구름 — 하늘에 딱 두 점. 장식은 여기까지(더 넣으면 시끄럽다) */
+.cloud{position:absolute;background:#fff;border-radius:var(--r-full);opacity:.9}
+.cloud.c1{width:64px;height:20px;left:36px;top:64px}
+.cloud.c1::after{content:'';position:absolute;width:30px;height:30px;border-radius:50%;
+  background:#fff;left:12px;top:-12px}
+.cloud.c2{width:44px;height:16px;right:44px;top:96px;opacity:.7}
+
+/* ── 머리 — 인사 + 사탕 알약 칩 ── */
+.top{display:flex;align-items:center;gap:8px;padding:10px 2px 4px;position:relative}
+.top .av{width:46px;height:46px;border-radius:var(--r-full);background:var(--canvas);
+  border:2.5px solid var(--grass-line);display:grid;place-items:center;font-size:24px}
+.top .who{font-size:21px;font-weight:700;letter-spacing:.5px}
+.top .who em{display:block;font-style:normal;font-size:12px;color:var(--sub);letter-spacing:0}
+.pill{margin-left:auto;display:flex;align-items:center;gap:4px;height:34px;padding:0 12px;
+  border-radius:var(--r-full);background:var(--canvas);font-size:14px;font-weight:700;
+  font-variant-numeric:tabular-nums}
+.pill+.pill{margin-left:0}
+.pill.fire{color:#D14B1F;border:2px solid #FFC9AE;box-shadow:0 3px 0 #FFD9C6}
+.pill.star{color:var(--sun-ink);border:2px solid #FFE08A;box-shadow:0 3px 0 #FFE9AE}
+
+/* ── ③ 오늘의 길 — 통통한 진행 리본 + 끝 깃발 ── */
+.path{position:relative;margin:14px 2px 16px}
+.path .bar{height:18px;border-radius:var(--r-full);background:#EAEFE2;
+  border:2px solid #DDE6D2;overflow:hidden}
+.path .bar i{display:block;height:100%;width:32%;border-radius:var(--r-full);
+  background:linear-gradient(180deg,#7CDC3A 0%,var(--grass) 55%);
+  box-shadow:inset 0 -4px 0 rgba(0,0,0,.12)}
+.path .flag{position:absolute;right:-2px;top:-14px;font-size:20px}
+.path .lb{display:flex;justify-content:space-between;margin-top:6px;
+  font-size:13px;font-weight:700;color:var(--sub);font-variant-numeric:tabular-nums}
+.path .lb b{color:var(--grass-lip)}
+
+/* ── ② 카드 — 제 색 테두리 + 아주 옅은 속. 입체는 아래 입술 3px ── */
+.card{background:var(--canvas);border:2.5px solid var(--grass-line);border-radius:var(--r-lg);
+  padding:14px 16px;margin-bottom:12px;box-shadow:0 3px 0 var(--grass-line)}
+.card .h{display:flex;align-items:center;gap:10px;font-size:19px;font-weight:700}
+.card .h .em{width:40px;height:40px;flex:none;display:grid;place-items:center;font-size:22px;
+  background:var(--sun-tint,#FFF4D1);border-radius:var(--r-md)}
+.card .h .cnt{margin-left:auto;font-size:13px;color:var(--sub);font-variant-numeric:tabular-nums}
+.card.quest{background:linear-gradient(180deg,#FDFFF9 0%,var(--canvas) 100%)}
+.q{display:flex;align-items:center;gap:10px;padding:11px 0;border-top:2px dashed #EDF3E3;
+  font-size:15px;font-weight:700}
+.q:first-of-type{border-top:none;margin-top:6px}
+.q .bx{width:26px;height:26px;flex:none;border:2.5px solid var(--grass-line);
+  border-radius:9px;background:var(--canvas);display:grid;place-items:center;color:#fff;font-size:15px}
+.q.done .bx{background:var(--grass);border-color:var(--grass)}
+.q.done .n{color:var(--sub);text-decoration:line-through}
+.q .n{flex:1}
+.q .st{color:var(--sun-ink);background:#FFF3CC;border-radius:var(--r-full);
+  padding:2px 9px;font-size:13px;font-variant-numeric:tabular-nums}
+
+/* 구획 이름 + 오늘 합계 — 네 갈래를 하나로 묶어 세는 자리 */
+.secline{display:flex;align-items:baseline;gap:8px;margin:2px 2px 8px;font-size:15px;font-weight:700}
+.secline b{margin-left:auto;font-size:14px;color:var(--sub);font-variant-numeric:tabular-nums}
+
+/* 세 갈래 타일 — 시간대가 색이다(아침 노을 · 학교 민트 · 방과후 하늘) */
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.tile{background:var(--canvas);border:2.5px solid var(--grass-line);border-radius:var(--r-lg);
+  padding:12px 6px 10px;font-family:inherit;color:inherit;
+  display:flex;flex-direction:column;align-items:center;gap:2px;box-shadow:0 3px 0 var(--grass-line)}
+.tile .em2{font-size:26px;line-height:1}
+.tile .nm{font-size:14px;font-weight:700}
+.tile .vv{font-size:12px;font-weight:700;color:var(--sub);font-variant-numeric:tabular-nums}
+.tile.dawn{border-color:var(--dawn-line);box-shadow:0 3px 0 var(--dawn-line);
+  background:linear-gradient(180deg,var(--dawn-tint) 0%,var(--canvas) 70%)}
+.tile.dawn .nm{color:var(--dawn-ink)}
+.tile.mint{border-color:var(--mint-line);box-shadow:0 3px 0 var(--mint-line);
+  background:linear-gradient(180deg,var(--mint-tint) 0%,var(--canvas) 70%)}
+.tile.mint .nm{color:var(--mint-ink)}
+.tile.pool{border-color:var(--pool-line);box-shadow:0 3px 0 var(--pool-line);
+  background:linear-gradient(180deg,var(--pool-tint) 0%,var(--canvas) 70%)}
+.tile.pool .nm{color:var(--pool-ink)}
+.tile:active{transform:translateY(2px);box-shadow:0 1px 0 currentColor}
+
+/* 아침/방과후 — 시간대가 색이다 */
+.grid{display:flex;gap:12px;margin-bottom:12px}
+.grid .card{flex:1;margin:0;text-align:center;padding:14px 10px}
+.grid .card.dawn{border-color:var(--dawn-line);box-shadow:0 3px 0 var(--dawn-line);
+  background:linear-gradient(180deg,var(--dawn-tint) 0%,var(--canvas) 70%)}
+.grid .card.pool{border-color:var(--pool-line);box-shadow:0 3px 0 var(--pool-line);
+  background:linear-gradient(180deg,var(--pool-tint) 0%,var(--canvas) 70%)}
+.grid .card .em2{font-size:30px;line-height:1;display:block;margin-bottom:6px}
+.grid .card .nm{font-size:15px;font-weight:700}
+.grid .card.dawn .nm{color:var(--dawn-ink)}
+.grid .card.pool .nm{color:var(--pool-ink)}
+.grid .card .vv{margin-top:2px;font-size:13px;font-weight:700;color:var(--sub);
+  font-variant-numeric:tabular-nums}
+
+/* 상점 — 포도보라 한 줄 */
+.card.shop{display:flex;align-items:center;gap:10px;border-color:var(--grape-line);
+  box-shadow:0 3px 0 var(--grape-line);
+  background:linear-gradient(90deg,var(--grape-tint) 0%,var(--canvas) 60%)}
+.card.shop .em{width:40px;height:40px;display:grid;place-items:center;font-size:22px;
+  background:#fff;border-radius:var(--r-md);border:2px solid var(--grape-line)}
+.card.shop .t{flex:1;font-size:16px;font-weight:700}
+.card.shop .t em{display:block;font-style:normal;font-size:12px;color:var(--grape-ink)}
+.card.shop .ar{color:var(--grape-ink);font-weight:700}
+
+/* ── 발판 CTA — 잔디. 입술이 브랜드다 ── */
+.act{padding:10px 16px 14px;background:linear-gradient(180deg,transparent, #EAF7DC 55%)}
+.btn{display:block;width:100%;min-height:54px;border:none;border-radius:var(--r-lg);
+  background:var(--grass);color:#fff;box-shadow:0 5px 0 var(--grass-lip);
+  font-family:inherit;font-size:17px;font-weight:700;letter-spacing:1px}
+.btn:active{transform:translateY(3px);box-shadow:0 2px 0 var(--grass-lip)}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="cap">B모듈 v2 — 오후 4시의 운동장<em>하늘→크림 바탕 · 카드마다 제 색 사탕 테두리 · 오늘의 길 리본 · 잉크 남색</em></div>
+  <div class="phone">
+    <div class="cloud c1"></div><div class="cloud c2"></div>
+    <div class="sb"><span>9:41</span><span>▲ ▮</span></div>
+    <div class="body">
+
+      <div class="top">
+        <span class="av">🦁</span>
+        <span class="who">콩<em>Lv.1 새싹 모험가</em></span>
+        <span class="pill fire">🔥 3</span>
+        <span class="pill star">★ 12</span>
+      </div>
+
+      <div class="path">
+        <div class="bar"><i></i></div>
+        <span class="flag">🚩</span>
+        <div class="lb"><span>오늘의 길</span><span><b>19</b> / 60</span></div>
+      </div>
+
+      <!-- 🔴 네 갈래다 (대표님 2026-08-12) — 아침 · 학교 · 방과후 · 부모.
+           앞의 셋은 «시간»이 나누고, 부모 퀘스트는 «누가 냈나»가 다르다.
+           그래서 셋은 한 줄에 타일로, 부모 것은 아래 제 카드로 떨어뜨린다. -->
+      <div class="secline"><span>오늘의 퀘스트</span><b>1 / 7</b></div>
+
+      <div class="grid3">
+        <button class="tile dawn"><span class="em2">🌅</span><span class="nm">아침</span><span class="vv">0 / 2</span></button>
+        <button class="tile mint"><span class="em2">🏫</span><span class="nm">학교</span><span class="vv">1 / 2</span></button>
+        <button class="tile pool"><span class="em2">📚</span><span class="nm">방과후</span><span class="vv">0 / 3</span></button>
+      </div>
+
+      <!-- 부모 퀘스트 — 엄마아빠가 낸 것. 별이 크고 «누가 냈는지»가 보인다 -->
+      <div class="card quest">
+        <div class="h"><span class="em">💛</span><span>엄마아빠 퀘스트</span><span class="cnt">1 / 3</span></div>
+        <div class="q done"><span class="bx">✓</span><span class="n">모르는 것 하나 물어보기</span><span class="st">★1</span></div>
+        <div class="q"><span class="bx"></span><span class="n">내일 배울 곳 훑어보기</span><span class="st">★2</span></div>
+        <div class="q"><span class="bx"></span><span class="n">일기 세 줄 쓰기</span><span class="st">★2</span></div>
+      </div>
+
+      <div class="card shop">
+        <span class="em">🏪</span>
+        <span class="t">스타코인 상점<em>모은 ★로 바꿔요</em></span>
+        <span class="ar">›</span>
+      </div>
+
+    </div>
+    <div class="act"><button class="btn">퀘스트 시작하기</button></div>
+    <div class="nb"></div>
+  </div>
+</div>
+
+</body>
+</html>

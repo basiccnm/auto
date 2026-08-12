@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>시안 E — 친근한 쪽</title>
+<!-- ═══════════════════════════════════════════════════════════
+     홈 시안 E 「친근한 쪽」 (2026-08-02) — 벤치마크: 키즈노트
+     · D와 «정보 → 색» 짝은 똑같다. 다른 것은 따뜻함의 정도다.
+       (아이콘 칸이 둥글고, 바탕이 따뜻하고, 글자가 한 단 크고, 카드에 그림자가 있다)
+     · 상태 규칙도 D와 같다 — 빨강 점(해야 할 일) · 초록 체크(끝남) · 숫자 뱃지(새 것).
+     ═══════════════════════════════════════════════════════════ -->
+<link rel="stylesheet" href="../app/www/fonts/tabler-subset.css">
+<style>
+:root{
+  --bg:#FFF7F0; --card:#FFFFFF; --ink:#3B2E26; --muted:#938175; --line:#F2E3D8;
+  --accent:#F2701E;
+
+  /* 종류 색 — 짝은 D와 같다. 톤만 따뜻한 쪽으로 옮겼다 */
+  --c-meal:#DE6A0A; --c-time:#2C74D6; --c-pack:#7B54D9; --c-mission:#DA3F75;
+  --c-drawer:#0E8E77; --c-bell:#4A57CC; --c-after:#1690A5; --c-cal:#C74A1B;
+  --c-doc:#6B7A8F; --c-comm:#0E8AC9;
+
+  --todo:#E23B3B; --done:#1E9E52;
+
+  --sp1:4px; --sp2:8px; --sp3:12px; --sp4:16px; --sp5:20px; --sp6:28px;
+  --frame:420px; --tabh:66px;
+  --lift:0 2px 10px rgba(90,60,40,.07), 0 1px 3px rgba(90,60,40,.05);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Noto Sans KR","Malgun Gothic",sans-serif;
+  background:#E6D8CC;color:var(--ink);font-size:16px;line-height:1.45;letter-spacing:-.01em;
+}
+#app{max-width:var(--frame);min-height:100vh;margin:0 auto;background:var(--bg);
+  padding:0 var(--sp4) calc(var(--tabh) + var(--sp6))}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;text-align:left}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:16px}
+
+/* ── 아이 ─────────────────────────────────────────────── */
+.top{display:flex;align-items:center;justify-content:space-between;padding:var(--sp4) 0 var(--sp5)}
+.who{display:flex;align-items:center;gap:var(--sp3);min-height:52px}
+.who .face{width:52px;height:52px;border-radius:50%;flex:none;display:grid;place-items:center;
+  font-size:23px;font-weight:800;color:#fff;box-shadow:var(--lift);
+  background:linear-gradient(150deg,#FF9A4D,#EF6A1E)}
+.who .t{min-width:0}
+.who .hi{font-size:13px;color:var(--muted);font-weight:700}
+.who .nm{display:flex;align-items:center;gap:var(--sp1);font-size:19px;font-weight:800}
+.who .nm i{font-size:15px;color:var(--muted)}
+.bell{position:relative;width:48px;height:48px;border-radius:50%;background:var(--card);
+  box-shadow:var(--lift);display:grid;place-items:center;font-size:23px;color:var(--c-bell);flex:none}
+.badge{position:absolute;top:2px;right:2px;min-width:20px;height:20px;padding:0 6px;border-radius:10px;
+  background:var(--todo);color:#fff;font-size:11.5px;font-weight:800;display:grid;place-items:center;
+  border:2.5px solid var(--bg);font-variant-numeric:tabular-nums}
+
+/* ── D-day ────────────────────────────────────────────── */
+.dday{display:flex;align-items:center;gap:var(--sp3);width:100%;min-height:56px;
+  padding:0 var(--sp4);border-radius:18px;background:var(--card);box-shadow:var(--lift);
+  margin-bottom:var(--sp5)}
+.dday .ic{width:34px;height:34px;border-radius:50%;flex:none;display:grid;place-items:center;
+  font-size:19px;background:color-mix(in srgb,var(--c-cal) 14%,#fff);color:var(--c-cal)}
+.dday .n{flex:1;min-width:0;font-size:15.5px;font-weight:700;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dday .v{flex:none;font-size:14.5px;font-weight:800;color:var(--c-cal);font-variant-numeric:tabular-nums}
+
+/* ── 오늘의 큰 카드 3장 ───────────────────────────────── */
+.big{display:flex;flex-direction:column;gap:var(--sp3);margin-bottom:var(--sp6)}
+.bcard{display:grid;grid-template-columns:60px minmax(0,1fr) 20px;align-items:center;gap:var(--sp4);
+  width:100%;min-height:108px;padding:var(--sp4);border-radius:24px;background:var(--card);
+  box-shadow:var(--lift)}
+.bcard:active{transform:scale(.985)}
+.bcard .ic{width:60px;height:60px;border-radius:50%;display:grid;place-items:center;font-size:30px}
+.bcard .tx{min-width:0}
+.bcard .lb{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:800;color:var(--muted);
+  margin-bottom:4px}
+.bcard .ttl{font-size:18px;font-weight:800;letter-spacing:-.02em;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bcard .go{font-size:20px;color:var(--muted);justify-self:end}
+.m-meal .ic{background:color-mix(in srgb,var(--c-meal) 15%,#fff);color:var(--c-meal)}
+.m-after .ic{background:color-mix(in srgb,var(--c-after) 15%,#fff);color:var(--c-after)}
+.m-pack .ic{background:color-mix(in srgb,var(--c-pack) 15%,#fff);color:var(--c-pack)}
+
+/* 급식 반찬 — 문장으로 흘리지 않고 하나씩 집어 보이게 */
+.tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.tags span{font-size:12.5px;font-weight:700;padding:3px 9px;border-radius:999px;
+  background:color-mix(in srgb,var(--c-meal) 10%,#fff);color:color-mix(in srgb,var(--c-meal) 72%,var(--ink))}
+/* 준비물 — 눌러서 챙기는 것이라 네모칸을 보여준다 */
+.packs{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.packs span{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:700;
+  padding:3px 9px;border-radius:999px;background:color-mix(in srgb,var(--c-pack) 10%,#fff);
+  color:color-mix(in srgb,var(--c-pack) 72%,var(--ink))}
+.packs span i{width:11px;height:11px;border-radius:3px;border:1.5px solid currentColor;flex:none}
+.sub{font-size:13.5px;color:var(--muted);margin-top:3px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--todo);flex:none}
+
+/* ── 광고 ─────────────────────────────────────────────── */
+.ad{height:82px;border-radius:20px;background:var(--card);box-shadow:var(--lift);
+  display:grid;place-items:center;color:var(--muted);font-size:12.5px;margin-bottom:var(--sp6)}
+
+/* ── 아이콘 그리드 — 3열, 크게 ────────────────────────── */
+.gtitle{font-size:14px;font-weight:800;color:var(--muted);margin-bottom:var(--sp3);padding-left:2px}
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--sp3)}
+.gitem{display:flex;flex-direction:column;align-items:center;gap:var(--sp2);min-width:0;
+  padding:var(--sp4) var(--sp2);border-radius:20px;background:var(--card);box-shadow:var(--lift)}
+.gitem:active{transform:scale(.98)}
+.gitem .ic{position:relative;width:52px;height:52px;border-radius:50%;display:grid;place-items:center;
+  font-size:26px}
+.gitem .nm{font-size:13.5px;font-weight:700;max-width:100%;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gitem .cnt{font-size:12.5px;font-weight:700;color:var(--muted);margin-top:-4px}
+.gitem .ic .badge{top:-4px;right:-6px;border-color:var(--card)}
+.gitem .ic .st{position:absolute;top:-2px;right:-2px;width:16px;height:16px;border-radius:50%;
+  border:3px solid var(--card)}
+.gitem .ic .st.todo{background:var(--todo)}
+.gitem .ic .st.done{background:var(--done);display:grid;place-items:center;color:#fff;font-size:9px}
+.g-time .ic{background:color-mix(in srgb,var(--c-time) 13%,#fff);color:var(--c-time)}
+.g-mission .ic{background:color-mix(in srgb,var(--c-mission) 13%,#fff);color:var(--c-mission)}
+.g-drawer .ic{background:color-mix(in srgb,var(--c-drawer) 13%,#fff);color:var(--c-drawer)}
+.g-bell .ic{background:color-mix(in srgb,var(--c-bell) 13%,#fff);color:var(--c-bell)}
+.g-cal .ic{background:color-mix(in srgb,var(--c-cal) 13%,#fff);color:var(--c-cal)}
+.g-doc .ic{background:color-mix(in srgb,var(--c-doc) 13%,#fff);color:var(--c-doc)}
+.g-comm .ic{background:color-mix(in srgb,var(--c-comm) 13%,#fff);color:var(--c-comm)}
+.g-after .ic{background:color-mix(in srgb,var(--c-after) 13%,#fff);color:var(--c-after)}
+.g-school .ic{background:color-mix(in srgb,var(--muted) 22%,#fff);color:var(--ink)}
+
+/* ── 하단 탭바 ────────────────────────────────────────── */
+.tabs{position:fixed;left:50%;transform:translateX(-50%);bottom:0;width:100%;max-width:var(--frame);
+  height:var(--tabh);display:grid;grid-template-columns:repeat(5,1fr);
+  background:var(--card);border-top:1px solid var(--line);
+  box-shadow:0 -2px 12px rgba(90,60,40,.06)}
+.tabs a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  text-decoration:none;color:var(--muted);font-size:11.5px;font-weight:800;position:relative}
+.tabs a i{font-size:23px}
+.tabs a.on{color:var(--accent)}
+.tabs a .badge{top:9px;right:calc(50% - 21px);border-color:var(--card)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div class="top">
+    <button class="who">
+      <span class="face">하</span>
+      <span class="t">
+        <span class="hi">10월 14일 화요일</span>
+        <span class="nm">하늘이의 오늘<i class="ti ti-chevron-down"></i></span>
+      </span>
+    </button>
+    <button class="bell" aria-label="알림 2개"><i class="ti ti-bell"></i><span class="badge">2</span></button>
+  </div>
+
+  <button class="dday">
+    <span class="ic"><i class="ti ti-calendar"></i></span>
+    <span class="n">가을 현장체험학습</span>
+    <span class="v">D-3</span>
+  </button>
+
+  <div class="big">
+    <button class="bcard m-meal">
+      <span class="ic"><i class="ti ti-tools-kitchen-2"></i></span>
+      <span class="tx">
+        <span class="lb">오늘 급식 · 12:20</span>
+        <span class="ttl">기장밥 · 쇠고기무국</span>
+        <span class="tags"><span>돈육김치볶음</span><span>알감자조림</span><span>배추김치</span></span>
+      </span>
+      <i class="ti ti-chevron-right go"></i>
+    </button>
+
+    <button class="bcard m-after">
+      <span class="ic"><i class="ti ti-run"></i></span>
+      <span class="tx">
+        <span class="lb">하교 · 방과후</span>
+        <span class="ttl">13:40 하교 → 축구교실</span>
+        <span class="sub">15:30 운동장 · 오늘 5교시</span>
+      </span>
+      <i class="ti ti-chevron-right go"></i>
+    </button>
+
+    <button class="bcard m-pack">
+      <span class="ic"><i class="ti ti-backpack"></i></span>
+      <span class="tx">
+        <span class="lb"><span class="dot"></span>내일 챙길 것 2개</span>
+        <span class="ttl">아직 안 챙겼어요</span>
+        <span class="packs"><span><i></i>리코더</span><span><i></i>물감세트</span></span>
+      </span>
+      <i class="ti ti-chevron-right go"></i>
+    </button>
+  </div>
+
+  <div class="ad">광고</div>
+
+  <div class="gtitle">전체</div>
+  <div class="grid">
+    <button class="gitem g-mission"><span class="ic"><i class="ti ti-target"></i><span class="st todo"></span></span><span class="nm">미션</span><span class="cnt">2 / 3</span></button>
+    <button class="gitem g-drawer"><span class="ic"><i class="ti ti-photo"></i></span><span class="nm">서랍</span><span class="cnt">42장</span></button>
+    <button class="gitem g-bell"><span class="ic"><i class="ti ti-bell"></i><span class="badge">2</span></span><span class="nm">알림</span><span class="cnt">새 소식</span></button>
+    <button class="gitem g-time"><span class="ic"><i class="ti ti-table"></i></span><span class="nm">시간표</span><span class="cnt">오늘 5교시</span></button>
+    <button class="gitem g-cal"><span class="ic"><i class="ti ti-calendar"></i></span><span class="nm">일정</span><span class="cnt">3건</span></button>
+    <button class="gitem g-doc"><span class="ic"><i class="ti ti-file-text"></i><span class="st done"><i class="ti ti-check"></i></span></span><span class="nm">서식</span><span class="cnt">낼 것 없음</span></button>
+    <button class="gitem g-after"><span class="ic"><i class="ti ti-run"></i></span><span class="nm">방과후</span><span class="cnt">주 3회</span></button>
+    <button class="gitem g-comm"><span class="ic"><i class="ti ti-messages"></i></span><span class="nm">커뮤니티</span><span class="cnt">3학년</span></button>
+    <button class="gitem g-school"><span class="ic"><i class="ti ti-school"></i></span><span class="nm">학교정보</span><span class="cnt">나래초</span></button>
+  </div>
+
+</div>
+
+<nav class="tabs">
+  <a href="#" class="on"><i class="ti ti-home"></i>홈</a>
+  <a href="#"><i class="ti ti-photo"></i>서랍</a>
+  <a href="#"><i class="ti ti-target"></i>미션</a>
+  <a href="#"><i class="ti ti-file-text"></i>서식</a>
+  <a href="#"><i class="ti ti-user"></i>설정</a>
+</nav>
+</body>
+</html>
