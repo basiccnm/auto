@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>우리 배너 자리 — A안 vs B안</title>
+<!--
+  우리 배너 (2026-08-14 대표님) — 공지·이벤트·자사 홍보용. 광고 아님.
+  ⚠ 자녀(kd) 화면엔 절대 안 들어간다 — 부모 화면 전용(대표님 확정).
+  서버 banners 테이블이 정본 → 관리자에서 바꾸면 배포 없이 반영.
+
+  A안 — 홈 서랍 맨 아래 한 줄 띠. 매일 보는 자리라 눈에 확실히 띈다.
+        홈은 «한 화면» 규칙이라 띠 높이(56px)만큼 서랍 간격이 줄어든다.
+  B안 — 드로어(☰) 맨 아래 카드. 홈을 안 건드리고, 메뉴 열 때마다 보인다.
+        노출 빈도는 A보다 낮다.
+-->
+<style>
+:root{ --bg:#F1F3F5; --card:#fff; --ink:#202124; --muted:#5F6368; --accent:#1A73E8;
+  --tint:#E8F0FE; --r:14px; }
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#3f3f3f;padding:24px;display:flex;gap:32px;flex-wrap:wrap;justify-content:center;
+  font-family:system-ui,"Malgun Gothic",sans-serif;color:var(--ink)}
+.wrap{width:360px}
+.cap{color:#fff;font-size:13px;font-weight:700;margin-bottom:6px;min-height:40px}
+.cap em{display:block;font-style:normal;font-weight:400;color:#c2c2c2;font-size:12px;margin-top:2px}
+.phone{width:360px;height:740px;background:var(--bg);border-radius:18px;overflow:hidden;
+  display:flex;flex-direction:column;position:relative}
+.row{background:var(--card);border-radius:var(--r);padding:14px 16px;margin:0 14px 10px;
+  display:flex;align-items:center;gap:12px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.row .i{width:34px;height:34px;border-radius:10px;background:var(--tint);display:grid;place-items:center}
+.row b{flex:1;font-size:15px}
+.row span{color:var(--muted);font-size:14px}
+.hd{padding:16px;font-weight:800;font-size:17px}
+.clock{margin:0 14px 12px;background:#D2E3FC;border-radius:var(--r);padding:18px;text-align:right}
+.clock b{font-size:34px;color:#174EA6}
+.sec{margin:4px 18px 8px;color:var(--muted);font-size:13px;font-weight:700}
+.bar{margin-top:auto;background:#1967D2;padding:12px;display:flex;justify-content:space-around;color:#fff;font-size:12px;font-weight:700}
+
+/* ── 배너 부품 — A·B 공통. 「우리 소식」 딱지를 박아 광고가 아님을 화면이 말한다 ── */
+.bn{display:flex;align-items:center;gap:12px;background:linear-gradient(100deg,#E8F0FE,#F3E8FD);
+  border:1px solid #D2E3FC;border-radius:var(--r);padding:12px 14px;margin:0 14px 10px}
+.bn .em{font-size:24px}
+.bn .t{flex:1;min-width:0}
+.bn .t b{display:block;font-size:14px}
+.bn .t span{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+.bn .tag{flex:none;font-size:10.5px;font-weight:800;color:#1967D2;background:#fff;
+  border-radius:999px;padding:3px 8px}
+.bn .x{flex:none;color:var(--muted);font-size:16px;padding:4px}
+
+/* 드로어 */
+.dw{position:absolute;inset:0;background:rgba(32,33,36,.32)}
+.dw .panel{position:absolute;top:0;bottom:0;left:0;width:280px;background:var(--bg);
+  padding:14px 10px;display:flex;flex-direction:column}
+.me{background:#1967D2;border-radius:var(--r);color:#fff;padding:16px;margin-bottom:10px}
+.me b{font-size:19px}
+.mi{display:flex;align-items:center;gap:12px;background:var(--card);border-radius:12px;
+  padding:12px 14px;margin-bottom:8px;font-size:14px;font-weight:600}
+.mi .i{width:30px;height:30px;border-radius:9px;background:var(--tint);display:grid;place-items:center;font-size:15px}
+.panel .bn{margin:auto 4px 6px}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="cap">A안 — 홈 서랍 맨 아래 띠
+    <em>매일 보는 자리. 서랍 간격이 배너 높이만큼 줄어듦 · ✕로 그 배너는 안 다시 봄</em></div>
+  <div class="phone">
+    <div class="hd">학교퀘스트</div>
+    <div class="clock"><b>17 29</b></div>
+    <div class="sec">오늘</div>
+    <div class="row"><span class="i">📅</span><b>오늘 일정</b><span>1개 ›</span></div>
+    <div class="row"><span class="i">🍚</span><b>오늘 급식</b><span>없어요 ›</span></div>
+    <div class="row"><span class="i">🎒</span><b>내일 준비물</b><span>1개 ›</span></div>
+    <div class="row"><span class="i">🏃</span><b>방과후 시간표</b><span>없어요 ›</span></div>
+    <div class="row"><span class="i">⭐</span><b>오늘 미션</b><span>4/8 ›</span></div>
+    <div class="bn">
+      <span class="em">🎉</span>
+      <span class="t"><b>개학맞이 — 미션 카탈로그 새 단장</b><span>2학기 미션 40개가 들어왔어요</span></span>
+      <span class="tag">우리 소식</span><span class="x">✕</span>
+    </div>
+    <div class="bar"><span>📅 달력</span><span>＋</span><span>⭐ 미션</span></div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="cap">B안 — 드로어(☰) 맨 아래 카드
+    <em>홈은 그대로. 메뉴 열 때만 보임 — 노출은 A보다 적음</em></div>
+  <div class="phone">
+    <div class="hd">학교퀘스트</div>
+    <div class="clock"><b>17 29</b></div>
+    <div class="dw">
+      <div class="panel">
+        <div class="me"><b>첫째</b><div style="font-size:12px;margin-top:6px;opacity:.9">서울숭미초등학교 · 3학년 1반</div></div>
+        <div class="mi"><span class="i">🍚</span>급식</div>
+        <div class="mi"><span class="i">📋</span>시간표</div>
+        <div class="mi"><span class="i">🏫</span>학교정보</div>
+        <div class="mi"><span class="i">📄</span>서류</div>
+        <div class="mi"><span class="i">⚙️</span>내 정보 · 설정</div>
+        <div class="bn">
+          <span class="em">🎉</span>
+          <span class="t"><b>개학맞이 새 단장</b><span>2학기 미션 40개</span></span>
+          <span class="tag">우리 소식</span>
+        </div>
+      </div>
+    </div>
+    <div class="bar"><span>📅 달력</span><span>＋</span><span>⭐ 미션</span></div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="cap">＋ 공지사항 게시판 — 배너를 누르면 여기로
+    <em>업데이트·이벤트·공지를 관리자에서 쓰면 앱에 바로 뜸(배포 없음) · 드로어에 「공지사항」 줄 추가 · 새 글이면 빨간 점</em></div>
+  <div class="phone">
+    <div class="hd">‹ 공지사항</div>
+    <div class="row" style="border-left:4px solid var(--accent)">
+      <span class="i">🎉</span>
+      <b>개학맞이 — 미션 카탈로그 새 단장<br>
+        <span style="font-weight:400;font-size:12.5px">2학기 미션 40개가 들어왔어요. 별 라인을 올려보세요.</span></b>
+      <span style="align-self:flex-start;font-size:11px">8/20<br><i style="color:#D93025;font-style:normal">NEW</i></span>
+    </div>
+    <div class="row"><span class="i">🔧</span><b>업데이트 안내 v1.1<br>
+      <span style="font-weight:400;font-size:12.5px">급식 아코디언 · 미션 알림이 생겼어요</span></b><span style="align-self:flex-start;font-size:11px">8/14</span></div>
+    <div class="row"><span class="i">🎁</span><b>친구 초대 이벤트<br>
+      <span style="font-weight:400;font-size:12.5px">초대한 가족마다 이용권 1주 연장</span></b><span style="align-self:flex-start;font-size:11px">8/10</span></div>
+    <div class="row" style="opacity:.6"><span class="i">📢</span><b>서비스 점검 안내<br>
+      <span style="font-weight:400;font-size:12.5px">8/9(일) 새벽 2~4시</span></b><span style="align-self:flex-start;font-size:11px">8/7</span></div>
+    <div class="bar"><span>📅 달력</span><span>＋</span><span>⭐ 미션</span></div>
+  </div>
+</div>
+
+</body>
+</html>

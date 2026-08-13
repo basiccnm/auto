@@ -4847,6 +4847,37 @@ const Screens = {
      흰 카드 5개가 같은 무게로 쌓여 있었다. 실제로 여기서 하는 일은 딱 둘이다 —
      **아이에게 보내기**와 **나에게 오는 알림 시각**. 그 둘을 위로 올리고
      기기 등록·보낸 내역은 아래로 내렸다. 안내문(「~해요」)은 전부 뺐다. */
+  /* ── 공지사항 목록 — 제목 1줄 단위(대표님: 「내용은 안 나오게」). 누르면 글 하나 ── */
+  notices: () => {
+    if (S.notices === undefined) { S.notices = null; App.loadNotices(); }
+    const seen = +localStorage.getItem(NOTICE_SEEN_KEY) || 0;
+    const list = S.notices || [];
+    return `
+    ${subHeader("공지사항")}
+    ${S.notices === null ? `<p class="sub">불러오는 중…</p>`
+      : !list.length ? `<p class="sub">아직 올라온 공지가 없어요</p>` : `
+    <div class="mp-list">
+      ${list.map((n) => `
+      <button class="mp-row" onclick="App.noticeOpen(${n.id})">
+        <span class="mp-l" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(n.title)}</span>
+        ${n.id > seen ? `<span class="v" style="color:var(--danger);font-weight:800">N</span>` : ""}
+        <span class="v" style="flex:none">${n.created_at ? `${+n.created_at.slice(5, 7)}/${+n.created_at.slice(8, 10)}` : ""}</span>
+      </button>`).join("")}
+    </div>`}`;
+  },
+
+  notice: () => {
+    const n = (S.notices || []).find((x) => x.id === S.noticeId);
+    if (!n) { location.hash = "#notices"; return ""; }
+    return `
+    ${subHeader("공지사항")}
+    <div class="card">
+      <b style="font-size:17px;line-height:1.4">${esc(n.title)}</b>
+      <p class="sub" style="margin-top:4px">${n.created_at ? esc(n.created_at.slice(0, 10)) : ""}</p>
+      <p style="margin-top:14px;line-height:1.7;white-space:pre-wrap">${esc(n.body || "")}</p>
+    </div>`;
+  },
+
   notify: () => {
     const c = curView();
     // 미션 알림 스위치의 진짜 값은 서버에 있다 — 처음 열 때 한 번 받아 온다
@@ -6464,6 +6495,14 @@ function subHeader(title, sub) {
    ⚠ 상태바를 덮지 않는다(top:var(--sa-t)). 예전엔 top:0 이라 시계·배터리까지 가렸다.
    ⚠ 보상(상점·티켓·아이 모드)은 **미션 화면 안**으로 옮겼다 — 입구가 둘일 이유가 없다.
    ══════════════════════════════════════════════════════════════ */
+/* ── 공지사항 (2026-08-14) — 서버 announcements 가 정본. 관리자가 쓰면 배포 없이 뜬다.
+   ⚠ 자녀(kd) 화면엔 안 들어간다 — 드로어 자체가 부모 전용이라 입구부터 막혀 있다. */
+const NOTICE_SEEN_KEY = "eduthink.noticeSeen";   // 마지막으로 본 공지 id — 배지 계산용
+function noticeNewCount() {
+  const seen = +localStorage.getItem(NOTICE_SEEN_KEY) || 0;
+  return (S.notices || []).filter((n) => n.id > seen).length;
+}
+
 function drawerView(c) {
   if (S.kidMode) return "";          /* 아이 모드에선 서랍이 아예 안 열린다 (§5④) */
   if (!S.drawer) return "";
@@ -6547,6 +6586,9 @@ function drawerView(c) {
     ${item("p", "ti-file-text", "서류", "location.hash='#docs'", undone ? String(undone) : "")}
     ${item("p", "ti-message-circle", "대화 · 알림", "location.hash='#notify'", unread ? String(unread) : "")}
     ${item("p", "ti-info-circle", "고객센터 · 문의", "location.hash='#help'")}
+    <!-- 공지사항 (2026-08-14 대표님: 「내정보·설정 위쪽으로 그냥 공지사항으로 올리면 됩니다」)
+         새 글이 있으면 N 배지. 목록은 제목 1줄만 — 배너·꾸밈 없음 -->
+    ${item("p", "ti-speakerphone", "공지사항", "location.hash='#notices'", noticeNewCount() ? String(noticeNewCount()) : "")}
 
     <div class="ns-foot">
       ${item("b", "ti-settings", "내 정보 · 설정", "location.hash='#mypage'")}
@@ -9483,6 +9525,19 @@ const App = {
      ⚠ 안드로이드는 «정확한 시각» 알림에 권한이 따로 있다. 우리는 몇 분 늦어도 되는
        내용이라 굳이 요구하지 않는다(allowWhileIdle 없이 반복 예약). */
   NOTI_ID: { evening: 4101, morning: 4102 },
+
+  /* 공지사항 — 목록을 받아오고, 글을 열면 «본 것»으로 기록해 배지를 지운다 */
+  async loadNotices() {
+    const r = await api("/notices").catch(() => null);
+    S.notices = r?.ok ? (r.data.items || []) : [];
+    this.render();
+  },
+  noticeOpen(id) {
+    S.noticeId = id;
+    const top = Math.max(+localStorage.getItem(NOTICE_SEEN_KEY) || 0, ...(S.notices || []).map((n) => n.id));
+    try { localStorage.setItem(NOTICE_SEEN_KEY, String(top)); } catch (_) {}
+    location.hash = "#notice"; this.render();
+  },
 
   /* 미션 알림 종류별 스위치 — 서버(notify-prefs)가 정본. 낙관 갱신 + 실패 시 되돌림 */
   async notifyPrefSet(key, on) {

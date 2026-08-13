@@ -1704,6 +1704,43 @@ async function handleMypagePayments(request, db) {
   return html(paymentsHistoryPage(payments));
 }
 
+/* ── 공지사항 관리 (2026-08-14 대표님 「공지사항 같은 게시판」) ─────────
+   업데이트·이벤트·점검 공지를 여기서 쓰면 앱 드로어 「공지사항」에 배포 없이 뜬다.
+   앱 쪽 정본은 GET /api/v1/notices — 여긴 쓰는 곳(Basic Auth 뒤)이다. */
+async function handleAdminNotices(request, db) {
+  if (request.method === "POST") {
+    const f = await request.formData();
+    const title = String(f.get("title") || "").trim().slice(0, 80);
+    const body = String(f.get("body") || "").trim().slice(0, 4000);
+    if (title && body) {
+      await db.prepare("INSERT INTO announcements (title, body, created_at, active) VALUES (?, ?, ?, 1)")
+        .bind(title, body, new Date().toISOString()).run();
+    }
+    return redirect("/admin/notices");
+  }
+  const { results } = await db.prepare(
+    "SELECT id, title, created_at, active FROM announcements ORDER BY id DESC LIMIT 100").all();
+  const esc2 = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;");
+  return html(`<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>공지사항 관리</title>
+  <body style="font-family:system-ui;max-width:640px;margin:24px auto;padding:0 16px">
+  <h2>공지사항 <a href="/admin" style="font-size:13px">← 관리자 홈</a></h2>
+  <form method="post" style="display:grid;gap:8px;margin:14px 0;padding:14px;border:1px solid #ddd;border-radius:10px">
+    <input name="title" maxlength="80" placeholder="제목 (앱 목록에 이 한 줄만 보입니다)" required style="padding:10px">
+    <textarea name="body" rows="6" maxlength="4000" placeholder="내용" required style="padding:10px"></textarea>
+    <button style="padding:10px;font-weight:700">올리기</button>
+  </form>
+  ${(results || []).map((n) => `
+    <div style="display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid #eee;${n.active ? "" : "opacity:.45"}">
+      <b style="flex:1">${esc2(n.title)}</b>
+      <span style="font-size:12px;color:#777">${String(n.created_at).slice(0, 10)}</span>
+      <form method="post" action="/admin/notices/${n.id}/toggle" style="margin:0">
+        <button style="font-size:12px">${n.active ? "내리기" : "다시 올리기"}</button>
+      </form>
+    </div>`).join("")}
+  </body>`);
+}
+
 // 알림 설정(마이페이지 하위) — 웹푸시 신청/해제 상태 저장 + 실제 구독/발송.
 async function handleMypageNotifications(request, db, env) {
   let ownerToken = getCookie(request, "owner_token");
@@ -2806,6 +2843,12 @@ export default {
                // 🔔 미션 알림 설정(2026-08-14) — 접두어 화이트리스트에 안 넣으면 HTML 404 로 샌다(아래 주석 참조)
                || path === "/api/v1/notify-prefs")
         res = await handleMissionApi(request, db, env, url);
+      // 공지사항 읽기(2026-08-14) — 개인정보 없음, 로그인 불필요. 쓰기는 /admin/notices 뒤에 있다
+      else if (path === "/api/v1/notices" && request.method === "GET") {
+        const { results } = await db.prepare(
+          "SELECT id, title, body, created_at FROM announcements WHERE active = 1 ORDER BY id DESC LIMIT 50").all();
+        res = json({ ok: true, data: { items: results || [] } });
+      }
       else if (path.startsWith("/api/v1/schools")) res = await handleSchoolsApi(request, db, env, url);
       // 별도장 상점·2단계 보상 (2026-08-07) — /children/* 밖에 있는 것들
       else if (path.startsWith("/api/v1/store/") || path.startsWith("/api/v1/rewards/") ||
@@ -2995,6 +3038,13 @@ export default {
 
       if (path === "/admin" || path === "/admin/") return handleAdminMonitor(db);
       if (path === "/admin/banners") return handleAdminBanners(request, db);
+      // 공지사항 작성 (2026-08-14) — 업데이트·이벤트 공지. 쓰면 앱에 배포 없이 뜬다
+      if (path === "/admin/notices") return handleAdminNotices(request, db);
+      { const m2 = path.match(/^\/admin\/notices\/(\d+)\/toggle$/);
+        if (m2 && request.method === "POST") {
+          await db.prepare("UPDATE announcements SET active = 1 - active WHERE id = ?").bind(m2[1]).run();
+          return redirect("/admin/notices");
+        } }
 
       const bannerToggleMatch = path.match(/^\/admin\/banners\/(\d+)\/toggle$/);
       if (bannerToggleMatch && request.method === "POST")
