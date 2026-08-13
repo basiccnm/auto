@@ -3115,12 +3115,12 @@ div.kd2-day { cursor: default; }
 
 .kd2-alone { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 60px;
   margin-top: 18px; padding: 0 18px; border-radius: 18px; cursor: pointer;
-  background: var(--card); border: 2px solid var(--line); color: var(--ink);
+  background: var(--kd-canvas); border: 2px solid var(--kd-grass-line); color: var(--kd-ink);
   font-size: 17px; font-weight: 800; text-align: left; }
 .kd2-alone i { width: 26px; height: 26px; border-radius: 50%; flex: none;
-  border: 2.5px solid var(--line); font-style: normal; }
-.kd2-alone.on { border-color: var(--k); background: var(--k-soft); color: var(--k); }
-.kd2-alone.on i { border-color: var(--k); background: var(--k); box-shadow: inset 0 0 0 4px var(--card); }
+  border: 2.5px solid var(--kd-grass-line); font-style: normal; }
+.kd2-alone.on { border-color: var(--kd-grass); background: var(--kd-grass); color: #fff; }
+.kd2-alone.on i { border-color: #fff; background: #fff; box-shadow: none; }
 
 /* ── 자녀 미션 탭 — 일일 퀘스트 / 의뢰 (2026-08-02) ──
    RPG의 «일일 퀘스트»(매일 초기화·즉시 보상)와 «의뢰»(수락→검수→보상)는 성격이 다르다.
@@ -3807,7 +3807,7 @@ body { font-weight: 500; }
 .kd2-pick1 button.on i { background: #fff; box-shadow: none; }
 .kd2-pick1 button:active { transform: scale(.985); }
 /* 친구 칩도 같은 규칙 */
-.kd2-chip-friend.on, .kd2-friends button.on { background: var(--k); color: var(--on-kk); }
+.kd2-chip-friend.on, .kd2-friends button.on { background: var(--kd-grass); color: #fff; border-color: var(--kd-grass); }
 
 /* ② 일정 아젠다 — 홈 시간 축과 같은 줄 모양으로 */
 .gc-agenda { margin: 10px 0 0; padding-bottom: 96px; }
@@ -4125,12 +4125,12 @@ div.kd2-day { cursor: default; }
 
 .kd2-alone { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 60px;
   margin-top: 18px; padding: 0 18px; border-radius: 18px; cursor: pointer;
-  background: var(--card); border: 2px solid var(--line); color: var(--ink);
+  background: var(--kd-canvas); border: 2px solid var(--kd-grass-line); color: var(--kd-ink);
   font-size: 17px; font-weight: 800; text-align: left; }
 .kd2-alone i { width: 26px; height: 26px; border-radius: 50%; flex: none;
-  border: 2.5px solid var(--line); font-style: normal; }
-.kd2-alone.on { border-color: var(--k); background: var(--k-soft); color: var(--k); }
-.kd2-alone.on i { border-color: var(--k); background: var(--k); box-shadow: inset 0 0 0 4px var(--card); }
+  border: 2.5px solid var(--kd-grass-line); font-style: normal; }
+.kd2-alone.on { border-color: var(--kd-grass); background: var(--kd-grass); color: #fff; }
+.kd2-alone.on i { border-color: #fff; background: #fff; box-shadow: none; }
 
 /* ── 자녀 미션 탭 — 일일 퀘스트 / 의뢰 (2026-08-02) ──
    RPG의 «일일 퀘스트»(매일 초기화·즉시 보상)와 «의뢰»(수락→검수→보상)는 성격이 다르다.
@@ -4792,7 +4792,7 @@ body { font-weight: 500; }
 .kd2-pick1 button.on i { background: #fff; box-shadow: none; }
 .kd2-pick1 button:active { transform: scale(.985); }
 /* 친구 칩도 같은 규칙 */
-.kd2-chip-friend.on, .kd2-friends button.on { background: var(--k); color: var(--on-kk); }
+.kd2-chip-friend.on, .kd2-friends button.on { background: var(--kd-grass); color: #fff; border-color: var(--kd-grass); }
 
 /* ② 일정 아젠다 — 홈 시간 축과 같은 줄 모양으로 */
 .gc-agenda { margin: 10px 0 0; padding-bottom: 96px; }

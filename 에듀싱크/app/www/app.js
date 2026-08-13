@@ -2305,6 +2305,16 @@ const Screens = {
         <button class="kd-tile pool" onclick="location.hash='#report'">
           <span class="em" aria-hidden="true">📊</span><span class="nm">이번 달</span></button>
       </div>
+      <!-- 🔴 부모가 «진열대»에 들어갈 입구가 아예 없었다 (2026-08-14 대표님:
+           「부모 페이지에 스타코인 상점 페이지가 없는데?」).
+           상점은 아이 화면(#store)에만 링크가 있었고, 부모는 «아이 화면으로 보기»를 거치거나
+           주소를 직접 치는 수밖에 없었다 — 보상을 못 올리면 별을 모을 이유가 없어진다. -->
+      <div class="kd-tiles two">
+        <button class="kd-tile grape" onclick="location.hash='#store'">
+          <span class="em" aria-hidden="true">🏪</span><span class="nm">상점 · 진열대</span></button>
+        <button class="kd-tile" onclick="location.hash='#tickets'">
+          <span class="em" aria-hidden="true">🎟️</span><span class="nm">내 티켓</span></button>
+      </div>
       <div class="kd-act">
         <!-- ⚠ gamePreviewOn 은 #game 안에서 탭을 바꾸는 함수다 — 주소를 같이 옮겨야 그려진다(08-10 실측) -->
         <button class="kd-btn" onclick="location.hash='#game';App.gamePreviewOn()">아이 화면으로 보기</button>
