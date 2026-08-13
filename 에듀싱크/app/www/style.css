@@ -1071,14 +1071,17 @@ mark { background: var(--mark); color: var(--mark-ink); padding: 0 2px; border-r
 .wk-axis > div { position: relative; }
 .wk-axis span { position: absolute; top: -7px; right: 6px; font-size: 11px; white-space: nowrap;
   font-family: ui-monospace, Menlo, monospace; color: var(--muted); }
-.wk-col { position: relative; border-left: 1px solid var(--line); }
-.wk-col:last-child { border-right: 1px solid var(--line); }
-/* 홀·짝 요일에 아주 옅은 톤 차이 — 색을 다섯 개 쓰면 학원 블록 색과 싸운다 */
-.wk-col.alt { background: color-mix(in srgb, var(--bg) 45%, var(--card)); }
-.wk-col.today { background: color-mix(in srgb, var(--accent) 7%, var(--card)); }
-.wk-col.today.alt { background: color-mix(in srgb, var(--accent) 10%, var(--card)); }
-.wk-slot { border-top: 1px solid var(--line); }
-.wk-slot:last-child { border-bottom: 1px solid var(--line); }
+/* 🔴 격자가 배경과 거의 같은 색이라 «표»로 안 읽혔다(2026-08-13 대표님: 「배경색이랑 너무 흡사」).
+   판을 흰 카드로 세우고 칸 줄을 한 단 진하게 — 그래야 블록이 그 위에 «떠» 보인다. */
+.wk-col { position: relative; background: var(--card);
+  border-left: 1px solid color-mix(in srgb, var(--ink) 13%, transparent); }
+.wk-col:last-child { border-right: 1px solid color-mix(in srgb, var(--ink) 13%, transparent); }
+/* 홀·짝 요일에 옅은 톤 차이 — 색을 다섯 개 쓰면 학원 블록 색과 싸운다 */
+.wk-col.alt { background: color-mix(in srgb, var(--ink) 4%, var(--card)); }
+.wk-col.today { background: color-mix(in srgb, var(--accent) 9%, var(--card)); }
+.wk-col.today.alt { background: color-mix(in srgb, var(--accent) 13%, var(--card)); }
+.wk-slot { border-top: 1px solid color-mix(in srgb, var(--ink) 10%, transparent); }
+.wk-slot:last-child { border-bottom: 1px solid color-mix(in srgb, var(--ink) 13%, transparent); }
 /* 시안 10b — **파스텔 칸을 없앴다.** 블록은 흰 면이고, 고른 색은 왼쪽 6px 막대로만 나온다.
    예전엔 칸 전체를 파스텔로 칠하고 그 위에 글씨를 얹어서, 진한 테마에서 밝은 칸 위에
    밝은 글씨가 앉는 사고가 났다(2026-07-25 실측 대비 1.0). 이제 글씨는 늘 카드 위에 있다. */
@@ -2127,6 +2130,12 @@ button, .btn { min-height: 44px; }
   font-size: 9px; font-style: normal; text-align: center; letter-spacing: -1px; }
 
 /* 아젠다가 본문이다 */
+/* 방학 띠(2026-08-13) — 목록에서 뺀 대신 «지금 방학이다»를 한 줄로 */
+.gc-vacbar { display: flex; align-items: center; gap: 6px; margin: 10px 0 2px;
+  padding: 10px 14px; border-radius: var(--ns-r); background: var(--chip);
+  font-size: 13.5px; font-weight: 700; color: var(--muted); }
+.gc-vacbar b { color: var(--ink); }
+
 .gc-agenda { margin: 6px -16px 0; padding-bottom: 96px; }
 .gc-day { position: relative; display: flex; gap: 12px;  }
 .gc-mark { position: absolute; left: 8px; top: 6px; bottom: 6px; width: 3px; border-radius: 2px;
@@ -2387,13 +2396,18 @@ button, .btn { min-height: 44px; }
 /* ════ 알림 — 2026-07-28 재설계 ══════════════════════════════
    흰 카드 5개 → 「보내기 / 나에게 오는 알림 / 보낸 내역 / 이 기기」 네 묶음.
    실제로 여기서 하는 일은 «보내기»와 «시각 정하기» 둘뿐이라 그 둘을 맨 위로 올렸다. */
-.nt-send { display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 16px;
-  min-height: 52px; border-radius: var(--ns-r); background: var(--card);
-  box-shadow: 0 1px 4px rgba(35, 34, 32, .07); }
-.nt-send input { flex: 1; min-width: 0; margin: 0; padding: 0; border: none; background: none;
-  font-size: 14.5px; color: var(--ink); }
+/* 🔴 판과 입력칸이 같은 톤이라 «어디에 쓰는지»가 안 보였다
+   (2026-08-13 대표님: 「대화알림 창 틴트 대비 입력창 사이즈?? 이게 맞어?」).
+   판은 얇은 테두리만, 입력칸은 제 면 + 테두리로 세우고 높이를 버튼과 같은 44px 로. */
+.nt-send { display: flex; align-items: center; gap: 8px; padding: 6px;
+  min-height: 56px; border-radius: var(--ns-r); background: var(--card);
+  border: 1px solid var(--line); box-shadow: none; }
+.nt-send input { flex: 1; min-width: 0; margin: 0; padding: 0 12px; min-height: 44px;
+  border: 1px solid var(--line); border-radius: var(--ns-r); background: var(--bg);
+  font-size: 15px; color: var(--ink); }
+.nt-send input:focus { outline: none; border-color: var(--accent); background: var(--card); }
 .nt-send button { display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  flex: none; min-width: 72px; min-height: 40px; border: none; border-radius: var(--ns-r);
+  flex: none; min-width: 76px; min-height: 44px; border: none; border-radius: var(--ns-r);
   background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 84%, #FFF), var(--accent)); color: #FFFFFF;
   font-size: 14.5px; font-weight: 700;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.26), 0 2px 6px rgba(18,53,102,.26); }
@@ -5543,6 +5557,16 @@ button.mk-row:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--kd-
    ⚠ **뒤 내용이 밀리면 안 된다**(«레이아웃 점프 0»).
      fixed 로 띄우고, 그 화면들의 아래 여백을 입력바 높이만큼 미리 비워 둔다.
      문서 흐름에 넣으면 키보드가 올라올 때마다 목록이 출렁인다. */
+/* 준비물 입력 줄 위의 날짜 고르기(2026-08-13) — «언제 챙길 것인가»가 먼저다 */
+.ib-dates { display: flex; align-items: center; gap: 6px; padding: 0 0 6px; }
+.ib-dates button { min-height: 34px; padding: 0 14px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--card); color: var(--muted);
+  font-family: inherit; font-size: 13.5px; font-weight: 700; }
+.ib-dates button.on { border-color: transparent; background: var(--accent); color: var(--on-accent); }
+.ib-dpick { min-height: 34px; padding: 0 8px; border-radius: var(--ns-r);
+  border: 1px solid var(--line); background: var(--card); color: var(--ink);
+  font-family: inherit; font-size: 13px; }
+
 .ib { position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
   display: flex; align-items: center; gap: 8px;
   padding: 10px 12px calc(var(--sa-b) + 10px);
@@ -5648,9 +5672,11 @@ body:has(#tabbar.hidden) #screen:has(.ib),
 .dy-list .ed { flex: none; width: 36px; height: 36px; border: none; border-radius: var(--ns-r);
   background: none; color: var(--muted); font-size: 16px; }
 /* 준비물 체크 — 지난 날은 버튼이 아니라 «표시»다(지난 것을 고칠 수는 없다) */
-.dy-list.chk .mk { flex: none; width: 26px; height: 26px; border-radius: 8px; display: grid;
-  place-items: center; border: 1.5px solid var(--line); background: none;
-  color: var(--done-ink); font-size: 15px; font-weight: 900; font-family: inherit; }
+/* 2026-08-13 대표님 「체크박스 사이즈 오류」 — 26px 이라 준비물 화면(32px)과 규격이 달랐고
+   손끝 과녁으로도 작았다. 두 화면을 같은 32px 로 맞춘다. */
+.dy-list.chk .mk { flex: none; width: 32px; height: 32px; border-radius: var(--ns-r); display: grid;
+  place-items: center; border: 1.5px solid var(--line); background: var(--card);
+  color: var(--done-ink); font-size: 17px; font-weight: 900; font-family: inherit; }
 .dy-list.chk li.done .mk { background: color-mix(in srgb, var(--done) 18%, transparent); border-color: transparent; }
 .dy-list.chk li.done .bd b { text-decoration: line-through; color: var(--muted-card); }
 .dy-list li.ms .mk { flex: none; width: 26px; text-align: center; font-size: 17px; color: var(--muted-card); }

@@ -5354,7 +5354,17 @@ function rememberTitle(kind, title) {
      문서 흐름에 넣으면 키보드가 올라올 때마다 목록이 출렁인다.
    ⚠ 「제대로 입력」으로 넘어가는 길을 옆에 둔다 — 날짜·반복이 필요하면 거기로 간다. */
 function inputBar(kind, ph) {
+  /* 준비물은 «언제 챙길 것인가»가 이름만큼 중요하다 — 날짜를 입력 줄에 올린다.
+     기본은 **내일**(저녁에 챙기는 건 내일 것이다). 오늘 것도 필요하면 한 번에 고른다. */
+  const supDate = kind === "sup" ? (S.ibDate || ymdPlus(TODAY, 1)) : null;
   return `
+  ${kind !== "sup" ? "" : `
+  <div class="ib-dates">
+    <button class="${supDate === TODAY ? "on" : ""}" onclick="App.ibDateSet('${TODAY}')">오늘</button>
+    <button class="${supDate === ymdPlus(TODAY, 1) ? "on" : ""}" onclick="App.ibDateSet('${ymdPlus(TODAY, 1)}')">내일</button>
+    <input type="date" class="ib-dpick" value="${supDate.slice(0,4)}-${supDate.slice(4,6)}-${supDate.slice(6)}"
+      onchange="App.ibDateSet(this.value.replace(/-/g,''))">
+  </div>`}
   <div class="ib">
     <input id="ib-t" class="ib-in" placeholder="${ph}" value="${esc(S.ibText || "")}"
       autocomplete="off" oninput="S.ibText=this.value"
@@ -7345,6 +7355,10 @@ function diaryTab() {
   for (let d = 1; d <= last; d++) {
     const key = ym + String(d).padStart(2, "0");
     const sc = schoolOf(key).filter((e) => {
+      /* 🔴 기간 방학은 목록에서 뺀다 — 달력 칸이 이미 회색으로 «방학»을 말하고 있고,
+         목록에까지 두면 달을 넘길 때마다 1일에 또 나와 «왜 계속 나오냐»가 된다.
+         «방학식·방학중 돌봄교실»처럼 그날 하루짜리는 남긴다(vacationRanges 와 같은 잣대). */
+      if (String(e.name || "").includes("방학") && !/식|교실|돌봄|상담/.test(e.name || "")) return false;
       if (shownName.has(e.name)) return false;
       shownName.add(e.name); return true;
     }).map((e) => ({ ...e, _end: runEnd[e.name] !== key ? runEnd[e.name] : null }))
@@ -7401,6 +7415,14 @@ function diaryTab() {
   <div class="gc-grid" id="gcgrid">${shown.map((r) => r.map(cell).join("")).join("")}</div>
 
   <!-- 아래는 «오늘부터 흐르는» 목록. 달력 칸을 누르면 이 목록이 그 날짜로 옮겨간다(§2) -->
+  ${(() => {
+    /* 방학은 목록 대신 **띠 한 줄**로(2026-08-13) — 지금 방학 중이거나 이 달에 걸쳐 있으면 */
+    const r = vac.find(([s, e]) => (s.slice(0, 6) <= ym && ym <= e.slice(0, 6)));
+    if (!r) return "";
+    const f = (d) => `${+d.slice(4, 6)}월 ${+d.slice(6)}일`;
+    const now = TODAY >= r[0] && TODAY < r[1];
+    return `<div class="gc-vacbar">🏖️ <b>방학</b> ${f(r[0])} ~ ${f(ymdPlus(r[1], -1))}${now ? ` · 개학 ${f(r[1])}` : ""}</div>`;
+  })()}
   ${agenda ? `<div class="gc-agenda">${agenda}</div>`
            : `<p class="gc-hint">이 달에는 남은 일정이 없어요</p>`}
   <p class="gc-hint">날짜를 꾹 누르면 일정을 넣어요 · 줄을 누르면 그날을 열어요</p>
@@ -10873,7 +10895,9 @@ const App = {
     const t = String(S.ibText || "").trim();
     if (!t) return;
     S.ibText = "";
-    const date = kind === "sup" ? (S.day || ymdPlus(TODAY, 1)) : (S.day || TODAY);
+    /* ⚠ 준비물은 S.day(보고 있던 날)를 따르지 않는다 — 준비물 화면에서 넣으면 늘 «오늘»이 됐다.
+       입력 줄에서 고른 날짜(기본 내일)가 정본이다(2026-08-13). */
+    const date = kind === "sup" ? (S.ibDate || ymdPlus(TODAY, 1)) : (S.day || TODAY);
     if (kind === "sup") {
       const keep = { ...S.supDraft };
       S.supDraft = { date, item: t, memo: "" };
@@ -10887,6 +10911,7 @@ const App = {
     this.render();
     document.getElementById("ib-t")?.focus();
   },
+  ibDateSet(ymd) { S.ibDate = ymd; this.render(); document.getElementById("ib-t")?.focus(); },
   /* 치던 글자를 그대로 들고 «제대로 입력»으로 넘어간다 — 다시 치게 하면 안 쓴다 */
   ibToEditor(kind) {
     const t = String(S.ibText || "").trim();
@@ -11928,10 +11953,16 @@ const App = {
     this.render();
   },
   planKillCancel() { S.planKill = null; this.render(); },
-  planKillDo() {
+  async planKillDo() {
     const k = S.planKill;
     const i = STUB.activities.findIndex((a) => a.id === k.id);
     const gone = i >= 0 ? STUB.activities[i] : null;
+    /* 🔴 순서가 뒤집혀 있었다 — 지우고 나서 비번을 물었다(2026-08-13 대표님).
+       되돌릴 수 없는 일은 **표를 먼저 받고** 실행한다. 표는 5분간 유효해 연속 작업엔 안 묻는다. */
+    if (gone?.server_id && TOKENS.access) {
+      const t0 = await this.getReauth("학원 삭제");
+      if (!t0) { S.planKill = null; this.render(); return toast("본인 확인을 못 해서 지우지 않았어요"); }
+    }
     if (i >= 0) STUB.activities.splice(i, 1);
     S.planKill = null; S.planDraft = null;
     /* 🔴 폼(#editact)에서 지웠으면 **들어온 화면으로** 돌아간다(대표님 2026-08-11
@@ -11955,9 +11986,17 @@ const App = {
     }
     if (!r?.ok) toast(r?.error?.message || "서버에 반영하지 못했어요 — 앱을 다시 켜면 되돌아올 수 있어요");
   },
-  planSave() {
+  async planSave() {
     const d = S.planDraft;
     if (!d?.name.trim()) return toast("이름을 넣어주세요");
+    /* 고치는 것도 되돌리기 어렵다 — 표를 먼저 받는다(2026-08-13 「수정할 때도 마찬가지」) */
+    if (d.id && TOKENS.access) {
+      const ex = STUB.activities.find((a) => a.id === d.id);
+      if (ex?.server_id) {
+        const t0 = await this.getReauth("학원 수정");
+        if (!t0) return toast("본인 확인을 못 해서 고치지 않았어요");
+      }
+    }
     // 요일이 곧 «언제 가는지»다. 비면 시간표·방과후 어디에도 안 나타나므로 저장을 막는다.
     const days = (d.days && d.days.length ? d.days : (d.day ? [d.day] : [])).slice().sort();
     if (!days.length) return toast("요일을 하나는 골라주세요");
@@ -12072,7 +12111,14 @@ const App = {
       }
       S.planMove = null;
       App.render();
-      this._planPush && this._planPush(a, "PATCH");
+      /* 이동도 «수정»이다 — 표가 없으면 여기서 한 번 받는다(연속 이동은 5분간 안 묻는다) */
+      (async () => {
+        if (a.server_id && TOKENS.access) {
+          const t0 = await App.getReauth("학원 수정");
+          if (!t0) return toast("본인 확인을 못 해서 서버엔 반영되지 않았어요");
+        }
+        App._planPush && App._planPush(a, "PATCH");
+      })();
       toast(`${a.name} ${a.start_time}~${a.end_time}`);
     };
     blk.addEventListener("pointermove", move);
