@@ -590,7 +590,16 @@ async function api(path, { method = "GET", body, form, timeout, reauth, _retry }
       setTimeout(() => App.render(), 0);
     }
     if (!j?.ok && j?.error?.code === "AUTH_EXPIRED" && TOKENS.refresh && !_retry) {
-      const r = await api("/auth/refresh", { method: "POST", body: { refresh_token: TOKENS.refresh }, _retry: true });
+      /* 🔴 갱신은 **한 번만** (간헐 로그아웃의 정체 — 2026-08-14 전수검수 중 재현).
+         화면이 API 를 여러 개 동시에 쏘는데, 만료 순간엔 그 모두가 AUTH_EXPIRED 를 받고
+         **각자 refresh 를 쏜다.** 회전(1회용) 토큰이라 첫 번째만 살고 나머지는 죽어서
+         멀쩡히 쓰던 계정이 통째로 로그아웃됐다(앱 재시작 직후가 특히 그랬다).
+         → 먼저 나간 갱신 하나를 **모두가 같이 기다린다**(single-flight). */
+      if (!api._ref) {
+        api._ref = api("/auth/refresh", { method: "POST", body: { refresh_token: TOKENS.refresh }, _retry: true });
+        api._ref.finally(() => { api._ref = null; });
+      }
+      const r = await api._ref;
       if (r?.ok) { saveTokens(r.data); return api(path, { method, body, form, timeout, reauth, _retry: true }); }
       saveTokens(null);
       /* 🔴 여기서 **조용히 로그아웃하면 «내 아이가 사라진» 것처럼 보인다.**

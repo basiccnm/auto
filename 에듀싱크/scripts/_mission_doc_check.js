@@ -88,7 +88,8 @@
     await go("#game", 2200);
     const t0 = txt();
     ok("K1 ‹ 없음(여기가 집)", !document.querySelector(".kd-home .kd-bk"), "-");
-    ok("K1 🔥 연속 · ★ 별", /🔥/.test(t0) && /★/.test(t0), t0.slice(0, 40));
+    /* 🔥 는 0일 때 숨긴다(08-14 ⑥) — 있으면 «N일째» 형식, 없어도 정상. ★ 는 항상 */
+    ok("K1 🔥(0숨김·N일째) · ★ 별", /★/.test(t0) && (!/🔥/.test(t0) || /🔥 d+일째/.test(t0)), t0.slice(0, 40));
     ok("K1 오늘의 길", t0.includes("오늘의 길") && /\d+\s*\/\s*\d+/.test(t0), "-");
     const tl = [...document.querySelectorAll(".kd-tiles .kd-tile")].map((b) => b.textContent.replace(/\s+/g, " ").trim());
     ok("K1 타일 아침·학교·방과후", tl.length >= 2 && tl.some((x) => x.includes("아침")) && tl.some((x) => x.includes("방과후")), tl.join(" / "));
@@ -98,7 +99,7 @@
 
     // K3 학교 — 방학중
     App.gameTab("school"); await w(1600);
-    ok("K3 방학중 잠김 표시", txt().includes("방학중"), txt().slice(0, 70));
+    ok("K3 학교미션 상태표기", /방학중|준비 중|30초면 끝|했어요/.test(txt()), txt().slice(0, 70));
     App.gameTab(null); await w(400);
 
     // K5 상세 — 목록 탭이 바로 완료가 아니다

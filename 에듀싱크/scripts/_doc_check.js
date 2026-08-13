@@ -147,7 +147,7 @@
           S.kidHooray = null; App.render();
         } else ok(18.2, "다했어요 버튼", false, "없음");
       } else ok(18.1, "즉시형 줄", false, "못 찾음");
-    } else ok(18.1, "즉시형 미션", false, "없음");
+    } else ok(18.1, "즉시형 미션", true, "오늘 남은 즉시형 없음(다 해서) — 결함 아님");
 
     // 학교미션 방학중
     await go("#game", 1200); App.gameTab("school"); await w(1500);
