@@ -6441,8 +6441,12 @@ function drawerView(c) {
       ${badge ? `<span class="cnt">${badge}</span>` : ""}
     </button>`;
 
+  /* 🔴 z-index 를 손으로 박지 말 것 (2026-08-14 대표님: 「자녀 전환 누르면 드로어 밑에 있어 안 보임」)
+     여기 `style="z-index:60"` 이 박혀 있었다. 드로어는 81(.ns-drawer)이라 시트가 그 밑에 깔렸다.
+     .modal 의 층(300)이 정본이다 — 그 주석에도 「60이었을 때 깔려서 안 눌렸다」가 이미 적혀 있었는데
+     이 시트만 그 함정을 다시 밟았다. 층은 CSS 한 곳에서만 정한다. */
   const kidSheet = !S.childSwitch ? "" : `
-  <div class="modal sheetwrap" style="z-index:60" onclick="App.childSwitchClose()">
+  <div class="modal sheetwrap" onclick="App.childSwitchClose()">
     <div class="sheet" onclick="event.stopPropagation()">
       <div class="sheet-grip"></div>
       <div class="sheet-hd"><b>자녀 전환</b></div>
@@ -6450,7 +6454,11 @@ function drawerView(c) {
         ${STUB.children.map((k) => `
         <button class="mp-row" style="width:100%" onclick="App.childSwitchClose();App.drawerClose();App.pickChild(${k.id})">
           <span class="mp-i"><i aria-hidden="true" class="ti ti-user"></i></span>
-          <span class="n">${esc(k.nickname)}${k.grade ? `<em>${k.grade}학년${k.class_name ? ` ${esc(k.class_name)}반` : ""}</em>` : ""}</span>
+          <!-- 🔴 라벨은 «mp-l» 이 정본이다 (2026-08-14). «n» 을 쓰는 바람에 «.mp-l em» 규칙이
+               안 걸려서 「첫째3학년 1반」처럼 기울임체로 딱 붙어 나왔다.
+               공용 부품(.mp-row)을 쓸 땐 그 부품의 클래스를 그대로 쓴다.
+               ⚠ 이 주석 안에 백틱을 쓰지 말 것 — 템플릿 문자열이 거기서 끊긴다(방금 겪었다). -->
+          <span class="mp-l">${esc(k.nickname)}${k.grade ? `<em>${k.grade}학년${k.class_name ? ` ${esc(k.class_name)}반` : ""}</em>` : ""}</span>
           ${k.id === S.currentChildId ? `<span class="v ok">지금</span>` : `<i aria-hidden="true" class="ti ti-chevron-right ar"></i>`}
         </button>`).join("")}
       </div>
