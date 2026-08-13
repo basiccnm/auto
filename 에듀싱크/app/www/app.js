@@ -10827,10 +10827,13 @@ const App = {
       S.missionNew = null;
       const code = r.data.mission.code;
       await this.missionPickReload();
-      if (S.missionPick.length < 3) S.missionPick.push(code);   // 만들자마자 오늘 것에 넣어준다
+      /* ⚠ 담기 상한은 서버 값(econ.max_per_day)이다 — 옛 「3」이 박혀 있었다 */
+      const cap = (S.econ && S.econ.max_per_day) || 8;
+      if (S.missionPick.length < cap) S.missionPick.push(code);
       this.render();
-      toast("우리 집 미션을 만들었어요");
-      return true;   // ⚠ 퀵입력(§4)이 이 값을 보고 시트를 닫는다 — 실패했는데 닫으면 «넣었다»는 거짓말이 된다
+      /* 🔴 code 를 돌려준다 — 미션 화면에서 만들었으면 **오늘 목록에도 바로 넣어야** 한다
+         (2026-08-13 대표님 검수: 「넣기」를 눌렀는데 오늘 목록에 없었다. 버튼 이름이 «넣기»다). */
+      return code;   // ⚠ 퀵입력(§4)이 truthy 를 보고 시트를 닫는다 — 실패하면 false
     } catch (_) { toast("만들지 못했어요"); return false; }
   },
   async missionCustomDelete(code) {
@@ -11072,8 +11075,19 @@ const App = {
         }
       } else {
         S.missionNew = { title, minutes: e.minutes, verify: e.verify, area: "study" };
-        const ok = await this.missionNewSave();
-        if (!ok) { S.missionNew = null; e.busy = false; this.render(); return; }
+        const madeCode = await this.missionNewSave();
+        if (!madeCode) { S.missionNew = null; e.busy = false; this.render(); return; }
+        /* 「만들기」로 들어왔으면 **오늘 목록에도 넣는다** — 카탈로그에만 넣고 끝내면
+           부모는 「넣기를 눌렀는데 왜 없지」가 된다(2026-08-13 검수).
+           고르기(#missionpick)에서 왔을 때는 담기 목록에만 체크하고 저장은 그 화면이 한다. */
+        if ((e.from || "") === "#mission" && typeof madeCode === "string") {
+          const c0 = cur();
+          if (c0?.server_id) {
+            const rr = await api(`/children/${c0.server_id}/missions`, { method: "PUT", body: { add: [madeCode] } });
+            if (rr?.ok) { await this.loadMissions(true); toast("오늘 미션에 넣었어요"); }
+            else toast(rr?.error?.message || "만들었지만 오늘 목록엔 못 넣었어요");
+          }
+        } else toast("우리 집 미션을 만들었어요");
       }
       rememberTitle(e.kind, title);
       const back = e.from || "#day";
