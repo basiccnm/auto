@@ -963,6 +963,21 @@ label.f { display: block; margin-top: 12px; font-size: 12.5px; font-weight: 700;
 .ml-dishes .bad { color: var(--accent-ink); border-bottom: 1.5px dotted var(--accent); }
 .ml-dishes .bad i { font-style: normal; font-size: 11px; vertical-align: super; margin-left: 2px; }
 .ml-dishes mark { background: var(--info); color: inherit; border-radius: 4px; padding: 0 2px; }
+/* ── 급식 아코디언 (2026-08-13) ──────────────────────────────
+   「목록이 한번에 여러개가 보이게」 — 접힌 날은 «날짜 + 반찬 한 줄»만 차지한다.
+   ⚠ 날짜 줄 전체가 버튼이다. 알림 스위치는 그 안에 있으니 stopPropagation 이 짝(app.js).
+   ⚠ 접었을 때 머리 밑선을 지운다 — 밑에 아무것도 없는데 선만 남으면 «잘린 카드»로 보인다. */
+.ml-dtog { flex: 1; min-width: 0; min-height: 44px; padding: 0; background: none; border: none;
+  display: flex; align-items: center; gap: 9px; text-align: left; color: inherit; }
+.ml-sum { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 13.5px; color: var(--muted); }
+.ml-car { flex: none; width: 8px; height: 8px; margin-left: auto; margin-top: -3px;
+  border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted);
+  transform: rotate(45deg); transition: transform .15s; }
+:root .ml-day.fold { padding: 2px 14px; }
+:root .ml-day.fold .ml-dhd { padding-bottom: 0; border-bottom: none; }
+:root .ml-day:not(.fold) .ml-car { transform: rotate(225deg); margin-top: 3px; }
+
 .ml-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; }
 .ml-foot button { min-height: 44px; padding: 0; background: none; border: none;
   color: var(--accent-ink); font-size: 14.5px; }
@@ -998,7 +1013,10 @@ label.f { display: block; margin-top: 12px; font-size: 12.5px; font-weight: 700;
 .graderow { display: flex; align-items: baseline; gap: 10px; padding: 9px 0; border-bottom: 1px dashed var(--line); }
 .graderow:last-child { border-bottom: none; }
 .graderow > b { flex: none; width: 46px; font-size: var(--fs-sm); }
-.graderow .gcls { flex: none; width: 52px; color: var(--muted); font-size: var(--fs-sm); }
+/* 학급수 칸 — 밑에 「한 반 17명」(학급당 평균)이 한 줄로 더 붙는다(2026-08-13 웹 이식).
+   52px 로는 그 줄이 «반 / 평균 17명» 으로 꺾여 읽혔다 — 폭을 주고 줄을 나눈다. */
+.graderow .gcls { flex: none; width: 68px; color: var(--muted); font-size: var(--fs-sm); }
+.graderow .gcls .gsex { display: block; margin-top: 1px; }
 .graderow .gnum { flex: 1; text-align: right; font-weight: 700; font-size: var(--fs-sm); }
 .graderow .gsex { color: var(--muted); font-weight: 400; font-size: var(--fs-xs); }
 .foldhd .caret { flex: none; color: var(--muted); font-size: 15px; }
@@ -1071,14 +1089,17 @@ mark { background: var(--mark); color: var(--mark-ink); padding: 0 2px; border-r
 .wk-axis > div { position: relative; }
 .wk-axis span { position: absolute; top: -7px; right: 6px; font-size: 11px; white-space: nowrap;
   font-family: ui-monospace, Menlo, monospace; color: var(--muted); }
-.wk-col { position: relative; border-left: 1px solid var(--line); }
-.wk-col:last-child { border-right: 1px solid var(--line); }
-/* 홀·짝 요일에 아주 옅은 톤 차이 — 색을 다섯 개 쓰면 학원 블록 색과 싸운다 */
-.wk-col.alt { background: color-mix(in srgb, var(--bg) 45%, var(--card)); }
-.wk-col.today { background: color-mix(in srgb, var(--accent) 7%, var(--card)); }
-.wk-col.today.alt { background: color-mix(in srgb, var(--accent) 10%, var(--card)); }
-.wk-slot { border-top: 1px solid var(--line); }
-.wk-slot:last-child { border-bottom: 1px solid var(--line); }
+/* 🔴 격자가 배경과 거의 같은 색이라 «표»로 안 읽혔다(2026-08-13 대표님: 「배경색이랑 너무 흡사」).
+   판을 흰 카드로 세우고 칸 줄을 한 단 진하게 — 그래야 블록이 그 위에 «떠» 보인다. */
+.wk-col { position: relative; background: var(--card);
+  border-left: 1px solid color-mix(in srgb, var(--ink) 13%, transparent); }
+.wk-col:last-child { border-right: 1px solid color-mix(in srgb, var(--ink) 13%, transparent); }
+/* 홀·짝 요일에 옅은 톤 차이 — 색을 다섯 개 쓰면 학원 블록 색과 싸운다 */
+.wk-col.alt { background: color-mix(in srgb, var(--ink) 4%, var(--card)); }
+.wk-col.today { background: color-mix(in srgb, var(--accent) 9%, var(--card)); }
+.wk-col.today.alt { background: color-mix(in srgb, var(--accent) 13%, var(--card)); }
+.wk-slot { border-top: 1px solid color-mix(in srgb, var(--ink) 10%, transparent); }
+.wk-slot:last-child { border-bottom: 1px solid color-mix(in srgb, var(--ink) 13%, transparent); }
 /* 시안 10b — **파스텔 칸을 없앴다.** 블록은 흰 면이고, 고른 색은 왼쪽 6px 막대로만 나온다.
    예전엔 칸 전체를 파스텔로 칠하고 그 위에 글씨를 얹어서, 진한 테마에서 밝은 칸 위에
    밝은 글씨가 앉는 사고가 났다(2026-07-25 실측 대비 1.0). 이제 글씨는 늘 카드 위에 있다. */
@@ -2127,6 +2148,12 @@ button, .btn { min-height: 44px; }
   font-size: 9px; font-style: normal; text-align: center; letter-spacing: -1px; }
 
 /* 아젠다가 본문이다 */
+/* 방학 띠(2026-08-13) — 목록에서 뺀 대신 «지금 방학이다»를 한 줄로 */
+.gc-vacbar { display: flex; align-items: center; gap: 6px; margin: 10px 0 2px;
+  padding: 10px 14px; border-radius: var(--ns-r); background: var(--chip);
+  font-size: 13.5px; font-weight: 700; color: var(--muted); }
+.gc-vacbar b { color: var(--ink); }
+
 .gc-agenda { margin: 6px -16px 0; padding-bottom: 96px; }
 .gc-day { position: relative; display: flex; gap: 12px;  }
 .gc-mark { position: absolute; left: 8px; top: 6px; bottom: 6px; width: 3px; border-radius: 2px;
@@ -2387,13 +2414,18 @@ button, .btn { min-height: 44px; }
 /* ════ 알림 — 2026-07-28 재설계 ══════════════════════════════
    흰 카드 5개 → 「보내기 / 나에게 오는 알림 / 보낸 내역 / 이 기기」 네 묶음.
    실제로 여기서 하는 일은 «보내기»와 «시각 정하기» 둘뿐이라 그 둘을 맨 위로 올렸다. */
-.nt-send { display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 16px;
-  min-height: 52px; border-radius: var(--ns-r); background: var(--card);
-  box-shadow: 0 1px 4px rgba(35, 34, 32, .07); }
-.nt-send input { flex: 1; min-width: 0; margin: 0; padding: 0; border: none; background: none;
-  font-size: 14.5px; color: var(--ink); }
+/* 🔴 판과 입력칸이 같은 톤이라 «어디에 쓰는지»가 안 보였다
+   (2026-08-13 대표님: 「대화알림 창 틴트 대비 입력창 사이즈?? 이게 맞어?」).
+   판은 얇은 테두리만, 입력칸은 제 면 + 테두리로 세우고 높이를 버튼과 같은 44px 로. */
+.nt-send { display: flex; align-items: center; gap: 8px; padding: 6px;
+  min-height: 56px; border-radius: var(--ns-r); background: var(--card);
+  border: 1px solid var(--line); box-shadow: none; }
+.nt-send input { flex: 1; min-width: 0; margin: 0; padding: 0 12px; min-height: 44px;
+  border: 1px solid var(--line); border-radius: var(--ns-r); background: var(--bg);
+  font-size: 15px; color: var(--ink); }
+.nt-send input:focus { outline: none; border-color: var(--accent); background: var(--card); }
 .nt-send button { display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  flex: none; min-width: 72px; min-height: 40px; border: none; border-radius: var(--ns-r);
+  flex: none; min-width: 76px; min-height: 44px; border: none; border-radius: var(--ns-r);
   background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 84%, #FFF), var(--accent)); color: #FFFFFF;
   font-size: 14.5px; font-weight: 700;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.26), 0 2px 6px rgba(18,53,102,.26); }
@@ -2828,18 +2860,20 @@ img.rec-none, img.rec-fail { opacity: .35; }
 :root[data-kid-theme] { --accent: var(--k); --accent-ink: var(--k); --on-accent: var(--on-kk); }
 
 /* ── 자녀 공통 부품 (kd2-) — 큰 글씨·큰 버튼·텍스트 최소 ── */
+/* (2026-08-12) kd2 위젯은 듀오링고 토큰 고정 — 옛 파스텔 테마 변수(--k)를 안 마신다.
+   테마 고르기 프리뷰(.kd2-prev·pick·chip)만 제 변수를 유지한다. */
 .kd2-h1 { font-size: 23px; font-weight: 800; letter-spacing: -.02em; margin-top: 8px; }
-.kd2-sub { color: var(--muted); margin-top: 6px; line-height: 1.5; }
+.kd2-sub { color: var(--kd-sub); margin-top: 6px; line-height: 1.5; }
 .kd2-cta { width: 100%; min-height: 54px; border: 0;  cursor: pointer;
-  background: var(--k); color: var(--on-kk); font-size: 21px; font-weight: 900; margin-top: 16px; }
+  background: var(--kd-grass); color: #fff; font-size: 21px; font-weight: 900; margin-top: 16px; }
 
 /* 도장 pill */
 .kd2-star { display: flex; align-items: center; gap: 8px; min-height: 56px; width: 100%;
-  background: var(--card); border: 1px solid var(--line); border-radius: 18px; cursor: pointer;
-  padding: 0 16px; font-size: 20px; font-weight: 900; color: var(--k-star); margin-bottom: 4px; }
-.kd2-star b { color: var(--ink); font-size: 22px; }
-.kd2-star span { flex: 1; text-align: left; font-size: 14px; color: var(--muted); font-weight: 700; }
-.kd2-star i { color: var(--muted); font-size: 18px; }
+  background: var(--kd-canvas); border: 1px solid var(--kd-grass-line); border-radius: 18px; cursor: pointer;
+  padding: 0 16px; font-size: 20px; font-weight: 900; color: var(--kd-sun); margin-bottom: 4px; }
+.kd2-star b { color: var(--kd-ink); font-size: 22px; }
+.kd2-star span { flex: 1; text-align: left; font-size: 14px; color: var(--kd-sub); font-weight: 700; }
+.kd2-star i { color: var(--kd-sub); font-size: 18px; }
 
 /* 미션 카드 크게 */
 .kd-m { border-radius: 22px !important; padding: 18px !important; }
@@ -2872,22 +2906,22 @@ img.rec-none, img.rec-fail { opacity: .35; }
 /* 도장판 */
 .kd2-board { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-top: 20px; }
 .kd2-cell { aspect-ratio: 1; border-radius: 50%; display: grid; place-items: center; font-size: 24px;
-  background: var(--card); border: 2px dashed var(--line); color: var(--line); }
-.kd2-cell.on { border: 3px solid var(--k-star); color: var(--k-star);
-  background: color-mix(in srgb, var(--k-star) 12%, var(--card)); transform: rotate(-4deg); }
-.kd2-cell.today { border: 3px solid var(--k); color: var(--k);
+  background: var(--kd-canvas); border: 2px dashed var(--kd-grass-line); color: var(--kd-grass-line); }
+.kd2-cell.on { border: 3px solid var(--kd-sun); color: var(--kd-sun);
+  background: color-mix(in srgb, var(--kd-sun) 12%, var(--kd-canvas)); transform: rotate(-4deg); }
+.kd2-cell.today { border: 3px solid var(--kd-grass); color: var(--kd-grass);
   background: var(--k-soft); transform: scale(1.1); }
-.kd2-goal { margin-top: 22px; background: var(--card); border: 1.5px solid var(--k);
+.kd2-goal { margin-top: 22px; background: var(--kd-canvas); border: 1.5px solid var(--kd-grass);
   border-radius: 18px; padding: 18px; text-align: center; }
 .kd2-goal b { font-size: 19px; font-weight: 900;  }
 
 /* 사진 인증 */
 .kd2-shot { display: flex; flex-direction: column; align-items: center; gap: 12px;
-  width: 100%; margin-top: 20px; padding: 30px 20px; border: 1.5px solid var(--line);
-  border-radius: 18px; background: var(--card); cursor: pointer; }
+  width: 100%; margin-top: 20px; padding: 30px 20px; border: 1.5px solid var(--kd-grass-line);
+  border-radius: 18px; background: var(--kd-canvas); cursor: pointer; }
 .kd2-shot .lens { display: grid; place-items: center; width: 76px; height: 76px;
-  border-radius: 50%; background: var(--k); color: var(--on-kk); font-size: 32px; }
-.kd2-shot b { font-size: 17px; font-weight: 800; color: var(--ink); }
+  border-radius: 50%; background: var(--kd-grass); color: #fff; font-size: 32px; }
+.kd2-shot b { font-size: 17px; font-weight: 800; color: var(--kd-ink); }
 
 /* 내 색 + 화면 바꾸기 */
 .kd2-me { display: flex; align-items: center; gap: 10px; margin-top: 20px; }
@@ -2902,26 +2936,26 @@ img.rec-none, img.rec-fail { opacity: .35; }
 /* 축하 오버레이 — 완료 순간이 봉우리 */
 .kd2-hooray-wrap { position: fixed; inset: 0; z-index: 90; background: rgba(0,0,0,.5);
   display: flex; align-items: center; justify-content: center; padding: 24px; }
-.kd2-hooray { width: 100%; max-width: 340px; border-radius: 26px; background: var(--card);
-  border: 2px solid var(--k); padding: 28px 22px; text-align: center; position: relative; overflow: hidden; }
-.kd2-hooray > b { display: block; font-size: 27px; font-weight: 900; color: var(--k); }
-.kd2-hooray .t { display: block; font-size: 16px; font-weight: 800; color: var(--muted); margin-top: 6px; }
+.kd2-hooray { width: 100%; max-width: 340px; border-radius: 26px; background: var(--kd-canvas);
+  border: 2px solid var(--kd-grass); padding: 28px 22px; text-align: center; position: relative; overflow: hidden; }
+.kd2-hooray > b { display: block; font-size: 27px; font-weight: 900; color: var(--kd-grass); }
+.kd2-hooray .t { display: block; font-size: 16px; font-weight: 800; color: var(--kd-sub); margin-top: 6px; }
 .kd2-hooray .stamp { width: 84px; height: 84px; margin: 16px auto 0; border-radius: 50%;
-  border: 5px solid var(--k); color: var(--k); display: grid; place-items: center;
+  border: 5px solid var(--kd-grass); color: var(--kd-grass); display: grid; place-items: center;
   font-size: 19px; font-weight: 900; transform: rotate(-6deg); white-space: nowrap; }
 .kd2-hooray .stamp .ti { font-size: 34px; }   /* 파스텔 체크는 크게, 퀘스트 «클리어» 석 자는 한 줄로 */
 /* 장식 별은 문구 열(가운데)을 피해 **모서리 바깥쪽**에만 둔다(지시서 0802-3 1-4 —
    «엄마한테도 갔어요» 줄과 겹쳤다). 도장 원 좌우 높이(45%)와 맨 위 두 귀퉁이. */
-.kd2-hooray .spark i { position: absolute; font-style: normal; color: var(--k-star); font-size: 17px; }
+.kd2-hooray .spark i { position: absolute; font-style: normal; color: var(--kd-sun); font-size: 17px; }
 .kd2-hooray .spark i:nth-child(1) { left: 5%; top: 6%; } .kd2-hooray .spark i:nth-child(2) { right: 5%; top: 6%; }
 .kd2-hooray .spark i:nth-child(3) { left: 5%; top: 45%; font-size: 13px; } .kd2-hooray .spark i:nth-child(4) { right: 5%; top: 45%; font-size: 13px; }
 
 /* 연결 끝 화면 */
 .kd2-end { display: flex; flex-direction: column; align-items: center; text-align: center;
   padding-top: 90px; }
-.kd2-end .ic { width: 92px; height: 92px; border-radius: 50%; background: var(--card);
-  border: 2px solid var(--line); display: grid; place-items: center; font-size: 40px;
-  color: var(--muted); margin-bottom: 18px; }
+.kd2-end .ic { width: 92px; height: 92px; border-radius: 50%; background: var(--kd-canvas);
+  border: 2px solid var(--kd-grass-line); display: grid; place-items: center; font-size: 40px;
+  color: var(--kd-sub); margin-bottom: 18px; }
 .kd2-end .kd2-cta { max-width: 300px; }
 
 /* 2-1 부모 경고 — 미션 화면·홈 도장판 공용 */
@@ -3057,27 +3091,1037 @@ div.kd2-day { cursor: default; }
 /* .kd2-face — 얼굴 이모지는 뺐다(2026-08-03, 8~13세 폭). 규칙은 남기지 않는다 */
 .kd2-stars { display: flex; justify-content: center; gap: 2px; margin-top: 20px; }
 .kd2-stars button { width: 50px; height: 50px; border: 0; background: none; cursor: pointer;
-  font-size: 42px; line-height: 1; color: var(--line); padding: 0; }
+  font-size: 42px; line-height: 1; color: var(--kd-grass-line); padding: 0; }
 
 .kd2-q2 { font-size: 16px; font-weight: 700; margin: 24px 0 10px; }
 .kd2-pick1 { display: flex; flex-direction: column; gap: 8px; }
 .kd2-pick1 button { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 60px;
   padding: 0 18px; border-radius: 18px; cursor: pointer;
-  background: var(--card); border: 2px solid var(--line); color: var(--ink);
+  background: var(--kd-canvas); border: 2px solid var(--kd-grass-line); color: var(--kd-ink);
   font-size: 18px; font-weight: 800; text-align: left; }
 .kd2-pick1 button i { width: 26px; height: 26px; border-radius: 50%; flex: none;
-  border: 2.5px solid var(--line); font-style: normal; }
-.kd2-pick1 button.on { border-color: var(--k);  }
-.kd2-pick1 button.on i { border-color: var(--k);  }
+  border: 2.5px solid var(--kd-grass-line); font-style: normal; }
+.kd2-pick1 button.on { border-color: var(--kd-grass);  }
+.kd2-pick1 button.on i { border-color: var(--kd-grass);  }
 .kd2-pick1 b { font-weight: 900; }
 
 /* ── 오늘 누구랑 놀았어 (2026-08-02) — 이름 칩을 탭만 한다 ── */
 .kd2-friends { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
 .kd2-friends button { min-height: 56px; padding: 0 20px; border-radius: 999px; cursor: pointer;
-  background: var(--card); border: 2px solid var(--line); color: var(--ink);
+  background: var(--kd-canvas); border: 2px solid var(--kd-grass-line); color: var(--kd-ink);
   font-size: 18px; font-weight: 900; }
-.kd2-friends button.on { border-color: var(--k);  }
-.kd2-friends button.add { border-style: dashed; color: var(--muted); font-weight: 800; }
+.kd2-friends button.on { border-color: var(--kd-grass);  }
+.kd2-friends button.add { border-style: dashed; color: var(--kd-sub); font-weight: 800; }
+
+.kd2-alone { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 60px;
+  margin-top: 18px; padding: 0 18px; border-radius: 18px; cursor: pointer;
+  background: var(--card); border: 2px solid var(--line); color: var(--ink);
+  font-size: 17px; font-weight: 800; text-align: left; }
+.kd2-alone i { width: 26px; height: 26px; border-radius: 50%; flex: none;
+  border: 2.5px solid var(--line); font-style: normal; }
+.kd2-alone.on { border-color: var(--k); background: var(--k-soft); color: var(--k); }
+.kd2-alone.on i { border-color: var(--k); background: var(--k); box-shadow: inset 0 0 0 4px var(--card); }
+
+/* ── 자녀 미션 탭 — 일일 퀘스트 / 의뢰 (2026-08-02) ──
+   RPG의 «일일 퀘스트»(매일 초기화·즉시 보상)와 «의뢰»(수락→검수→보상)는 성격이 다르다.
+   섞어 두면 아이가 왜 어떤 건 바로 별이 나오고 어떤 건 기다려야 하는지 못 읽는다. */
+.kd2-tabs { display: flex; gap: 8px; margin: 20px 0 12px; }
+.kd2-tabs button { flex: 1; min-height: 54px; border-radius: 16px; cursor: pointer;
+  background: var(--card); border: 2px solid var(--line); color: var(--muted);
+  font-size: 16px; font-weight: 900;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; }
+.kd2-tabs button em { font-style: normal; font-size: 12.5px; font-weight: 800; opacity: .75; }
+.kd2-tabs button.on { border-color: var(--k); background: var(--k-soft); color: var(--k); }
+
+/* 사진 없는 의뢰의 부모 확인 칸 — 빈 사진틀 대신 «아이가 눌렀다»는 사실만 놓는다 */
+.ms-said { margin: 0 0 10px; padding: 12px 14px; border-radius: 12px;
+  background: var(--card); color: var(--ink); font-size: 14px; }
+.ms-said b { font-weight: 700; }
+
+/* 우리 집 미션 만들기 — 미션 화면에서 바로 여는 자리(2026-08-02) */
+.ms-mkbtn { display: flex; align-items: center; gap: 12px; width: 100%; margin-top: 12px;
+  padding: 14px; border: 1.5px dashed var(--line); border-radius: var(--ns-r);
+  background: var(--card); color: var(--ink); text-align: left; }
+.ms-mkbtn i { font-size: 20px; color: var(--accent-ink); }
+.ms-mkbtn b { display: block; font-size: 15px; font-weight: 700; }
+.ms-mkbtn em { display: block; margin-top: 2px; font-size: 12.5px; font-style: normal; color: var(--muted); }
+.ms-fhint { margin: 8px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--muted); }
+
+/* ⭐ 하루 별 라인 — 구글 캐논(2026-08-12 두벌 확정: 부모=구글). 값은 서버(S.econ)가 준다 */
+.sl { margin-top: var(--ns-8); }
+.sl-hd { display: flex; align-items: baseline; justify-content: space-between; gap: var(--ns-8); }
+.sl-hd b { font-size: var(--ns-fs-16); font-weight: 700; }
+.sl-now { font-size: var(--ns-fs-19); font-weight: 700; color: var(--accent-ink); font-variant-numeric: tabular-nums; }
+.sl-dial { display: flex; align-items: center; gap: 12px; margin-top: var(--ns-8); }
+.sl-b { flex: none; width: 34px; height: 34px; min-height: 0; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  border: 1.5px solid var(--line); border-radius: 50%; background: var(--card);
+  color: var(--accent-ink); font-size: 19px; font-weight: 700; line-height: 1; }
+.sl-b[disabled] { opacity: .35; }
+.sl-bar { flex: 1 1 auto; height: 8px; border-radius: 99px; background: var(--chip); overflow: hidden; }
+.sl-bar i { display: block; height: 100%; border-radius: 99px; background: var(--t-bar); transition: width .25s; }
+.sl-sub { margin: var(--ns-8) 0 0; font-size: var(--ns-fs-13); line-height: 1.5; color: var(--muted); word-break: keep-all; }
+.sl-sub b { color: var(--ink); font-variant-numeric: tabular-nums; }
+
+/* 지난 이레(부모, 구글 캐논) — 초록=했다 · 분홍=놓쳤다 · 회색=그날 없었다 */
+.wk7 { margin-top: 12px; }
+.wk7 .dots { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.wk7 .d { text-align: center; font-size: 11px; color: var(--muted); font-weight: 700; }
+.wk7 .d i { display: grid; place-items: center; height: 30px; margin-bottom: 4px;
+  border-radius: var(--ns-r); border: 1px solid var(--line); background: var(--card);
+  font-style: normal; font-size: 14px; color: var(--muted); }
+.wk7 .d.on i { border-color: transparent; background: var(--done); color: var(--on-accent); }
+.wk7 .d.miss i { border-color: transparent; background: color-mix(in srgb, var(--danger) 14%, var(--card)); color: var(--danger); }
+.wk7 .d.today { color: var(--accent-ink); }
+
+/* 미션 액션바 (2026-08-10) — 바꾸기·고르기·만들기 세 입구를 한 줄로.
+   흩어져 있던 것을 나란히 두는 게 이 개편의 요점이라, 셋의 생김새가 똑같아야 한다. */
+.ms-actrow { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-top: 14px; }
+.ms-actrow button { display: flex; flex-direction: column; align-items: center; gap: 5px;
+  padding: 13px 4px 11px; border: 1.5px solid var(--line); border-radius: var(--ns-r);
+  background: var(--card); color: var(--ink); font-size: 19px; }
+.ms-actrow button i { font-size: 20px; color: var(--accent-ink); }
+.ms-actrow button b { font-size: 13.5px; font-weight: 700; }
+.ms-actrow button[disabled] { opacity: .45; }
+/* 아이 화면 미리보기 — 행동이 아니라 «구경»이라 액션바와 결이 달라야 한다: 꽉 찬 한 줄 */
+.ms-preview { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;
+  margin-top: 10px; padding: 13px; border: 1.5px solid var(--line); border-radius: var(--ns-r);
+  background: var(--card-a); color: var(--ink); }
+.ms-preview i { font-size: 19px; color: var(--accent-ink); }
+.ms-preview b { font-size: 14.5px; font-weight: 700; }
+/* 「확인해 주세요」가 맨 위로 왔을 때 — 카드보다 먼저 눈에 걸리게 밑줄 하나 */
+.vf-wrap.top { margin: 14px 0 4px; padding-bottom: 14px; border-bottom: 1.5px dashed var(--line); }
+/* 미션 세계(.gmw) 안에서는 세계 문법으로 — 흰 판 + 굵은 그림자 + 금색(2026-08-10 대표님: 「디자인이 안 맞어」).
+   부모 토큰(--card·--line) 그대로 두면 파란 세계에 베이지 조각이 뜬다. */
+.gmw .ms-actrow button, .gmw .ms-preview {
+  background: var(--g-panel); color: var(--g-ink);
+  border: none; border-radius: 18px; box-shadow: var(--g-shadow); }
+.gmw .ms-actrow button i, .gmw .ms-preview i { color: var(--g-gold-d); }
+.gmw .ms-actrow button[disabled] { opacity: .55; }
+
+/* ═══ 부모 월간 리포트 (2026-08-03) ═══════════════════════════
+   일일 퀘스트가 쌓은 것을 한 장으로. 막대는 장식이 아니라 **표본 크기**를 눈으로 보여주는 것이라,
+   숫자를 지우고 막대만 남기지 말 것. 「3번 중 2번」이 「67%」보다 정직하다. */
+.pg-h { margin: 4px 0 0; font-size: 22px; font-weight: 700; letter-spacing: -.02em; }
+.rp-nav { display: flex; align-items: center; justify-content: center; gap: 18px; margin-top: 10px; }
+.rp-nav b { font-size: 15px; font-weight: 600; }
+.rp-nav button { display: flex; align-items: center; justify-content: center;  border: none; border-radius: var(--ns-r);
+  background: var(--card); color: var(--icon); font-size: 16px; }
+.rp-nav button[disabled] { opacity: .35; }
+
+.rp-sec { background: var(--card); }
+.rp-hd { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.rp-lead { margin: 14px 0 8px; font-size: 13px; color: var(--muted); }
+.rp-lead b { color: var(--ink); font-weight: 600; }
+
+.rp-list { list-style: none; margin: 8px 0 0; padding: 0; }
+.rp-list li { display: grid; grid-template-columns: minmax(0, 96px) 1fr auto;
+  align-items: center; gap: 10px; min-height: 34px; }
+.rp-list b { overflow: hidden; font-size: 14px;  text-overflow: ellipsis; white-space: nowrap; }
+.rp-list em { font-size: 12px; font-style: normal; color: var(--muted); white-space: nowrap; }
+.rp-bar { display: block; height: 8px; border-radius: 4px; background: var(--chip); }
+.rp-bar i { display: block; height: 100%; min-width: 3px; border-radius: 4px; background: var(--accent); }
+.rp-note { margin: 10px 0 0;  line-height: 1.5; color: var(--muted); }
+.rp-note b { color: var(--ink); font-weight: 600; }
+
+.rp-empty { margin-top: 26px; padding: 30px 20px; border-radius: var(--ns-r);
+  background: var(--card); text-align: center; }
+.rp-empty i { font-size: 28px; color: var(--icon); }
+.rp-empty b { display: block; margin-top: 12px; font-size: 16px; font-weight: 700; }
+.rp-empty span { display: block; margin-top: 8px; font-size: 13px; line-height: 1.6; color: var(--muted); }
+
+/* ═══ 자녀 홈 «오늘 카드 덱» (kd3-, 2026-08-03) ═══════════════
+   부모는 목록을 훑고 아이는 한 장씩 해치운다. 그 차이를 색이 아니라 **구조**로 만든다.
+   뒤에 겹친 유령 카드가 이 화면의 서명 — 남은 개수를 숫자 대신 두께로 보여준다.
+   여덟 살은 「3/5」를 읽지 않지만 종이가 두꺼운 건 본다. */
+.kd3-top { display: flex; align-items: center; gap: 10px; margin: 6px 0 14px; }
+.kd3-star { display: flex; align-items: center; gap: 7px; padding: 8px 14px 8px 12px;
+  border: none; border-radius: 999px; background: var(--card); }
+.kd3-star .s { font-size: 17px; font-style: normal; color: var(--k-star, var(--k)); }
+.kd3-star b { font-size: 17px; font-weight: 800; color: var(--ink); }
+.kd3-star span { font-size: 13px; font-weight: 700;  }
+.kd3-wait { margin-left: auto; padding: 7px 12px; border-radius: 999px;
+  background: var(--k-soft);  font-size: 12.5px; font-weight: 800; }
+
+.kd3-deck { position: relative; }
+.kd3-stack { position: relative; }
+/* 유령 카드 — 뒤에 남은 장. 장식이 아니라 개수 표시다 */
+.kd3-ghost { position: absolute; left: 0; right: 0; display: block; height: 26px;
+  border-radius: var(--ns-r); }
+.kd3-ghost.g1 { top: -11px; left: 10px; right: 10px;
+  background: color-mix(in srgb, var(--card) 88%, var(--ink) 12%);
+  box-shadow: var(--sh2), inset 0 1px 0 color-mix(in srgb, var(--card) 60%, #fff); }
+.kd3-ghost.g2 { top: -21px; left: 21px; right: 21px;
+  background: color-mix(in srgb, var(--card) 76%, var(--ink) 24%);
+  box-shadow: var(--sh2), inset 0 1px 0 color-mix(in srgb, var(--card) 60%, #fff); }
+
+.kd3-card { position: relative; display: flex; flex-direction: column;
+  min-height: 268px; padding: 18px 18px 16px; border-radius: 18px;
+  background: var(--card);  }
+.kd3-hd { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.kd3-badge { padding: 6px 11px; border-radius: 999px; font-size: 12px;  }
+.kd3-badge.now { background: var(--k); color: var(--on-kk); }
+.kd3-badge.wait { background: var(--k-soft); color: var(--k); }
+.kd3-stars { font-size: 15px; font-weight: 900; color: var(--k-star, var(--k)); }
+.kd3-card h2 { margin: 16px 0 0; font-size: 22px; font-weight: 800;
+  line-height: 1.35; letter-spacing: -.02em; word-break: keep-all; }
+.kd3-sub { margin: 8px 0 0;  line-height: 1.5; color: var(--muted); }
+.kd3-go { margin-top: auto; min-height: 52px; border: none; border-radius: 14px;  font-weight: 800; }
+.kd3-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 6px; }
+.kd3-x, .kd3-next { min-height: 44px; padding: 0 4px; border: none; background: none;
+  color: var(--muted); font-size: 14px; font-weight: 700; }
+.kd3-next { display: flex; align-items: center; gap: 2px; color: var(--k); }
+
+.kd3-dots { display: flex; align-items: center; justify-content: center; gap: 7px; margin-top: 16px; }
+.kd3-dots i { width: 7px; height: 7px; border-radius: 4px; background: var(--line); }
+.kd3-dots i.on { width: 20px; background: var(--k); }
+
+/* 다 했을 때 */
+.kd3-clear { align-items: center; justify-content: center; text-align: center; }
+.kd3-seal { display: flex; align-items: center; justify-content: center;
+  width: 62px; height: 62px; border-radius: 50%; background: var(--k-soft); color: var(--k); font-size: 30px; }
+.kd3-clear h2 { margin-top: 16px; font-size: 23px; }
+.kd3-clear p { margin: 8px 0 0; font-size: 14.5px; font-weight: 600; color: var(--muted); }
+
+/* 덱 아래 바로가기 — 질문이 아닌 것들은 여기로 비킨다 */
+.kd3-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+.kd3-chips button { display: flex; align-items: center; gap: 6px; min-height: 44px;
+  padding: 0 14px; border: none; border-radius: 999px; background: var(--card);
+  color: var(--ink); font-size: 14px;  }
+.kd3-chips i.ti { color: var(--muted); font-size: 16px; }
+.kd3-chips em { padding: 1px 7px; border-radius: 999px; background: var(--k);
+  color: var(--on-kk); font-size: 11.5px; font-style: normal; font-weight: 900; }
+
+/* ═══ 부모 홈 «오늘 축» (hp-, 2026-08-03) ════════════════════
+   아이 화면이 «한 장씩 덱»이 되면서 부모 화면은 그 반대로 세운다 — 하루를 위에서
+   내려다보는 한 판. 시간이 위에서 아래로 흐르고 지난 것은 흐려진다.
+   서명 요소는 **왼쪽 세로선과 지금 자리의 굵은 점**이다. 색이 아니라 자리가 뜻을 진다. */
+.hp-say { display: flex; align-items: baseline; gap: 8px; margin: 14px 2px 12px; }
+.hp-say b { font-weight: 700;  }
+.hp-say span { font-size: 14.5px; color: var(--muted); }
+
+.hp-line { position: relative; padding: 4px 0; }
+/* 세로선 — 시각 칸(44px) + 간격(10) 안쪽에 선다 */
+.hp-line::before { content: ""; position: absolute; left: 59px; top: 14px; bottom: 14px;
+  width: 2px; border-radius: 1px; background: var(--line); }
+
+.hp-row { position: relative; display: grid; grid-template-columns: 44px 22px 1fr auto;
+  align-items: center; gap: 6px; width: 100%; min-height: 58px; padding: 8px 8px 8px 0;
+  border: none;  text-align: left; }
+.hp-t { font-size: 12.5px;  color: var(--muted);  text-align: right; }
+.hp-mark { display: flex; align-items: center; justify-content: center; }
+.hp-mark i { display: block; width: 10px; height: 10px; border-radius: 50%;
+  background: var(--line);  }
+.hp-tx { min-width: 0; }
+.hp-tx b { display: block; font-size: 15.5px; font-weight: 600; letter-spacing: -.01em; }
+.hp-tx span { display: block; margin-top: 2px; overflow: hidden; font-size: 13px;
+  color: var(--muted); text-overflow: ellipsis; white-space: nowrap; }
+.hp-go { color: var(--muted); font-size: 16px; opacity: .55; }
+
+/* 지나간 것 — 지우지 않고 흐린다. 오늘이 어디까지 왔는지가 그 자체로 정보다 */
+.hp-row.past .hp-tx b, .hp-row.past .hp-t { color: var(--muted); font-weight: 500; }
+.hp-row.past .hp-mark i { background: var(--line); }
+.hp-row.past .hp-tx span { opacity: .7; }
+/* 지금 자리 — 이 화면에서 제일 굵은 한 점 */
+.hp-row.now .hp-mark i { width: 14px; height: 14px; background: var(--accent); }
+.hp-row.now .hp-tx b { font-weight: 800; }
+.hp-pend { display: inline-block; min-width: 18px; padding: 0 5px; border-radius: 999px;
+  background: var(--todo); color: var(--on-fn); font-size: 11.5px; font-style: normal;
+  font-weight: 800; text-align: center; vertical-align: 1px; }
+
+/* 서랍 «가장 최근» — 사진 없는 기록용 한 줄(2026-08-03).
+   16:9 회색 덩어리를 세우던 자리다. 없는 사진을 자리로 표시하지 않는다. */
+.dw-recent { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px;
+  margin-top: 18px; padding: 12px 14px; border: none; border-radius: var(--ns-r);
+  background: var(--card); text-align: left; }
+
+/* 미션 — 요약 카드 자리에 «눌러야 할 것» 하나만 */
+.ms-need { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 52px;
+  margin-top: 14px; padding: 0 14px; border: none; border-radius: var(--ns-r);
+  background: var(--todo-soft, color-mix(in srgb, var(--todo) 10%, var(--card)));
+  color: var(--todo-ink); font-size: 14.5px; font-weight: 700; text-align: left; }
+
+/* 서랍 «가장 최근» — 사진 없는 기록용 한 줄(2026-08-03).
+   16:9 회색 덩어리를 세우던 자리다. 없는 사진을 자리로 표시하지 않는다. */
+.dw-recent { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 64px;
+  margin-top: 18px; padding: 12px 14px; border: none; border-radius: var(--ns-r);
+  background: var(--card); text-align: left; }
+.dw-recent > i.ti { flex: none;  font-size: 20px; }
+.dw-recent .tx { flex: 1; min-width: 0; }
+.dw-recent .tx b { display: block; overflow: hidden; 
+  text-overflow: ellipsis; white-space: nowrap; }
+.dw-recent .tx span { display: block; margin-top: 2px; font-size: 12.5px;  }
+.dw-recent em { flex: none; padding: 3px 8px; border-radius: 999px;  font-size: 11.5px; font-style: normal; font-weight: 700; }
+.dw-recent .go { font-size: 16px; opacity: .55; }
+
+/* 미션 — 요약 카드 자리에 «눌러야 할 것» 하나만 */
+.ms-need { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 52px;
+  margin-top: 14px; padding: 0 14px; border: none; border-radius: var(--ns-r);
+  background: var(--todo-soft, color-mix(in srgb, var(--todo) 10%, var(--card)));
+  color: var(--todo-ink); font-size: 14.5px; font-weight: 700; text-align: left; }
+.ms-need i.ti { font-size: 17px; }
+.ms-need em { margin-left: auto; font-size: 13px; font-style: normal;  opacity: .85; }
+
+/* ═══ 입체감 (2026-08-03) ═══════════════════════════════════
+   「너무 평면이야」 — 면만 뒤집으니 카드가 뜨긴 했는데 여전히 종이에 그린 그림이었다.
+   그림자를 **한 벌로 정의해서** 같은 층은 같은 높이로 뜨게 한다. 층은 셋뿐이다:
+     ①줄(row) ②카드/구획 ③떠 있는 것(버튼·시트·탭바)
+   ⚠ 어두운 테마에선 그림자가 안 보인다 — 대신 **위쪽 1px 하이라이트**로 세운다.
+      검은 화면에 검은 그림자를 깔면 그냥 더러워진다. */
+:root {
+  --sh1: 0 1px 2px rgba(16,24,40,.10);
+  --sh2: 0 1px 3px rgba(16,24,40,.10), 0 8px 20px -6px rgba(16,24,40,.22);
+  --sh3: 0 2px 6px rgba(16,24,40,.14), 0 16px 34px -10px rgba(16,24,40,.32);
+  --hi: none;
+}
+[data-theme="dark"], [data-theme="lavender"], [data-theme="navy"], [data-theme="charcoal"],
+:root[data-kid-theme] {
+  --sh1: 0 1px 2px rgba(0,0,0,.30);
+  --sh2: 0 2px 6px rgba(0,0,0,.36);
+  --sh3: 0 6px 18px rgba(0,0,0,.46);
+  --hi: inset 0 1px 0 rgba(255,255,255,.06);
+}
+
+/* ② 카드·구획 */
+:where(.hd-ms, .rp-sec, .ms-row, .dw-recent, .hd-card, .kd2-nt, .kd2-sup,
+       .kd2-goal, .lg-field, .hp-line, .kd2-shot, .kd3-chips button, .kd2-picks .kd2-pick.on) {
+  box-shadow: var(--sh2), var(--hi);
+}
+/* 시간 축은 통짜 카드로 세운다 — 줄만 떠 있으면 축이 끊겨 보인다 */
+.hp-line { padding: 6px 8px; border-radius: var(--ns-r); background: var(--card); }
+.hp-row { background: none; }
+
+/* ③ 떠 있는 것 — 누르는 것들 */
+:where(.btn-primary, .lg-go, .kd3-go, .kd2-cta, .ms-need, .hd-ms-wait, .gc-fab) {
+  box-shadow: var(--sh3);
+}
+.kd3-card { box-shadow: var(--sh3), var(--hi); }
+#tabbar { box-shadow: 0 -1px 0 var(--line), 0 -10px 28px -10px rgba(16,24,40,.28); }
+[data-theme="dark"] #tabbar, [data-theme="lavender"] #tabbar,
+[data-theme="navy"] #tabbar, [data-theme="charcoal"] #tabbar {
+  box-shadow: 0 -1px 0 var(--line), 0 -10px 26px rgba(0,0,0,.5);
+}
+/* 눌리면 내려앉는다 — 입체는 «높이»라서 눌림이 있어야 진짜로 읽힌다 */
+:where(.btn-primary, .lg-go, .kd3-go, .kd2-cta, .hd-card, .ms-row, .dw-recent):active {
+  transform: translateY(1px); box-shadow: var(--sh1);
+}
+@media (prefers-reduced-motion: reduce) {
+  :where(.btn-primary, .lg-go, .kd3-go, .kd2-cta, .hd-card, .ms-row, .dw-recent):active { transform: none; }
+}
+
+/* ═══ 글씨 입체 (2026-08-03) ═══════════════════════════════
+   카드만 뜨고 글씨가 평평하면 «스티커 붙인 종이»가 된다. 다만 글씨 그림자는 세게 넣는 순간
+   흐려 보이고 2010년대 스큐어모픽이 된다. 그래서 규칙을 좁힌다:
+
+     · **큰 글씨에만** — 18px 이상. 작은 글씨는 그림자가 곧 번짐이다
+     · 밝은 테마는 **아래쪽 흰 하이라이트**(양각), 어두운 테마는 **아래쪽 검은 그림자**(음각)
+     · 본문·라벨·입력값에는 넣지 않는다. 읽는 글씨는 평평한 게 제일 잘 읽힌다 */
+:root { --tsh: 0 1px 0 rgba(255,255,255,.75); --tsh-on: 0 1px 1px rgba(0,0,0,.14); }
+[data-theme="dark"], [data-theme="lavender"], [data-theme="navy"], [data-theme="charcoal"] {
+  --tsh: 0 1px 2px rgba(0,0,0,.45); --tsh-on: 0 1px 1px rgba(0,0,0,.22);
+}
+
+:where(.pg-h, .kd2-h1, .kd3-card h2, .kd3-clear h2, .lg-title, .hp-say b,
+       .hd-ms-cnt, .kd3-star b, .rp-hd b, .ms-sum b, .kd2-q2, .dw-h) {
+  text-shadow: var(--tsh);
+}
+/* 색 위에 얹힌 글씨 — 바탕이 진해서 하이라이트가 안 먹는다. 살짝 눌러 넣는다 */
+:where(.kd3-go, .kd2-cta, .lg-go, .btn-primary, .kd3-badge.now) { text-shadow: var(--tsh-on); }
+
+/* 숫자는 자리를 고정한다 — 1/3 이 1/13 이 될 때 글자가 밀리면 입체고 뭐고 흔들려 보인다 */
+:where(.hd-ms-cnt, .kd3-star b, .hp-t, .rp-list em, .kd3-stars) { font-variant-numeric: tabular-nums; }
+
+@media (prefers-reduced-motion: no-preference) {
+  /* 아이콘도 같은 층에 있다 — 카드가 떴으면 그 위 아이콘도 살짝 떠야 한다 */
+  :where(.hd-stamp .mark, .kd3-star .s, .kd2-prev .pv-btn) { filter: drop-shadow(0 1px 1px rgba(0,0,0,.10)); }
+}
+
+/* ═══ 글씨 굵기 한 단 올림 (2026-08-03) ═══════════════════════
+   「너무 얇다」 — 카드가 뜨고 그림자가 생기니 얇은 글씨가 상대적으로 더 가늘어 보인다.
+   무게는 **한 단씩만** 올린다. 두 단 올리면 화면이 시커메지고 위계가 무너진다.
+     본문 400 → 500 · 라벨/부제 500 → 600 · 줄 제목 600 → 700
+   ⚠ 입력칸과 긴 문단은 올리지 않는다. 읽는 글씨는 굵을수록 느려진다. */
+body { font-weight: 500; }
+
+:where(.hp-tx b, .ms-hd b, .mp-row b, .dw-recent .tx b, .rp-list b, .kd2-sup b,
+       .hd-nm, .kd3-chips button, .lg-links a, .hd-ms-hd b, .rp-hd b) { font-weight: 700; }
+
+:where(.hp-tx span, .hp-t, .ms-meta, .rp-list em, .rp-hd span, .dw-recent .tx span,
+       .hd-lb, .hd-sub, .kd3-sub, .kd2-sub, .rp-note, .rp-lead) { font-weight: 600; }
+
+/* 지금 자리·확인 대기처럼 «봐야 하는 줄»은 한 단 더 */
+.hp-row.now .hp-tx b { font-weight: 800; }
+:where(.ms-need, .hd-ms-wait, .kd3-badge, .kd2-nt .tx) { font-weight: 800; }
+
+/* ⚠ 여기는 올리지 않는다 — 굵으면 오히려 못 읽거나 «입력한 값»처럼 안 보인다 */
+:where(input, textarea, select, .lg-field input, .rp-note, .mp-hint, .fine, .sub) { font-weight: 500; }
+
+/* ═══ 고급스럽게 — 크기와 여백의 강약 (2026-08-03) ═══════════
+   「허접하다」의 나머지 절반은 **모든 글씨가 같은 크기**라는 것이었다.
+   고급스러움은 색이 아니라 **대비**에서 온다 — 큰 건 더 크게, 작은 건 더 작고 흐리게.
+   여백도 마찬가지다. 구획 사이는 넉넉하게, 줄 안쪽은 조밀하게. */
+.pg-h, .dw-h, #screen > h1 { font-size: 27px; font-weight: 800; letter-spacing: -.035em; }
+.mp-sec { margin-top: var(--ns-24); text-transform: none;
+  font-size: var(--ns-fs-14); font-weight: 700; padding: 0 var(--ns-8) var(--ns-8); }
+.hp-say { margin: 20px 2px 14px; }
+.hp-say b { font-size: 19px; letter-spacing: -.03em; }
+
+/* 모서리를 한 단 키운다 — 14px 은 «앱 기본값»으로 읽히고 20px 부터 의도가 보인다 */
+:where(.hd-ms, .rp-sec, .ms-row, .hp-line, .dw-recent, .hd-card, .kd2-nt, .kd2-sup) { border-radius: 20px; }
+:where(.btn-primary, .lg-go, .ms-need) { border-radius: var(--ns-r); }
+.kd2-cta { border-radius: 16px; }   /* 자녀앱(B모듈)은 둥근 채로 둔다 — 정본이 다르다 */
+
+/* 구획 사이 숨 — 지금은 전부 12~16px 이라 화면이 한 덩어리로 보인다 */
+.hd-ms { margin-top: 22px; padding: 18px 16px; }
+.hd-row5 { margin-top: 26px; }
+.rp-sec { margin-top: 22px; padding: 20px 16px; }
+
+/* 얇은 선은 더 얇게 — 굵은 회색 선은 싸 보인다 */
+.mp-row + .mp-row, .ms-row + .ms-row { border-top-width: .5px; }
+
+/* ═══ 「다 똑같다」 풀기 (2026-08-03) ═══════════════════════════
+   지적이 정확했다 — 버튼도 카드도 글씨도 전부 «둥근 사각형 + 글씨»라 어느 화면이나 같아 보였다.
+   색을 더 쓰는 게 답이 아니라 **한 덩어리만 다르게** 만드는 게 답이다.
+   그래서 홈의 주인공(미션)만 **색을 채운 카드**로 세운다. 나머지는 흰 카드 그대로.
+   화면에 «다른 것» 하나가 생기면 나머지가 배경이 되고 위계가 생긴다. */
+.hd-ms {
+  background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 90%, #FFF) 0%, var(--accent-ink) 60%, color-mix(in srgb, var(--accent) 82%, #000) 100%);
+  border-radius: 22px; padding: 6px 16px 16px; margin-bottom: 18px;
+  box-shadow: 0 2px 6px rgba(18,53,102,.22), 0 18px 34px -12px rgba(18,53,102,.45);
+}
+.hd-ms .hd-ms-hd b, .hd-ms-cnt { color: #FFFFFF; }
+.hd-ms-cnt i { color: rgba(255,255,255,.62); }
+.hd-ms .hd-go { color: rgba(255,255,255,.62); }
+.hd-ms-empty { color: rgba(255,255,255,.72); }
+
+/* 도장 — 회색·초록 링을 걷어낸다. 링은 «비어 있음»으로 읽혀서 다 한 날도 허전했다.
+   찍힌 것은 **채워진 흰 원**, 기다리는 것은 금빛, 아직인 것만 점선으로 비워 둔다. */
+.hd-stamp .mark { width: 54px; height: 54px; border-radius: 50%; display: grid; place-items: center;
+  font-size: 21px; transition: transform .12s ease; }
+.hd-stamp.on .mark { border: 0; background: #FFFFFF; color: var(--accent-ink);
+  box-shadow: 0 3px 10px rgba(0,0,0,.22); transform: rotate(-4deg); }
+.hd-stamp:nth-child(2).on .mark { transform: rotate(3deg); }
+.hd-stamp.wait .mark { border: 0; background: #F0B429; color: #3A2708;
+  box-shadow: 0 3px 10px rgba(0,0,0,.22); }
+.hd-stamp.off .mark { border: 1.5px dashed rgba(255,255,255,.38); color: rgba(255,255,255,.55); background: none; }
+.hd-stamp .lb { color: rgba(255,255,255,.66); font-weight: 600; }
+.hd-stamp.off .lb { color: #FFFFFF; font-weight: 700; }
+.hd-stamp:active .mark { transform: scale(.94); }
+
+/* 색 카드 안의 «확인하러 가기» 줄 — 흰 알약. 카드 안에서 한 번 더 층이 생긴다 */
+.hd-ms .hd-ms-wait { background: rgba(255,255,255,.14); color: #FFFFFF;
+  border-radius: 999px; min-height: 46px; font-weight: 700;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.22); }
+.hd-ms .hd-ms-wait i.ti { color: #FFD87A; }
+.hd-ms .ms-linkwarn { background: rgba(255,255,255,.14); color: #FFFFFF; }
+
+/* 격자 아이콘 — 회색 원을 색 타일로. 홈에서 유일하게 «누르는 것들»이라 한 벌로 묶는다 */
+.hd-mini .hd-ic.xs { background: #F1F4F9; box-shadow: inset 0 0 0 1px #E2E8F2; }
+.hd-mini .hd-ic.xs i.ti { color: #2C4E80; }
+
+/* ═══ 줄을 번갈아 칠한다 (2026-08-03) ══════════════════════════
+   자녀 밝은 테마가 좋아 보인 이유는 **흰 카드 + 아주 옅은 색 바탕**이 겹쳐 있어서다.
+   부모도 같은 방식으로 — 다만 색을 새로 쓰지 않고 **포인트 파랑을 3%만 섞어** 쓴다.
+   줄이 번갈아 칠해지면 눈이 줄을 세지 않아도 «몇 개인지»가 보인다. */
+:root { --tint: color-mix(in srgb, var(--accent) 5%, #FFFFFF); }
+[data-theme="dark"], [data-theme="lavender"], [data-theme="navy"], [data-theme="charcoal"] {
+  --tint: color-mix(in srgb, var(--accent) 9%, var(--card));
+}
+
+/* 홈 시간 축 — 한 줄 걸러 옅은 파랑. 지난 줄은 칠하지 않는다(끝난 건 조용해야 한다) */
+.hp-line { padding: 6px; }
+.hp-row { border-radius: var(--ns-r); }
+.hp-row:nth-child(even):not(.past) { background: var(--tint); }
+.hp-row.now { background: color-mix(in srgb, var(--accent) 9%, #FFFFFF); }
+[data-theme="dark"] .hp-row.now, [data-theme="lavender"] .hp-row.now,
+[data-theme="navy"] .hp-row.now, [data-theme="charcoal"] .hp-row.now {
+  background: color-mix(in srgb, var(--accent) 16%, var(--card));
+}
+.hp-mark i { box-shadow: none; }
+.hp-line::before { left: 65px; }
+
+/* 내 정보·서류 같은 목록도 같은 규칙 — 다만 카드 안쪽이라 더 옅게 */
+.mp-row:nth-child(even) { background: color-mix(in srgb, var(--accent) 3%, transparent); }
+
+/* 리포트 표도 한 줄 걸러 — 숫자를 눈으로 따라가기 쉬워진다 */
+.rp-list li:nth-child(even) { background: var(--tint); border-radius: var(--ns-r); }
+.rp-list li { padding: 0 8px; }
+
+/* ═══ 감사에서 나온 3건 (2026-08-03) ═══════════════════════════
+   ① 밝은 자녀 6벌의 배지 글씨가 4.5:1 미달(2.90~3.87) → --k-ink 진한 짝을 쓴다
+   ② 카드 구분선이 흰 배경에서 1.22:1 → --line 을 한 단 진하게
+   ③ 44px 미만 터치 영역 → 최소치까지 올린다 */
+.kd3-badge.wait { color: var(--k-ink, var(--k)); }
+.kd3-star span, .kd3-wait { color: var(--k-ink, var(--k)); }
+.kd2-goal b, .rp-hd span { color: inherit; }
+
+.rp-nav button { width: 44px; height: 44px; }
+:where(.nt-presets button, .hd-banner button, .kd2-nt .ack, .hd-more .edit) { min-height: 44px; }
+.kd2-pick1 button i { min-width: 26px; }
+
+/* ═══ 아이콘에 색을 확실하게 (2026-08-03) ═══════════════════════
+   「파랑을 넣을 거면 파랑·핑크·오렌지 이런 식으로 확실하게 가라」 —
+   회색 아이콘 열여덟 개는 목록을 «표»로 만든다. 뜻이 다르면 색도 달라야 눈이 줄을 건너뛴다.
+   ⚠ 규칙은 지킨다: **색은 갈래를 가리키는 것이지 상태가 아니다.**
+      빨강=해야 할 일 / 초록=완료는 그대로 이 팔레트 밖에 둔다.
+   아이콘 칸에만 옅은 그라디언트를 넣는다 — 면이 살짝 부풀어 보인다. */
+/* 🔴 2026-08-11 폐기 — 그라디언트 칩과 «갈래별 색»은 새 정본에서 쓰지 않는다.
+   색 계열은 둘뿐이다(파랑=행동·학교 / 자주=우리 아이). 여덟 가지 파스텔 칩은
+   사진 테마 19벌과 싸운다. .mp-i 는 위 2678행의 평평한 32px 칩이 정본이다.
+   아래 :has() 팔레트도 --ic-* 를 안 읽으므로 자동으로 죽는다(선택자는 남겨 둔다 — 지우면
+   diff 가 커져 뭘 바꿨는지 안 보인다). */
+.hd-mini .hd-ic.xs {
+  background: linear-gradient(145deg, var(--ic-a, #EEF1F6), var(--ic-b, #E4E9F1));
+  color: var(--ic-f, #3A506F);
+}
+/* 갈래별 색 — 아이콘 이름으로 고른다. 화면마다 손으로 칠하지 않는다 */
+.mp-i:has(.ti-user),        .hd-ic:has(.ti-user)        { --ic-a:color-mix(in srgb, var(--accent) 12%, var(--card)); --ic-b:color-mix(in srgb, var(--accent) 20%, var(--card)); --ic-f:var(--accent); }
+.mp-i:has(.ti-plus),        .hd-ic:has(.ti-plus)        { --ic-a:color-mix(in srgb, var(--accent) 12%, var(--card)); --ic-b:color-mix(in srgb, var(--accent) 20%, var(--card)); --ic-f:var(--accent); }
+.mp-i:has(.ti-message-circle), .hd-ic:has(.ti-message-circle) { --ic-a:#E2F5EF; --ic-b:#C9EBE1; --ic-f:#0B6B57; }
+.mp-i:has(.ti-pencil),      .hd-ic:has(.ti-pencil)      { --ic-a:#FFEDDD; --ic-b:#FBDCC2; --ic-f:#9A4B10; }
+.mp-i:has(.ti-file-text),   .hd-ic:has(.ti-file-text)   { --ic-a:#FFEDDD; --ic-b:#FBDCC2; --ic-f:#9A4B10; }
+.mp-i:has(.ti-photo),       .hd-ic:has(.ti-photo)       { --ic-a:#F0E7FF; --ic-b:#E1D3FB; --ic-f:#5B3AA6; }
+.mp-i:has(.ti-bell),        .hd-ic:has(.ti-bell)        { --ic-a:#FFE6EE; --ic-b:#FBD0DE; --ic-f:#A32250; }
+.mp-i:has(.ti-lock),        .hd-ic:has(.ti-lock)        { --ic-a:#E8EAF0; --ic-b:#D8DCE6; --ic-f:#3D465C; }
+.mp-i:has(.ti-receipt),     .hd-ic:has(.ti-receipt)     { --ic-a:#FFF3D6; --ic-b:#FAE6B4; --ic-f:#8A5B00; }
+.mp-i:has(.ti-flag),        .hd-ic:has(.ti-flag)        { --ic-a:#E8EAF0; --ic-b:#D8DCE6; --ic-f:#3D465C; }
+.hd-ic:has(.ti-run)     { --ic-a:#E2F5EF; --ic-b:#C9EBE1; --ic-f:#0B6B57; }
+.hd-ic:has(.ti-school)  { --ic-a:#F0E7FF; --ic-b:#E1D3FB; --ic-f:#5B3AA6; }
+.hd-ic:has(.ti-messages){ --ic-a:#FFE6EE; --ic-b:#FBD0DE; --ic-f:#A32250; }
+
+/* 어두운 테마에선 옅은 파스텔이 뜬다 — 바탕을 죽이고 아이콘 색만 살린다 */
+[data-theme="dark"] :where(.mp-i, .hd-mini .hd-ic.xs),
+[data-theme="lavender"] :where(.mp-i, .hd-mini .hd-ic.xs),
+[data-theme="navy"] :where(.mp-i, .hd-mini .hd-ic.xs),
+[data-theme="charcoal"] :where(.mp-i, .hd-mini .hd-ic.xs) {
+  background: color-mix(in srgb, var(--ic-f, #8FA6C8) 20%, var(--card));
+  color: color-mix(in srgb, var(--ic-f, #8FA6C8) 45%, #FFFFFF);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.05);
+}
+
+/* ═══ 선명도 (2026-08-03) ═══════════════════════════════════
+   「글씨가 선명해 보이지 않는다」 — 원인은 두 가지였다.
+   ① 자녀 밝은 테마 여섯 벌이 «어두운 테마» 목록에 묶여 **흰 카드 위에 검은 그림자**를 썼다.
+      밝은 바탕에 어두운 번짐은 그냥 흐릿함이다.
+   ② 큰 제목에 그림자를 넣은 것 자체가 과했다. 제목은 **날카로운 게 정보**다.
+   그래서 제목에서 그림자를 걷고, 색 위에 얹힌 글씨(버튼·배지)만 남긴다. */
+:root[data-kid-theme] { --tsh: none; }
+:where(.kd3-card h2, .kd3-clear h2, .kd2-h1, .pg-h, .dw-h, .hp-say b, .kd2-q2) { text-shadow: none; }
+/* 대신 굵기와 자간으로 또렷하게 세운다 — 흐린 그림자보다 이쪽이 훨씬 선명하다 */
+.kd3-card h2 { font-weight: 800; letter-spacing: -.035em; -webkit-font-smoothing: antialiased; }
+.kd2-h1 { -webkit-font-smoothing: antialiased; }
+
+/* ═══ 마무리 네 가지 (2026-08-03) ══════════════════════════════
+   ① 색 조화 — 갈래 색을 다 같은 «채도·밝기»로 묶는다. 제각각이면 알록달록해진다
+   ② 버튼이 죽지 않게 — 비활성 버튼이 탁한 겨자색이 되던 것을 고친다
+   ③ 선명도 — 위에서 그림자를 걷었고, 여기선 굵기로 세운다
+   ④ 글씨 위계 — 제목/줄제목/본문/보조 **네 단**을 못 박는다. 지금은 단이 뭉개져 있었다 */
+
+/* ④ 글씨 네 단 — 크기와 굵기가 같이 움직여야 단으로 읽힌다 */
+:where(.pg-h, .dw-h, .kd2-h1, #screen > h1) { font-size: 26px; font-weight: 800; letter-spacing: -.035em; line-height: 1.25; }
+:where(.kd3-card h2)                        { font-size: 22px; font-weight: 800; letter-spacing: -.035em; line-height: 1.32; }
+:where(.hd-ms-hd b, .ms-hd b, .rp-hd b, .hp-say b) { font-size: 16px; font-weight: 700; letter-spacing: -.02em; }
+:where(.hp-tx b, .mp-l, .ms-row b, .dw-recent .tx b, .kd2-sup b) { font-size: 15px; font-weight: 700; letter-spacing: -.01em; }
+:where(.hp-tx span, .ms-meta, .mp-v, .kd3-sub, .kd2-sub, .rp-note, .hd-sub) { font-size: 13px; font-weight: 500; }
+.mp-sec { letter-spacing: .02em; }
+
+/* ② 비활성 버튼 — 색을 흐리게 하지 말고 **회색으로 바꾼다.**
+   포인트색에 투명도를 먹이면 탁한 겨자색·흙색이 되어 «고장난 것»처럼 보인다 */
+:where(.kd2-cta, .kd3-go, .btn-primary, .lg-go)[disabled] {
+  opacity: 1; background: var(--chip); color: var(--muted);
+  box-shadow: inset 0 0 0 1px var(--line); text-shadow: none; cursor: default;
+}
+/* (2026-08-12 두벌 원칙) 자녀 비활성 버튼 — 테마색 섞지 말고 kd 회색 고정 */
+:root[data-kid-theme] :where(.kd2-cta, .kd3-go)[disabled] {
+  background: #DDE3D6; color: #6C7566; box-shadow: 0 3px 0 #C9D1C0;
+}
+
+/* ① 색 조화 — 갈래 색 팔레트를 한 채도로 맞춘다(위 .mp-i 규칙이 쓰는 값과 같은 계열).
+   상태색(빨강·초록)은 이 팔레트 밖이다 — 갈래와 상태를 색으로 섞지 않는다 */
+.hd-mini .hd-ic.xs { width: 42px; height: 42px; border-radius: var(--ns-r); }
+.hd-mini .hd-ic.xs i.ti { font-size: 19px; }
+.mp-i { border-radius: var(--ns-r); }
+
+/* ③ 선명도 — 얇은 회색 글씨가 흐릿함의 주범이다. 보조 글씨도 한 단 진하게 */
+:root { --muted: #5F594E; }
+
+/* ═══ 파란 것들에 광택 + 알림을 빨강에서 떼기 (2026-08-03) ═══════
+   ① 「알림이라고 무조건 뻘겋지 않아도 된다」 — 맞다. 빨강 글씨를 분홍 바탕에 얹으면
+      흐릿하고 촌스럽다. **파랑을 채우고 흰 글씨**로 간다. 급한 건 개수가 말한다.
+      진짜 빨강은 계속 «해야 할 일 표시(점·뱃지)»에만 쓴다.
+   ② 광택 — 채운 파랑 위에 위쪽 흰빛을 아주 얇게 얹는다. 유리 느낌은 여기까지만.
+      두껍게 넣으면 2010년대 젤리 버튼이 된다.
+   ③ 내 정보에 파란 버튼이 하나도 없었다 — 화면마다 «누를 것» 하나는 채워져 있어야 한다. */
+.ms-need {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 84%, #FFF) 0%, var(--accent) 55%, var(--accent-ink) 100%);
+  color: #FFFFFF; border-radius: 999px; min-height: 50px; padding: 0 8px 0 16px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.28), 0 2px 5px rgba(18,53,102,.24),
+              0 10px 20px -8px rgba(18,53,102,.45);
+}
+.ms-need i.ti { color: #BFD6FF; }
+.ms-need em { padding: 6px 12px; border-radius: 999px; background: rgba(255,255,255,.18);
+  color: #FFFFFF; font-weight: 700; box-shadow: inset 0 0 0 1px rgba(255,255,255,.25); }
+
+/* 🔴 2026-08-11 폐기 — 새 정본은 평평하다. 광택은 그림 테마 19벌 위에서 얼룩으로 보였다.
+   (.hd-ms 는 자체 그라디언트가 있어 원래도 제외였다) */
+:where(.btn-primary, .lg-go, .ms-need, .cl-on, .act-del) { background-image: none; }
+.hd-ms { background-blend-mode: normal; }   /* 이미 자체 그라디언트가 있다 */
+
+/* ③ 내 정보의 「다시 연결」을 채운 파랑으로 — 이 화면의 유일한 «누를 것» */
+.cl-on {
+  min-height: 38px; padding: 0 14px; border: 0; border-radius: 999px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 84%, #FFF), var(--accent));
+  color: #FFFFFF; font-weight: 700;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.26), 0 2px 6px rgba(18,53,102,.28);
+}
+.cl-off { min-height: 38px; padding: 0 14px; border-radius: 999px; }
+
+/* ═══ 로그인·홈에도 같은 파랑 (2026-08-03) ══════════════════════
+   로그인 버튼만 검정이었다 — 앱에서 제일 먼저 누르는 버튼인데 다른 화면과 말이 달랐다.
+   포인트가 파랑으로 정해졌으면 **첫 버튼부터** 파랑이어야 한다. 광택도 같은 값으로. */
+.lg-go {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 84%, #FFF) 0%, var(--accent) 55%, var(--accent-ink) 100%);
+  color: #FFFFFF; font-weight: 800; border-radius: var(--ns-r);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.26), 0 2px 6px rgba(18,53,102,.26),
+              0 14px 26px -10px rgba(18,53,102,.42);
+}
+.lg-child button { border-color: color-mix(in srgb, var(--accent) 32%, var(--line));
+  color: var(--accent-ink); font-weight: 700; }
+.lg-child em { font-weight: 800; }
+
+/* 홈 — 남은 흰 줄들에도 갈래 색을 넣는다. 아이콘 칸이 색을 지고 글씨는 검정 그대로 */
+.hd-dday { border-radius: var(--ns-r); }
+.hd-dday > i.ti { display: grid; place-items: center; width: 34px; height: 34px; border-radius: var(--ns-r);
+  background: linear-gradient(145deg, color-mix(in srgb, var(--accent) 12%, var(--card)), color-mix(in srgb, var(--accent) 20%, var(--card))); color: var(--accent-ink); font-size: 17px;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.65), 0 1px 2px rgba(16,24,40,.10); }
+.hd-dday .hd-v { color: var(--accent-ink); font-weight: 800; }
+/* 시간 축의 «지금» 점에도 광택 한 점 */
+.hp-row.now .hp-mark i {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 68%, #FFF), var(--accent));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, #FFFFFF), 0 1px 3px rgba(18,53,102,.4);
+}
+/* 대화바 — 홈 맨 아래인데 혼자 무채색이었다 */
+.chatbar .cb-badge, .chatbar .badge { background: var(--accent); }
+
+/* ═══ 소셜 로그인은 브랜드 색 (2026-08-03) ═══════════════════════
+   회색 칸 세 개로 두면 무슨 버튼인지 안 읽힌다. 카카오·네이버·구글은
+   **그 색이 곧 이름**이라 우리 팔레트 규칙 밖에 둔다(브랜드 가이드 값 그대로).
+   ⚠ 순서 고정 — 카카오 · 네이버 · Google. 순서를 바꾸면 색도 같이 옮겨야 한다. */
+.lg-social button { font-weight: 800; border: 0; box-shadow: var(--sh1); }
+.lg-social button:nth-child(1) {            /* 카카오 */
+  background: #FEE500; color: rgba(0,0,0,.85);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.45), 0 1px 3px rgba(0,0,0,.14);
+}
+.lg-social button:nth-child(2) {            /* 네이버 */
+  background: #03C75A; color: #FFFFFF;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.28), 0 1px 3px rgba(0,0,0,.16);
+}
+.lg-social button:nth-child(3) {            /* Google — 흰 바탕 + 회색 테두리가 브랜드 규정 */
+  background: #FFFFFF; color: #1F1F1F;
+  box-shadow: inset 0 0 0 1px #DADCE0, 0 1px 3px rgba(0,0,0,.10);
+}
+/* 어두운 테마에서도 브랜드 색은 그대로 둔다 — 구글만 규정대로 어두운 판을 쓴다 */
+[data-theme="dark"] .lg-social button:nth-child(3),
+[data-theme="lavender"] .lg-social button:nth-child(3),
+[data-theme="navy"] .lg-social button:nth-child(3),
+[data-theme="charcoal"] .lg-social button:nth-child(3) {
+  background: #131314; color: #E3E3E3; box-shadow: inset 0 0 0 1px #8E918F;
+}
+
+/* 고객센터 줄 — 글씨만 있으면 링크로 안 읽힌다. 아이콘 하나로 «누르는 것»이 된다 */
+.lg-help a { display: inline-flex; align-items: center; gap: 7px; }
+.lg-help i.ti { font-size: 15px; color: var(--accent-ink); }
+
+/* ═══ 아이콘 붙은 버튼·링크 정렬 + 로고 살리기 (2026-08-03) ══════
+   ① 아이콘을 넣었으면 글씨와 같은 줄에 가운데로 서야 한다 — 한 벌로 묶는다
+   ② 「우리아이 학교정보」가 먹색 회색이라 우중충했다. 앱 이름은 **브랜드 색**이 맞다.
+      로고 마크도 회색 선이었다 — 파랑을 넣는다. */
+:where(.lg-go, .lg-eye, .lg-links a, .lg-child button, .kd2-cta, .kd3-go, .kd2-supadd button,
+       .btn-primary, .btn-line, .act-del, .cl-on, .ms-need) {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+}
+.kd2-supadd button { gap: 5px; }
+:where(.lg-links a, .lg-eye) i.ti { font-size: 14px; opacity: .85; }
+:where(.kd2-cta, .kd3-go, .lg-go, .btn-primary) i.ti { font-size: 17px; }
+
+/* 앱 이름 — 두 줄 중 «학교정보»만 파랑으로. 통째로 파랑이면 간판이 아니라 광고가 된다 */
+.lg-title { color: var(--ink); }
+.lg-title .br { color: var(--accent-ink); }
+.lg-sub { color: var(--muted); }
+/* 로고 마크 — 회색 선 세 개였다. 종이에 파란 점 하나가 이 앱의 표식이다 */
+
+/* 작은 링크의 아이콘이 글씨에 붙어 있었다 — :where() 는 특이도 0이라 기존 규칙에 밀린다.
+   실제 선택자로 다시 못 박는다. */
+.lg-links a, .lg-help a, .lg-eye {
+  display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+}
+.lg-links i.ti, .lg-eye i.ti { font-size: 14px; opacity: .8; }
+.lg-links { gap: 14px; }
+
+/* 아이콘과 글씨가 달라붙던 것 — flex gap 이 안 먹는 자리가 있어 여백으로 못 박는다 */
+.lg-help i.ti, .lg-eye i.ti, .lg-child button i.ti { margin-right: 6px; }
+.lg-links a { padding: 10px 2px; }
+
+/* ═══ 다듬기 6건 — 모아서 한 번에 (2026-08-03) ═════════════════ */
+
+/* ① 확인 대기 세로줄이 빨강이었다 — 위 알림줄을 파랑으로 바꿨으니 여기도 같은 말을 해야 한다.
+      빨강은 계속 «해야 할 일 표시»에만. 확인 대기는 «할 일»이지 «사고»가 아니다 */
+.ms-row.ms-wait { border-left-color: var(--accent); }
+.ms-row.ms-wait .ms-tag { color: var(--accent-ink); font-weight: 700; }
+
+/* ② 사진 없는 미션의 회색 틀이 260px 였다 — 사진이 안 온 자리를 그만큼 비워둘 이유가 없다.
+      실제 사진이 오면 원래 크기로 돌아간다(로드되면 aspect 가 잡힌다) */
+.ms-photo img { max-height: 190px; background: var(--chip); }
+.ms-photo img.rec-none, .ms-photo img[src^="data:"] { height: 120px; object-fit: contain; opacity: .5; }
+
+/* ③ 급식 별점 — 안 고른 별 다섯 개가 회색이라 «고르는 것»으로 안 읽혔다.
+      테두리만 있는 별로 두고, 고른 것만 채운다. 누르면 커진다 */
+.kd2-stars button { color: color-mix(in srgb, var(--kd-ink) 22%, var(--kd-canvas)); transition: transform .12s ease; }
+.kd2-stars button.on { color: var(--kd-sun); }
+.kd2-stars button:active { transform: scale(1.18); }
+.kd2-starhint { margin-top: 6px; text-align: center; font-size: 13px; color: var(--kd-sub); }
+
+/* ④ 홈 격자 — 아이콘만 떠 있어 «줄»로 안 읽혔다. 한 장의 카드 위에 얹는다 */
+.hd-row5 { gap: 4px; margin-top: 22px; padding: 10px 4px; border-radius: 18px;
+  background: var(--card); box-shadow: var(--sh2); }
+.hd-mini { gap: 6px; padding: 6px 2px; border-radius: var(--ns-r); }
+.hd-mini .hd-nm { font-size: 11.5px; font-weight: 700; }
+
+/* ⑥ 서랍 «가장 최근»·일정 «오늘» — 화면마다 주인공 하나.
+      홈의 미션 카드와 같은 방식으로 한 덩어리만 채운다 */
+.dw-recent { background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 90%, #FFF), var(--accent-ink)); color: #FFFFFF; }
+.dw-recent > i.ti, .dw-recent .go { color: rgba(255,255,255,.7); }
+.dw-recent .tx span { color: rgba(255,255,255,.72); }
+.dw-recent em { background: rgba(255,255,255,.18); color: #FFFFFF;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.25); }
+
+/* ═══ 남은 화면 셋 (2026-08-03) ══════════════════════════════
+   ① 자녀 속 화면(급식·친구·과목)이 아직 «목록 + 버튼»이라 덱과 결이 안 맞았다
+   ② 일정 아젠다가 홈 시간 축과 다른 모양이었다 — 같은 앱에서 같은 것을 두 모양으로 그리지 않는다
+   ③ 서랍 격자의 빈 사진 자리가 회색 네모 잔치였다 */
+
+/* ① 고르는 칸 — 덱 카드와 같은 결로. 고른 것은 «채워서» 확실히 */
+.kd2-pick1 button { border-radius: 16px; box-shadow: var(--sh1); transition: transform .1s ease; }
+.kd2-pick1 button.on { background: var(--kd-grass); color: #fff;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 2px 8px rgba(0,0,0,.24); }
+.kd2-pick1 button.on i { background: #fff; box-shadow: none; }
+.kd2-pick1 button:active { transform: scale(.985); }
+/* 친구 칩도 같은 규칙 */
+.kd2-chip-friend.on, .kd2-friends button.on { background: var(--k); color: var(--on-kk); }
+
+/* ② 일정 아젠다 — 홈 시간 축과 같은 줄 모양으로 */
+.gc-agenda { margin: 10px 0 0; padding-bottom: 96px; }
+.gc-day { border-radius: var(--ns-r); padding: 12px 14px; }
+.gc-day:nth-child(even) { background: var(--tint); }
+.gc-day.on { background: color-mix(in srgb, var(--accent) 9%, #FFFFFF); }
+[data-theme="dark"] .gc-day.on, [data-theme="lavender"] .gc-day.on,
+[data-theme="navy"] .gc-day.on, [data-theme="charcoal"] .gc-day.on {
+  background: color-mix(in srgb, var(--accent) 16%, var(--card));
+}
+
+/* ③ 서랍 빈 사진 — 회색 네모 대신 옅은 종이색 + 흐린 아이콘. 사진이 오면 사진이 이긴다 */
+.dw-noimg { background: linear-gradient(160deg, var(--chip), color-mix(in srgb, var(--chip) 70%, var(--bg)));
+  color: color-mix(in srgb, var(--muted) 55%, var(--chip)); gap: 6px; }
+.dw-noimg i { font-size: 24px; }
+.dw-grid { gap: 12px; }
+
+/* 자녀폰 미연결 — 한 줄 경고를 물음표 하나로(2026-08-03 폰 실기).
+   파란 카드 안에서 파란 알약처럼 보여 경고로 안 읽혔고, 도장 3칸을 밀어냈다. */
+/* 「자녀폰 미연결 ⓘ」 — 긴 문장을 카드 안에 눕히면 도장을 밀어내고,
+   물음표만 두면 무슨 말인지 모른다. 짧은 말 + 정보 아이콘이 답이다. */
+.ms-linkq { display: inline-flex; align-items: center; gap: 5px; align-self: flex-start;
+  margin: 2px 0 10px; padding: 5px 10px; border: 0; border-radius: 999px;
+  background: rgba(255,255,255,.16); color: #FFFFFF; font-size: 12.5px; font-weight: 700;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.28); }
+.ms-linkq i.ti { font-size: 14px; opacity: .9; }
+.hd-ms-hd { position: relative; }
+.lw-p { margin: 14px 0 0; font-size: 14.5px; line-height: 1.6; color: var(--muted); }
+.lw-p b { color: var(--ink); font-weight: 700; }
+
+/* 대화바가 홈 격자를 덮어 아이콘 라벨이 잘렸다(폰에서만 — 화면이 짧다) */
+#screen { padding-bottom: calc(var(--tabbar-h) + 58px + var(--sa-b) + 40px); }
+
+/* 「다른 걸로 바꾸기」가 두 줄로 깨졌다(폰 실기) — 두 버튼이 같은 폭을 나눠 갖는데
+   글자 수가 다르다. 긴 쪽에 폭을 더 주고 줄바꿈을 막는다. */
+.ms-row2, #screen .row { align-items: stretch; }
+:where(.btn-line, .btn-primary) { white-space: nowrap; padding-left: 12px; padding-right: 12px; }
+
+/* ═══ 문자 화살표 → 진짜 아이콘 (2026-08-03) ═══════════════════
+   `›` `‹` `▴▾` 는 **글자**라 서체마다 굵기·높이가 제각각이고 옆 아이콘과 안 맞았다.
+   앱 전체가 Tabler 를 쓰는데 여기만 글자였다. 크기·색을 한 벌로 묶는다. */
+:where(.mp-go, .cc-go, .ttp-go, .caret, .hd-caret) {
+  display: inline-flex; align-items: center; justify-content: center;
+  flex: none; color: var(--muted); font-size: 17px;
+}
+.back, .ca-back { color: var(--muted); font-size: 20px; }
+/* <em> 꼬리에 붙는 화살표 — 글씨와 붙지 않게 */
+:where(.hd-trial em, .dw-warn em, .tt-ask em) i.ti { margin-left: 3px; font-size: 15px; vertical-align: -2px; }
+.gc-next i.ti { margin-left: 3px; font-size: 15px; vertical-align: -2px; }
+
+/* ═══ 남은 화면에도 같은 규칙 (2026-08-03) ═════════════════════
+   ① docs 서식 목록 — docSituations 에 정의만 돼 있던 아이콘을 꺼내 쓴다.
+      갈래 색은 이미 있는 .mp-i:has(.ti-*) 매핑이 알아서 칠한다.
+      새로 필요한 것만 여기 더한다(비행기=체험학습, 아픔=결석). */
+.mp-i:has(.ti-plane)     { --ic-a:color-mix(in srgb, var(--accent) 12%, var(--card)); --ic-b:color-mix(in srgb, var(--accent) 20%, var(--card)); --ic-f:var(--accent); }
+.mp-i:has(.ti-mood-sick) { --ic-a:#FFE6EE; --ic-b:#FBD0DE; --ic-f:#A32250; }
+.mp-row.two .mp-i { align-self: center; }
+
+/* ② 클래스가 아예 없던 맨 button 셋 — notify 보내기 · community 나가기 */
+/* .nt-go 는 안 쓴다 — 원본 .nt-send button 을 직접 파랑으로 고쳤다(중복 규칙 금지) */
+.cm-leave { min-height: 40px; padding: 0 14px; border: 0; border-radius: 999px;
+  background: var(--chip); color: var(--muted); font-size: 13px; font-weight: 700; }
+
+/* ③ 화면 제목을 한 벌로 — 인라인 style(margin-top:8px)로 흩어져 있었다 */
+.pg-h { margin: 4px 0 0; }
+
+/* ═══ 옛 버튼을 오늘 규칙으로 (2026-08-03) ═════════════════════
+   btn-primary 가 26곳에 남아 있는데 홈·미션의 새 버튼과 모양이 달랐다.
+   접두어별로 새 버튼을 또 만들지 않는다 — **원본을 고쳐서** 전 화면이 한 번에 따라오게 한다. */
+/* 🔴 2026-08-11 새 정본 — 평평한 테마색 채움. 광택 그라디언트·큰 그림자를 걷어냈다.
+   ⚠ 예전엔 `background:` 로 그라디언트만 깔아 **background-color 가 투명**이었다.
+     아래 「광택 한 벌」이 background-image 를 덮으면 흰 글씨만 남아 안 보였다. */
+.btn-primary {
+  background: var(--t-bar); color: #FFFFFF; font-weight: 700;
+  border-radius: var(--ns-r); box-shadow: none;
+  font-size: var(--ns-fs-16); min-height: var(--ns-act-h);
+}
+.btn-primary[disabled] {
+  background: var(--chip); color: var(--muted); box-shadow: inset 0 0 0 1px var(--line);
+  text-shadow: none;
+}
+.btn-line { border-radius: var(--ns-r); box-shadow: none; min-height: var(--ns-act-h);
+  font-size: var(--ns-fs-16); font-weight: 700; }
+.btn-ghost { border-radius: var(--ns-r); min-height: var(--ns-act-h);
+  font-size: var(--ns-fs-16); font-weight: 700; }
+/* 시트의 확정 버튼도 같은 얼굴로 */
+.act-del { border-radius: var(--ns-r); font-weight: 800; }
+
+/* ═══ 약관·방침 — 읽히게만 (2026-08-03) ════════════════════════
+   색도 아이콘도 없다. 본문 불변. 여기서 화려하면 오히려 못 믿는 화면이 된다. */
+.legal-eff { color: var(--muted); font-size: 13px; margin: 2px 0 18px; }
+.legal section + section { border-top: 1px solid var(--line); padding-top: 18px; }
+.legal b { display: block; font-size: 15px; font-weight: 700; color: var(--ink);
+           margin-bottom: 7px; letter-spacing: -.2px; }
+.legal p { margin: 0; font-size: 14.5px; line-height: 1.75; color: var(--ink);
+           word-break: keep-all; }
+
+/* 아직 못 파는 버튼 — 파랑으로 두면 눌러보고 실망한다 */
+.btn-primary.soon { background: var(--chip); color: var(--muted); box-shadow: inset 0 0 0 1px var(--line); }
+
+/* ═══ 고객센터 갈래 아코디언 (2026-08-03) ══════════════════════
+   질문 24개가 통째로 펼쳐져 화면이 다섯 배였다. 갈래만 다섯 줄로 접는다. */
+.faq-sec { margin-top: var(--ns-8); background: var(--card); border: 1px solid var(--line);
+  border-radius: var(--ns-r); box-shadow: var(--ns-sh); }
+.faq-sechd { display: flex; align-items: center; gap: 10px; width: 100%; padding: 15px 14px;
+  background: none; border: none; text-align: left; color: var(--ink);
+  font-size: 15px; font-weight: 700; letter-spacing: -.2px; }
+.faq-sechd > span { flex: 1; min-width: 0; }
+.faq-sechd > em { flex: none; font-style: normal; font-size: 12px; font-weight: 700;  border-radius: 9px; padding: 2px 8px; }
+.faq-sechd > i { flex: none; font-size: 15px; color: var(--muted); transition: transform .15s; }
+.faq-sec.on > .faq-sechd > i { transform: rotate(180deg); }
+.faq-sec.on > .faq-sechd { border-bottom: 1px solid var(--line); }
+.faq-sec .faq-q:first-of-type { border-top: none; }
+.faq-sec.on .faq-q.on { background: var(--tint); }
+
+/* ═══ 팝업 껌뻑임 막기 (2026-08-03) ════════════════════════════
+   render() 가 화면을 통째로 갈아끼우는 구조라, 팝업 안에서 체크 하나만 바꿔도
+   시트가 새로 만들어져 열림 애니메이션이 다시 돌았다. 같은 팝업이면 이 클래스가 붙는다. */
+.noanim, .noanim * { animation: none !important; }
+
+/* 홈 — 대화바가 아이콘 격자를 덮던 자리.
+   ⚠ 아래 여백은 render() 가 대화바를 **실측해서** 넣는다(--chatbar-gap).
+      상수로 두면 대화바 글자가 두 줄이 되는 순간 또 덮인다(2026-08-03 실측: 격자 719 vs 대화바 690). */
+#screen:has(.chatbar) { padding-bottom: var(--chatbar-gap, 215px); }
+
+/* ═══ ⑤ 상태표시줄 가림막 (2026-08-03 폰 실측) ═══════════════════
+   viewport-fit=cover 라 글이 상태표시줄 밑으로 지나가며 겹쳐 보였다.
+   본문 위에 배경색 띠를 고정으로 깔아 지나가는 글을 가린다. 팝업(300)보다는 아래. */
+/* 상태바 자리를 테마색으로 덮는 띠 — 글이 상태바 아이콘과 겹쳐 읽히지 않게.
+   🔴 이게 «화면 위 베이지 띠»의 정체였다(2026-08-10 폴드6). z-index 200 으로 맨 위에 있어서
+      아이 세계(파랑) 화면에서도 부모 테마색을 칠했다. body 배경을 아무리 바꿔도 소용없었던 이유다.
+   ⚠ 아래 세계 규칙과 짝이다 — 한쪽만 고치면 다시 어긋난다. */
+body::before {
+  content: ""; position: fixed; top: 0; left: 0; right: 0;
+  height: var(--sa-t); background: var(--bg); z-index: 200;
+  pointer-events: none;
+}
+/* 아이 세계 화면에서는 세계 색으로. 그라데이션의 «맨 윗 색»이라 이어져 보인다 */
+body:has(#screen > .gmw)::before, body:has(#screen > .gmp)::before,
+body:has(#screen > .gm)::before { background: #6FAEF2; }
+/* 테마·보스전마다 띠 색을 따라 붙인다 — 안 그러면 상태바 자리만 하늘색으로 뜬다(2026-08-12 실측) */
+body:has(#screen > .gm.gt-lime)::before   { background: #6FD693; }
+body:has(#screen > .gm.gt-lav)::before    { background: #B9A3F2; }
+body:has(#screen > .gm.gt-sunset)::before { background: #F5B06E; }
+body:has(#screen > .gm.gt-mint)::before   { background: #67CFCB; }
+body:has(#screen > .gm.qzp)::before       { background: #F7A45C; }
+
+/* ═══ 고객센터 갈래 제목 — 새 정본(2026-08-11) ══════════════════════
+   면색(--accent)을 글씨로 쓰면 흰 카드 위에서 4.5 를 못 넘는다(실측 4.38·3.77).
+   글씨는 잉크, 개수 배지는 **틴트 면 + 진한 잉크**로 — 드로어 칩과 같은 문법이다. */
+.faq-sechd > span { color: var(--ink); }
+.faq-sec.on > .faq-sechd { background: var(--t-tint); border-radius: var(--ns-r) var(--ns-r) 0 0; }
+.faq-sechd > em { background: var(--t-tint); color: var(--t-ink); }
+
+/* ═══ 별의 길 v2 — 3D 캔디 게임판 (2026-08-03 재설계) ═══════════════
+   전 판은 px 하드코딩이라 중앙이 안 맞았고, 켜진 별 2개가 실제 진행도와 무관했다.
+   %-지그재그 + 실제 진행도 + 구슬(3D) + 오늘 배지. 색은 자녀 테마 --k 를 그대로 탄다. */
+.kb-path { position: relative; height: min(560px, 118vw); margin: 18px 4px 0; }
+.kb-trail { position: absolute; inset: 0; width: 100%; height: 100%; color: var(--k);
+  opacity: .45; }
+.kb-node { position: absolute; transform: translate(-50%, -50%); text-align: center; }
+.kb-ball {
+  display: grid; place-items: center; width: 66px; height: 66px; border-radius: 50%;
+  font-size: 26px; font-weight: 900; color: var(--muted);
+  background: radial-gradient(circle at 32% 28%, #FFFFFF 0%, var(--card) 38%, var(--chip) 100%);
+  box-shadow: inset 0 2px 4px rgba(255,255,255,.9), inset 0 -6px 10px rgba(0,0,0,.07),
+              0 6px 14px rgba(0,0,0,.14);
+  border: none;
+}
+.kb-node.on .kb-ball {
+  color: #FFFFFF; font-size: 30px;
+  background: radial-gradient(circle at 32% 28%,
+    color-mix(in srgb, var(--k) 35%, #FFFFFF) 0%, var(--k) 55%,
+    color-mix(in srgb, var(--k) 72%, #000000) 100%);
+  box-shadow: inset 0 2px 5px rgba(255,255,255,.55), inset 0 -7px 12px rgba(0,0,0,.22),
+              0 8px 18px color-mix(in srgb, var(--k) 45%, transparent);
+  text-shadow: 0 2px 4px rgba(0,0,0,.25);
+  animation: kb-pop .4s ease-out;
+}
+.kb-node.on .kb-ball::after {           /* 반짝이 — 켜진 별에만 */
+  content: "✦"; position: absolute; top: -7px; right: -5px; font-size: 15px;
+  color: color-mix(in srgb, var(--k) 30%, #FFFFFF);
+  animation: kb-tw 1.6s ease-in-out infinite;
+}
+.kb-node.today .kb-ball {
+  border: 3px solid var(--k);
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--k) 16%, transparent),
+              0 8px 18px rgba(0,0,0,.16), inset 0 2px 4px rgba(255,255,255,.9);
+  color: var(--k);
+}
+.kb-here {
+  position: absolute; left: 50%; transform: translateX(-50%); bottom: -30px;
+  background: var(--k); color: #FFF; font-size: 12.5px; font-weight: 900;
+  padding: 4px 12px; border-radius: 999px; white-space: nowrap;
+  box-shadow: 0 4px 10px color-mix(in srgb, var(--k) 45%, transparent);
+  animation: kb-bounce 1.4s ease-in-out infinite;
+}
+.kb-here::before { content: ""; position: absolute; top: -5px; left: 50%; transform: translateX(-50%);
+  border: 5px solid transparent; border-bottom-color: var(--k); border-top: none; }
+.kb-need { display: block; margin-top: 6px; font-size: 12px; font-weight: 800; color: var(--muted);
+  white-space: nowrap; }
+.kb-flag { position: absolute; transform: translate(-50%, -50%); text-align: center; }
+.kb-flag span { font-size: 34px; display: block; filter: drop-shadow(0 4px 6px rgba(0,0,0,.18)); }
+.kb-flag b { font-size: 13px; font-weight: 900; color: var(--k); }
+.kb-left { margin: 26px 0 8px; text-align: center; font-size: 16px; font-weight: 800; color: var(--ink); }
+.kb-left b { color: var(--k); font-size: 19px; }
+@keyframes kb-bounce { 0%,100% { transform: translateX(-50%) translateY(0); } 50% { transform: translateX(-50%) translateY(-5px); } }
+@keyframes kb-tw { 0%,100% { opacity: .35; transform: scale(.85); } 50% { opacity: 1; transform: scale(1.15); } }
+@keyframes kb-pop { from { transform: scale(.6); } to { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .kb-here, .kb-node.on .kb-ball::after { animation: none; } }
+
+
+.kd2-p { display: flex; align-items: center; gap: 12px; background: var(--card);
+  border: 1.5px solid var(--line); border-radius: var(--ns-r); padding: 12px 16px; }
+.kd2-p i { font-style: normal; width: 30px; height: 30px; border-radius: 50%; background: var(--k-soft);
+  color: var(--k); display: grid; place-items: center; font-size: 14px; font-weight: 900; flex: none; }
+.kd2-p b { font-size: 17px; font-weight: 900; flex: 1; }
+.kd2-p span { font-size: 13px; color: var(--muted); font-weight: 700; }
+.kd2-p.now { border-color: var(--k); }
+.kd2-p.now span { color: var(--k); font-weight: 900; }
+
+/* 급식 평가 — 이모지 3단 + 선택 한마디 */
+.kd2-rate { display: flex; gap: 12px; margin-top: 22px; }
+.kd2-rate button { flex: 1; aspect-ratio: 1; border-radius: 22px; background: var(--card);
+  border: 2px solid var(--line); cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; }
+.kd2-rate button b { font-size: 40px; }
+.kd2-rate button span { font-size: 15px; font-weight: 900; color: var(--muted); }
+.kd2-rate button.on { border-color: var(--k); background: var(--k-soft); }
+.kd2-rate button.on span { color: var(--k); }
+.kd2-saytitle { font-size: 14px; font-weight: 800; color: var(--muted); margin: 26px 0 10px; }
+.kd2-say { display: flex; flex-wrap: wrap; gap: 8px; }
+.kd2-say button { min-height: 44px; padding: 0 16px; border-radius: 999px; background: var(--card);
+  border: 1.5px solid var(--line); font-size: 15px; font-weight: 800; color: var(--ink); cursor: pointer; }
+.kd2-say button.on { border-color: var(--k); background: var(--k-soft); color: var(--k); }
+.kd2-cta[disabled] { opacity: .4; cursor: default; }
+
+/* 알림 — 자녀 전용(부모 .noticerow 안 씀). 봤어요 버튼 크게 */
+.kd2-nt { display: flex; align-items: center; gap: 12px; background: var(--card);
+  border: 1px solid var(--line); border-radius: var(--ns-r); padding: 14px 16px; margin-bottom: 8px; }
+.kd2-nt .tx { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 600; line-height: 1.45; }
+.kd2-nt.seen { opacity: .6; }
+.kd2-nt .ack { padding: 0 16px; border-radius: 12px; border: 0; cursor: pointer;
+  background: var(--k); color: var(--on-kk); font-size: 15px; font-weight: 900; flex: none; }
+.kd2-nt .ok { width: 30px; height: 30px; border-radius: 50%; background: var(--k-soft);
+  color: var(--k); display: grid; place-items: center; font-size: 15px; flex: none; }
+
+/* 준비물 — 큰 체크 원 */
+.kd2-sup { display: flex; align-items: center; gap: 12px; background: var(--card);
+  border: 1px solid var(--line); border-radius: var(--ns-r); padding: 12px 16px; margin-bottom: 8px; cursor: pointer; }
+.kd2-sup input { display: none; }
+.kd2-sup .box { width: 32px; height: 32px; border-radius: 50%; border: 2.5px solid var(--line);
+  display: grid; place-items: center; font-size: 15px; color: var(--on-kk); flex: none; font-style: normal; }
+.kd2-sup b { font-size: 17px;  flex: 1; }
+.kd2-sup span { font-size: 12.5px; color: var(--muted); font-weight: 700; }
+.kd2-sup.done .box { background: var(--k); border-color: var(--k); }
+.kd2-sup.done b { color: var(--muted); text-decoration: line-through; }
+.kd2-supadd { display: flex; gap: 8px; margin-top: 4px; }
+.kd2-supadd input { flex: 1; min-height: 52px; border-radius: 14px; border: 1.5px solid var(--line);
+  background: var(--card); color: var(--ink); font-size: 16px; font-weight: 700; padding: 0 16px; }
+.kd2-supadd button { min-height: 52px; padding: 0 20px; border-radius: 14px; border: 0; cursor: pointer;
+  background: var(--k); color: var(--on-kk); font-size: 16px; font-weight: 900; }
+
+/* 오늘 하루 — 3~4줄 요약 */
+.kd2-day { display: flex; align-items: center; gap: 12px; width: 100%; background: var(--card);
+  border: 1px solid var(--line); border-radius: var(--ns-r); padding: 13px 16px; margin-bottom: 8px;
+  cursor: pointer; text-align: left; }
+div.kd2-day { cursor: default; }
+.kd2-day > i { font-size: 20px; color: var(--k); flex: none; }
+.kd2-day b { font-size: 16px; font-weight: 900; flex: 1; }
+.kd2-day span { font-size: 13px; color: var(--muted); font-weight: 700; }
+
+/* 코드 연결 — 큰 숫자 */
+.kd2-link { display: flex; flex-direction: column; padding-top: 40px; }
+.kd2-link .code { width: 100%; min-height: 84px; margin-top: 26px; border-radius: 20px;
+  border: 2px solid var(--line); background: var(--card); color: var(--ink);
+  font-size: 40px; font-weight: 900; letter-spacing: .25em; text-align: center; }
+.kd2-link .code:focus { border-color: var(--k); outline: none; }
+.kd2-link .err { margin-top: 10px; font-size: 14px; font-weight: 800; color: var(--danger); }
+.kd2-link .fine { margin-top: 14px; font-size: 13px; color: var(--muted); font-weight: 700;
+  display: flex; align-items: center; gap: 6px; }
+
+/* 대화 시트 — 자녀 화면에서만 크게(부모 마크업 공유, CSS 스코프로 영향 차단) */
+:root[data-kid-theme] .bub .bb { font-size: 17px; }
+:root[data-kid-theme] .cs-presets button { min-height: 46px; font-size: 15px; font-weight: 800; }
+:root[data-kid-theme] .chatbar .cb-txt b, :root[data-kid-theme] .chatbar .cb-last { font-size: 15px; }
+:root[data-kid-theme] .cs-input input { min-height: 52px; font-size: 16px; }
+
+/* ── 급식 평가 — 묻는 건 둘뿐(2026-08-02 재설계 2) ──
+   글자를 줄이고 손가락을 키운다. 메뉴는 «고르는 카드» 한 벌만 있고 위에 또 늘어놓지 않는다. */
+/* .kd2-face — 얼굴 이모지는 뺐다(2026-08-03, 8~13세 폭). 규칙은 남기지 않는다 */
+.kd2-stars { display: flex; justify-content: center; gap: 2px; margin-top: 20px; }
+.kd2-stars button { width: 50px; height: 50px; border: 0; background: none; cursor: pointer;
+  font-size: 42px; line-height: 1; color: var(--kd-grass-line); padding: 0; }
+
+.kd2-q2 { font-size: 16px; font-weight: 700; margin: 24px 0 10px; }
+.kd2-pick1 { display: flex; flex-direction: column; gap: 8px; }
+.kd2-pick1 button { display: flex; align-items: center; gap: 14px; width: 100%; min-height: 60px;
+  padding: 0 18px; border-radius: 18px; cursor: pointer;
+  background: var(--kd-canvas); border: 2px solid var(--kd-grass-line); color: var(--kd-ink);
+  font-size: 18px; font-weight: 800; text-align: left; }
+.kd2-pick1 button i { width: 26px; height: 26px; border-radius: 50%; flex: none;
+  border: 2.5px solid var(--kd-grass-line); font-style: normal; }
+.kd2-pick1 button.on { border-color: var(--kd-grass);  }
+.kd2-pick1 button.on i { border-color: var(--kd-grass);  }
+.kd2-pick1 b { font-weight: 900; }
+
+/* ── 오늘 누구랑 놀았어 (2026-08-02) — 이름 칩을 탭만 한다 ── */
+.kd2-friends { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+.kd2-friends button { min-height: 56px; padding: 0 20px; border-radius: 999px; cursor: pointer;
+  background: var(--kd-canvas); border: 2px solid var(--kd-grass-line); color: var(--kd-ink);
+  font-size: 18px; font-weight: 900; }
+.kd2-friends button.on { border-color: var(--kd-grass);  }
+.kd2-friends button.add { border-style: dashed; color: var(--kd-sub); font-weight: 800; }
 
 .kd2-alone { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 60px;
   margin-top: 18px; padding: 0 18px; border-radius: 18px; cursor: pointer;
@@ -3572,10 +4616,9 @@ body { font-weight: 500; }
   opacity: 1; background: var(--chip); color: var(--muted);
   box-shadow: inset 0 0 0 1px var(--line); text-shadow: none; cursor: default;
 }
+/* (2026-08-12 두벌 원칙) 자녀 비활성 버튼 — 테마색 섞지 말고 kd 회색 고정 */
 :root[data-kid-theme] :where(.kd2-cta, .kd3-go)[disabled] {
-  background: color-mix(in srgb, var(--ink) 8%, var(--card));
-  color: color-mix(in srgb, var(--ink) 45%, var(--card));
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 14%, var(--card));
+  background: #DDE3D6; color: #6C7566; box-shadow: 0 3px 0 #C9D1C0;
 }
 
 /* ① 색 조화 — 갈래 색 팔레트를 한 채도로 맞춘다(위 .mp-i 규칙이 쓰는 값과 같은 계열).
@@ -3718,10 +4761,10 @@ body { font-weight: 500; }
 
 /* ③ 급식 별점 — 안 고른 별 다섯 개가 회색이라 «고르는 것»으로 안 읽혔다.
       테두리만 있는 별로 두고, 고른 것만 채운다. 누르면 커진다 */
-.kd2-stars button { color: color-mix(in srgb, var(--ink) 22%, var(--card)); transition: transform .12s ease; }
-.kd2-stars button.on { color: var(--k-star); }
+.kd2-stars button { color: color-mix(in srgb, var(--kd-ink) 22%, var(--kd-canvas)); transition: transform .12s ease; }
+.kd2-stars button.on { color: var(--kd-sun); }
 .kd2-stars button:active { transform: scale(1.18); }
-.kd2-starhint { margin-top: 6px; text-align: center; font-size: 13px; color: var(--muted); }
+.kd2-starhint { margin-top: 6px; text-align: center; font-size: 13px; color: var(--kd-sub); }
 
 /* ④ 홈 격자 — 아이콘만 떠 있어 «줄»로 안 읽혔다. 한 장의 카드 위에 얹는다 */
 .hd-row5 { gap: 4px; margin-top: 22px; padding: 10px 4px; border-radius: 18px;
@@ -3744,9 +4787,9 @@ body { font-weight: 500; }
 
 /* ① 고르는 칸 — 덱 카드와 같은 결로. 고른 것은 «채워서» 확실히 */
 .kd2-pick1 button { border-radius: 16px; box-shadow: var(--sh1); transition: transform .1s ease; }
-.kd2-pick1 button.on { background: var(--k); color: var(--on-kk);
+.kd2-pick1 button.on { background: var(--kd-grass); color: #fff;
   box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 2px 8px rgba(0,0,0,.24); }
-.kd2-pick1 button.on i { background: var(--on-kk); box-shadow: none; }
+.kd2-pick1 button.on i { background: #fff; box-shadow: none; }
 .kd2-pick1 button:active { transform: scale(.985); }
 /* 친구 칩도 같은 규칙 */
 .kd2-chip-friend.on, .kd2-friends button.on { background: var(--k); color: var(--on-kk); }
@@ -3962,16 +5005,16 @@ body:has(#screen > .gm.qzp)::before       { background: #F7A45C; }
 @media (prefers-reduced-motion: reduce) { .kb-here, .kb-node.on .kb-ball::after { animation: none; } }
 
 /* ═══ 자녀 화면 버튼 — 3D 캔디 공통 (2026-08-03 지적: 평면·허접) ═══════
-   자녀 테마가 켜진 화면의 «누르는 것»에 입체를 준다. 색은 각 테마의 --k. */
+   자녀 테마가 켜진 화면의 «누르는 것»에 입체를 준다. (2026-08-12 두벌 원칙) 색은 테마가 아니라 **듀오링고 잔디** 고정. */
 :root[data-kid-theme] .kd2-cta, :root[data-kid-theme] .kd3-go,
 :root[data-kid-theme] .kd2-shot, :root[data-kid-theme] .btn-primary,
 :root[data-kid-theme] .kd3-next {
   background: linear-gradient(180deg,
-    color-mix(in srgb, var(--k) 78%, #FFFFFF) 0%, var(--k) 45%,
-    color-mix(in srgb, var(--k) 82%, #000000) 100%);
+    color-mix(in srgb, var(--kd-grass) 78%, #FFFFFF) 0%, var(--kd-grass) 45%,
+    color-mix(in srgb, var(--kd-grass) 82%, #000000) 100%);
   color: #FFFFFF; border: none; border-radius: 18px; font-weight: 900;
   box-shadow: inset 0 2px 3px rgba(255,255,255,.45), inset 0 -4px 6px rgba(0,0,0,.18),
-              0 6px 14px color-mix(in srgb, var(--k) 40%, transparent);
+              0 6px 14px color-mix(in srgb, var(--kd-grass) 40%, transparent);
   text-shadow: 0 1px 2px rgba(0,0,0,.18);
   transition: transform .08s ease, box-shadow .08s ease;
 }
@@ -3980,12 +5023,12 @@ body:has(#screen > .gm.qzp)::before       { background: #F7A45C; }
 :root[data-kid-theme] .kd3-next:active {
   transform: translateY(2px);
   box-shadow: inset 0 2px 3px rgba(255,255,255,.3), inset 0 -2px 4px rgba(0,0,0,.15),
-              0 2px 6px color-mix(in srgb, var(--k) 35%, transparent);
+              0 2px 6px color-mix(in srgb, var(--kd-grass) 35%, transparent);
 }
 :root[data-kid-theme] .kd2-seg button.on {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--k) 75%, #FFFFFF), var(--k));
+  background: linear-gradient(180deg, color-mix(in srgb, var(--kd-grass) 75%, #FFFFFF), var(--kd-grass));
   color: #FFF; border: none;
-  box-shadow: inset 0 1px 2px rgba(255,255,255,.4), 0 4px 10px color-mix(in srgb, var(--k) 35%, transparent);
+  box-shadow: inset 0 1px 2px rgba(255,255,255,.4), 0 4px 10px color-mix(in srgb, var(--kd-grass) 35%, transparent);
 }
 
 /* 별의 길 v2.1 — 목표 구슬(꼭대기 깃발)은 좀 더 크게 */
@@ -4452,9 +5495,8 @@ body:has(.hv3-art)::before { background: var(--art-1); }   /* 상태바 가림�
   background: color-mix(in srgb, #E0A93E 22%, transparent); color: #7A5200; }
 :root[data-theme="dark"] .bk-pro { color: #FFD54A; }
 
-/* ═══ 미션 고르기 화면 (2026-08-03 · 2026-08-12 듀오링고 캐논으로 갈아입힘) ═══
-   학년대 탭 → 추천 3개 → 영역별 묶음 → 하단 「n개 담기」.
-   ⚠ 이 화면은 kd-scr 껍데기 안에서 그려진다 — 색·글꼴은 kid.css 토큰을 그대로 받는다. */
+/* ═══ 미션 고르기 화면 — 듀오링고 캐논(2026-08-13 재확정: 미션 세계는 부모도 듀오링고) ═══
+   kd-scr 껍데기 안에서 그려진다. 색·글꼴은 kid.css 토큰. 오늘한것·추가증정도 이 부품을 쓴다. */
 .mk-bands { display: flex; gap: 8px; margin: 2px 0 6px; }
 .mk-bands button { flex: 1; height: 44px; min-height: 0; border-radius: var(--kd-r-lg);
   border: 2.5px solid #DDE6D2; box-shadow: 0 3px 0 #DDE6D2;
@@ -4469,17 +5511,16 @@ body:has(.hv3-art)::before { background: var(--art-1); }   /* 상태바 가림�
   padding: 12px 14px; min-height: 0; border: 2.5px solid var(--kd-grass-line); border-radius: var(--kd-r-lg);
   box-shadow: 0 3px 0 var(--kd-grass-line);
   background: var(--kd-canvas); text-align: left; font-family: inherit; color: var(--kd-ink); }
-.mk-row:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--kd-grass-line); }
+button.mk-row:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--kd-grass-line); }
 .mk-row .bd { flex: 1; min-width: 0; }
 .mk-row .bd b { display: block; font-size: 15px; font-weight: 700; }
 .mk-row .bd em { display: block; font-style: normal; font-size: 12.5px; font-weight: 700;
   color: var(--kd-sub); margin-top: 2px; }
 .mk-mine { font-style: normal; font-size: 11px; font-weight: 700; color: var(--kd-grape-ink);
   background: var(--kd-grape-tint); border-radius: 6px; padding: 1px 6px; margin-right: 6px; }
-.mk-row .mk-add { flex: none; width: 30px; height: 30px; border-radius: 50%; display: grid;
+.mk-row .mk-add { flex: none; min-width: 30px; height: 30px; border-radius: 999px; display: grid;
   place-items: center; border: 2px solid #FFE08A; background: var(--kd-sun-tint);
-  color: var(--kd-sun-ink); font-size: 17px; font-weight: 700; }
-/* 이미 담은 것 — 흐리게 + 「담김」. 지우지 않는다(어디 있었는지 알아야 다시 뺀다) */
+  color: var(--kd-sun-ink); font-size: 15px; font-weight: 700; }
 .mk-row.on { opacity: .6; border-color: #E4EBDA; box-shadow: 0 3px 0 #E4EBDA; background: #F6F8F2; }
 .mk-row .mk-in { flex: none; padding: 4px 10px; border-radius: 999px;
   background: var(--kd-grass); color: #fff; font-size: 12px; font-weight: 700; }
@@ -4487,7 +5528,6 @@ body:has(.hv3-art)::before { background: var(--art-1); }   /* 상태바 가림�
   margin-top: 18px; padding: 14px; min-height: 0; border: 2.5px dashed var(--kd-grape-line);
   border-radius: var(--kd-r-lg); background: var(--kd-grape-tint); color: var(--kd-grape-ink);
   font-family: inherit; font-size: 14.5px; font-weight: 700; }
-/* 담기 버튼 — 아래 고정. 목록이 길어 위로 올라가면 못 찾는다 */
 .mk-bot { position: sticky; bottom: 0; margin-top: 18px;
   padding: 10px 0 calc(var(--sa-b) + 10px);
   background: linear-gradient(180deg, transparent, var(--kd-cream) 40%); }
@@ -4535,6 +5575,16 @@ body:has(.hv3-art)::before { background: var(--art-1); }   /* 상태바 가림�
    ⚠ **뒤 내용이 밀리면 안 된다**(«레이아웃 점프 0»).
      fixed 로 띄우고, 그 화면들의 아래 여백을 입력바 높이만큼 미리 비워 둔다.
      문서 흐름에 넣으면 키보드가 올라올 때마다 목록이 출렁인다. */
+/* 준비물 입력 줄 위의 날짜 고르기(2026-08-13) — «언제 챙길 것인가»가 먼저다 */
+.ib-dates { display: flex; align-items: center; gap: 6px; padding: 0 0 6px; }
+.ib-dates button { min-height: 34px; padding: 0 14px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--card); color: var(--muted);
+  font-family: inherit; font-size: 13.5px; font-weight: 700; }
+.ib-dates button.on { border-color: transparent; background: var(--accent); color: var(--on-accent); }
+.ib-dpick { min-height: 34px; padding: 0 8px; border-radius: var(--ns-r);
+  border: 1px solid var(--line); background: var(--card); color: var(--ink);
+  font-family: inherit; font-size: 13px; }
+
 .ib { position: fixed; left: 0; right: 0; bottom: 0; z-index: 60;
   display: flex; align-items: center; gap: 8px;
   padding: 10px 12px calc(var(--sa-b) + 10px);
@@ -4640,9 +5690,11 @@ body:has(#tabbar.hidden) #screen:has(.ib),
 .dy-list .ed { flex: none; width: 36px; height: 36px; border: none; border-radius: var(--ns-r);
   background: none; color: var(--muted); font-size: 16px; }
 /* 준비물 체크 — 지난 날은 버튼이 아니라 «표시»다(지난 것을 고칠 수는 없다) */
-.dy-list.chk .mk { flex: none; width: 26px; height: 26px; border-radius: 8px; display: grid;
-  place-items: center; border: 1.5px solid var(--line); background: none;
-  color: var(--done-ink); font-size: 15px; font-weight: 900; font-family: inherit; }
+/* 2026-08-13 대표님 「체크박스 사이즈 오류」 — 26px 이라 준비물 화면(32px)과 규격이 달랐고
+   손끝 과녁으로도 작았다. 두 화면을 같은 32px 로 맞춘다. */
+.dy-list.chk .mk { flex: none; width: 32px; height: 32px; border-radius: var(--ns-r); display: grid;
+  place-items: center; border: 1.5px solid var(--line); background: var(--card);
+  color: var(--done-ink); font-size: 17px; font-weight: 900; font-family: inherit; }
 .dy-list.chk li.done .mk { background: color-mix(in srgb, var(--done) 18%, transparent); border-color: transparent; }
 .dy-list.chk li.done .bd b { text-decoration: line-through; color: var(--muted-card); }
 .dy-list li.ms .mk { flex: none; width: 26px; text-align: center; font-size: 17px; color: var(--muted-card); }
@@ -5615,6 +6667,8 @@ body:has(#screen > .gmw) { background: linear-gradient(180deg, #6FAEF2, #9A87E8)
   font-family: inherit; background: var(--g-gold); color: var(--g-gold-ink);
   font-size: 15px; font-weight: 900; box-shadow: 0 3px 0 var(--g-gold-d); }
 .pm-plus[disabled] { opacity: .5; }
+/* 소속 밑에 붙는 안쪽 줄(2026-08-12) — 한 단 들여서 «소속»이 보이게 */
+.pm-in { margin-left: 18px; opacity: .95; border: none; background: rgba(255,255,255,.55); }
 .pm-fine { margin: 8px 0 0; font-size: 11.5px; font-weight: 800; color: rgba(255,255,255,.8);
   text-align: center; }
 
@@ -5813,6 +6867,10 @@ body:has(#screen > .gmw) { background: linear-gradient(180deg, #6FAEF2, #9A87E8)
   box-shadow: 0 3px 0 var(--g-lime-d); pointer-events: none; }
 
 /* 보스 타일(오늘의 미션) — 4칸 중 하나지만 색으로 «다른 것»임을 알린다 */
+/* 방학중 — CLEAR 처럼 스탬프만 남고 눌리지 않는 «쉬는 칸»(2026-08-12 대표님) */
+.gm-tile.vac { opacity: .55; filter: grayscale(.5); }
+.gm-tile.vac .gm-foot { font-weight: 900; }
+
 .gm-tile.boss { background: linear-gradient(135deg, #FF8A3D, #FF4E7A); color: #fff; }
 .gm-tile.boss::before { background: rgba(255, 255, 255, .5); }
 .gm-tile.boss .gm-ti { background: rgba(255, 255, 255, .26); }

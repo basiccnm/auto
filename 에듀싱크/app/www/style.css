@@ -963,6 +963,21 @@ label.f { display: block; margin-top: 12px; font-size: 12.5px; font-weight: 700;
 .ml-dishes .bad { color: var(--accent-ink); border-bottom: 1.5px dotted var(--accent); }
 .ml-dishes .bad i { font-style: normal; font-size: 11px; vertical-align: super; margin-left: 2px; }
 .ml-dishes mark { background: var(--info); color: inherit; border-radius: 4px; padding: 0 2px; }
+/* ── 급식 아코디언 (2026-08-13) ──────────────────────────────
+   「목록이 한번에 여러개가 보이게」 — 접힌 날은 «날짜 + 반찬 한 줄»만 차지한다.
+   ⚠ 날짜 줄 전체가 버튼이다. 알림 스위치는 그 안에 있으니 stopPropagation 이 짝(app.js).
+   ⚠ 접었을 때 머리 밑선을 지운다 — 밑에 아무것도 없는데 선만 남으면 «잘린 카드»로 보인다. */
+.ml-dtog { flex: 1; min-width: 0; min-height: 44px; padding: 0; background: none; border: none;
+  display: flex; align-items: center; gap: 9px; text-align: left; color: inherit; }
+.ml-sum { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-size: 13.5px; color: var(--muted); }
+.ml-car { flex: none; width: 8px; height: 8px; margin-left: auto; margin-top: -3px;
+  border-right: 2px solid var(--muted); border-bottom: 2px solid var(--muted);
+  transform: rotate(45deg); transition: transform .15s; }
+:root .ml-day.fold { padding: 2px 14px; }
+:root .ml-day.fold .ml-dhd { padding-bottom: 0; border-bottom: none; }
+:root .ml-day:not(.fold) .ml-car { transform: rotate(225deg); margin-top: 3px; }
+
 .ml-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; }
 .ml-foot button { min-height: 44px; padding: 0; background: none; border: none;
   color: var(--accent-ink); font-size: 14.5px; }
@@ -998,7 +1013,10 @@ label.f { display: block; margin-top: 12px; font-size: 12.5px; font-weight: 700;
 .graderow { display: flex; align-items: baseline; gap: 10px; padding: 9px 0; border-bottom: 1px dashed var(--line); }
 .graderow:last-child { border-bottom: none; }
 .graderow > b { flex: none; width: 46px; font-size: var(--fs-sm); }
-.graderow .gcls { flex: none; width: 52px; color: var(--muted); font-size: var(--fs-sm); }
+/* 학급수 칸 — 밑에 「한 반 17명」(학급당 평균)이 한 줄로 더 붙는다(2026-08-13 웹 이식).
+   52px 로는 그 줄이 «반 / 평균 17명» 으로 꺾여 읽혔다 — 폭을 주고 줄을 나눈다. */
+.graderow .gcls { flex: none; width: 68px; color: var(--muted); font-size: var(--fs-sm); }
+.graderow .gcls .gsex { display: block; margin-top: 1px; }
 .graderow .gnum { flex: 1; text-align: right; font-weight: 700; font-size: var(--fs-sm); }
 .graderow .gsex { color: var(--muted); font-weight: 400; font-size: var(--fs-xs); }
 .foldhd .caret { flex: none; color: var(--muted); font-size: 15px; }

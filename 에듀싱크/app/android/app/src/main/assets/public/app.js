@@ -482,7 +482,8 @@ function regCheck(key, v) {
     case "email":
       return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? null : "이메일 형식이 맞지 않아요";
     case "phone":
-      if (!v) return null;                          // 선택 항목
+      /* 2026-08-12 대표님: 휴대폰 필수 — 빈 값도 잡는다 */
+      if (!v) return "휴대폰 번호를 넣어 주세요";
       return /^01\d{8,9}$/.test(v.replace(/-/g, "")) ? null : "휴대폰 번호를 확인해 주세요";
     default: return null;
   }
@@ -490,9 +491,8 @@ function regCheck(key, v) {
 // 필수 칸이 전부 통과했는지
 function regValid() {
   const r = S.reg;
-  const required = ["userid", "pw", "pw2", "name", "birth", "email"];
+  const required = ["userid", "pw", "pw2", "name", "birth", "email", "phone"];   // 휴대폰 필수(2026-08-12)
   if (required.some((k) => !r[k] || regCheck(k, r[k]))) return false;
-  if (r.phone && regCheck("phone", r.phone)) return false;
   return r.t1 && r.t2;
 }
 
@@ -829,6 +829,10 @@ const S = {
   planKill: null,         // 지우기 확인 중인 일정 {id, name} — L4 창(시안 10f)
   mealRange: "week",      // 급식 보기 범위 — 주간 · 월간
   mealQuery: "",          // 급식 메뉴 검색어
+  /* 급식 아코디언(2026-08-13) — 다 펼쳐 두면 한 날이 화면을 다 먹어 「이번 주」가 안 보인다.
+     기본은 «오늘만 펼침». mealAll 은 전체 버튼이 누른 값, mealOpen 은 날짜별 손수정. */
+  mealAll: null,          // null=기본(오늘만) · "open"=전체 펼침 · "closed"=전체 닫음
+  mealOpen: {},           // { "20260813": true/false } — 날짜 하나만 손으로 여닫은 것
   supMemoOpen: false,     // 준비물 메모칸을 폈나 — 평소엔 접는다(시안 10d: 입력은 한 줄)
   mealSearchOpen: false,  // 메뉴 검색칸을 폈나 — 시안 10a 는 평소엔 접어둔다(메뉴가 주인)
   myAllergens: [5, 6],    // 우리 아이 알레르기 코드(예시: 대두·밀). 실제로는 자녀 정보에 저장
@@ -2109,7 +2113,7 @@ const Screens = {
       ${field("name", "이름 *", { ph: "보호자 이름" })}
       ${field("birth", "생년월일 *", { ph: "19850312", mode: "numeric" })}
       ${field("email", "이메일 *", { ph: "비밀번호 찾기에 쓰여요" })}
-      ${field("phone", "휴대폰 (선택)", { ph: "01012345678", mode: "numeric" })}
+      ${field("phone", "휴대폰", { ph: "01012345678", mode: "numeric" })}
       <div class="check"><input type="checkbox" id="t1" ${r.t1 ? "checked" : ""} onchange="App.regSet('t1', this.checked)"><label for="t1">이용약관 동의 (필수)</label><a class="see" href="#terms">보기</a></div>
       <div class="check"><input type="checkbox" id="t2" ${r.t2 ? "checked" : ""} onchange="App.regSet('t2', this.checked)"><label for="t2">개인정보 수집·이용 동의 (필수)</label><a class="see" href="#policy">보기</a></div>
       <!-- 광고성 수신(선택, 2026-07-31) — 켜면 채널 셋이 나온다. 기본 전부 체크, 끄는 건 자유.
@@ -2120,7 +2124,8 @@ const Screens = {
           <label class="mk"><input type="checkbox" ${r[k] !== false ? "checked" : ""} onchange="App.regSet('${k}', this.checked)">${nm}</label>`).join("")}
       </div>` : ""}
       <!-- 가입 다음은 곧바로 자녀 등록이다. 자녀가 없으면 앱이 보여줄 게 없다(2026-07-24 확정). -->
-      <div style="margin-top:16px"><button class="btn-primary" onclick="App.registerDone()">
+      <!-- 필수가 다 차기 전엔 잠근다(2026-08-12) — 눌리는데 안 되는 버튼은 고장으로 읽힌다 -->
+      <div style="margin-top:16px"><button class="btn-primary" ${regValid() && !S.regBusy ? "" : "disabled"} onclick="App.registerDone()">
         ${S.regBusy ? "확인 중…" : "가입하고 자녀 등록하기"}</button></div>
       ${S.regServerErr._ ? `<p class="fielderr" style="text-align:center">${S.regServerErr._}</p>` : ""}
     </div>`;
@@ -2188,13 +2193,12 @@ const Screens = {
     const row = (x) => {
       const done = x.status === "done";
       const wait = x.status === "waiting";
-      const tag = done ? `＋★${x.got || x.stars}`
+      const tag = done ? `★${x.got || x.stars}`
         : wait ? (kid ? "보냄" : "확인")
         : x.status === "skipped" ? "쉬어감" : `★${x.stars}`;
-      /* 아이는 줄을 눌러 **해낸다** — 즉시형은 그 자리에서 별, 사진형은 카메라로 */
-      const go = kid && !done && !wait
-        ? (x.verify === "review" ? `S.kidShootId=${x.id};location.hash='#childshoot'` : `App.missionDone(${x.id})`)
-        : `App.msOpen(${x.id})`;
+      /* 아이도 **상세에서 확정한다**(2026-08-12 대표님: 「누르면 바로 완성이 된다고???」).
+         목록 한 탭에 완료되면 실수로 스친 것도 별이 나간다 — 상세의 큰 「다 했어요!」가 확정이다. */
+      const go = `App.msOpen(${x.id})`;
       return `
       <button class="kd-q ${done ? "done" : ""} ${wait ? "wait" : ""}" onclick="${go}">
         <span class="bx">${done ? "✓" : wait ? "📷" : ""}</span>
@@ -2211,7 +2215,7 @@ const Screens = {
       return `
       <div class="kd-scr">
         <div class="kd-hd">
-          <button class="kd-bk" onclick="App.goBack()" aria-label="뒤로">‹</button>
+          <button class="kd-bk" onclick="location.hash='#game'" aria-label="뒤로">‹</button>
           <span class="ti">오늘의 미션</span>
           <span class="kd-pill star">★ ${(S.coin && S.coin.stars) || 0}</span>
         </div>
@@ -2265,7 +2269,10 @@ const Screens = {
     return `
     <div class="kd-scr">
       <div class="kd-hd">
-        <button class="kd-bk" onclick="App.goBack()" aria-label="뒤로">‹</button>
+        <!-- 🔴 goBack() 금지 — 미션↔상세 발자국이 쌓이면 ‹ 가 그 사이를 무한히 돈다.
+             **부모 미션의 ‹ 는 홈(A모듈)이다**(2026-08-12 확정 → 08-13 kd 복원 때 원본째 되돌아가
+             다시 깨졌다. 옛 판을 통째로 붙여 넣을 때는 이 줄을 꼭 확인할 것). -->
+        <button class="kd-bk" onclick="App.goHome()" aria-label="뒤로">‹</button>
         <span class="ti">미션</span>
         <span class="kd-pill star">★ ${S.missionStars}</span>
       </div>
@@ -2287,6 +2294,12 @@ const Screens = {
           <span class="em" aria-hidden="true">✏️</span><span class="nm">만들기</span></button>
       </div>
       <div class="kd-tiles two">
+        <button class="kd-tile" onclick="location.hash='#missiontoday'">
+          <span class="em" aria-hidden="true">📋</span><span class="nm">오늘 한 것</span></button>
+        <button class="kd-tile" onclick="location.hash='#missionbonus'">
+          <span class="em" aria-hidden="true">⭐</span><span class="nm">추가 증정 ＋1</span></button>
+      </div>
+      <div class="kd-tiles two">
         <button class="kd-tile" onclick="App.reactOpen(${c.server_id || 0})">
           <span class="em" aria-hidden="true">💛</span><span class="nm">칭찬 보내기</span></button>
         <button class="kd-tile pool" onclick="location.hash='#report'">
@@ -2303,6 +2316,7 @@ const Screens = {
 `;
   },
 
+
   /* ═══ 🎮 미션 게임 — 아이의 세계 (2026-08-08 기획서 §01·§08) ═══════════
      하단 ★ 로 들어온다. 부모 앱 위에 얹힌 화면이 아니라 **다른 세계**로 보여야 한다:
      머리띠·카드 문법을 그대로 쓰지 않고, 상태창 하나로 시작한다.
@@ -2318,7 +2332,8 @@ const Screens = {
        부모 페이지는 관리자 페이지다 — 화려할 필요 없고 알아보기 쉬우면 된다(대표님 지시 08-08).
        아이 세계를 보고 싶으면 «아이 화면 미리보기»로 일부러 들어간다. */
     const kid = isChildToken() || S.kidMode;
-    if (!kid && !S.gamePreview) return parentMissionAdmin(c, coin);
+    /* 두벌(2026-08-12): 옛 파랑 허브(parentMissionAdmin) 퇴역 — 부모의 미션 일은 전부 #mission(구글) */
+    if (!kid && !S.gamePreview) { location.hash = "#mission"; return ""; }
 
     /* 안쪽 화면(카드를 열었거나 상점·프로필)이면 그쪽을 그린다.
        ⚠ 탭이 아니다 — 탭은 부모 앱의 문법이고, 아이 화면은 «들어갔다 나오는» 문법이다. */
@@ -2432,12 +2447,15 @@ const Screens = {
        아이는 «고장»으로 읽는다 — 왜 안 되는지가 화면에 있어야 한다. */
   store: () => {
     const c = cur();
-    const kid = isChildToken() || S.childView || S.kidMode;
+    /* 미리보기(gamePreview)도 «아이 눈»이다(2026-08-12 대표님: 「진열대 올리기가 아이 화면에서
+       나오면 어떡해」) — 부모 관리 단추는 부모 눈일 때만. */
+    const kid = isChildToken() || S.childView || S.kidMode || S.gamePreview;
     /* ══ 2026-08-12 «오후 4시의 운동장» — 상점도 미션과 같은 세계다.
        머리(kd-hd)·카드 문법은 미션 화면과 한 벌. st- 부품은 style.css 정의 자리에서 kd 값으로. */
+    /* 미션 세계는 부모도 듀오링고(2026-08-13 재확정) — kid 는 역할(버튼)만 가른다 */
     const hd = `
       <div class="kd-hd">
-        <button class="kd-bk" onclick="App.goBack()" aria-label="뒤로">‹</button>
+        <button class="kd-bk" onclick="${kid ? "location.hash='#game'" : "location.hash='#mission'"}" aria-label="뒤로">‹</button>
         <span class="ti">스타코인 상점</span>
         <span class="kd-pill star">★ ${S.missionStars || 0}</span>
       </div>`;
@@ -2456,8 +2474,9 @@ const Screens = {
 
     ${!S.store.length ? `
       <div class="ms-empty">
-        <b>진열대가 비어 있어요</b>
-        ${kid ? "" : `<button class="kd-btn" onclick="App.storeAddOpen()">진열대에 올리기</button>`}
+        <b>${kid ? "아직 준비된 보상이 없어요" : "진열대가 비어 있어요"}</b>
+        ${kid ? `<p class="sub" style="margin-top:6px">엄마아빠에게 부탁해봐!</p>`
+              : `<button class="kd-btn" onclick="App.storeAddOpen()">진열대에 올리기</button>`}
       </div>` : `
       <ul class="st-list">
         ${S.store.map((it) => {
@@ -2502,8 +2521,8 @@ const Screens = {
      ⚠ 「바꿔줬어요」는 부모만 누른다 — 아이가 스스로 받았다고 처리하면 그건 기록이 아니다. */
   tickets: () => {
     const c = cur();
-    const kid = isChildToken() || S.childView || S.kidMode;
-    /* 2026-08-12 듀오링고 캐논 — 상점과 같은 세계, 같은 머리 */
+    const kid = isChildToken() || S.childView || S.kidMode || S.gamePreview;
+    /* 미션 세계는 부모도 듀오링고(2026-08-13 재확정) */
     const hd = `
       <div class="kd-hd">
         <button class="kd-bk" onclick="location.hash='#store'" aria-label="뒤로">‹</button>
@@ -2991,6 +3010,16 @@ const Screens = {
             const addr = esc(sc.address || "");
             return (head || addr) ? `<p class="sub" style="margin-top:0">${head}${head && addr ? "<br>" : ""}${addr}</p>` : "";
           })()}
+          <!-- 웹 학교 페이지의 머리 요약줄 그대로 — 「공립 · 남녀공학 · 1981년 개교 · ○○교육지원청」
+               (2026-08-13 「기존 웹으로 만든 부분 이식이 안 되어 있다」) -->
+          ${(() => {
+            const b = [];
+            if (sc.est_type) b.push(esc(sc.est_type));
+            if (sc.coedu) b.push(esc(String(sc.coedu).replace("남여", "남녀")));
+            if (sc.founded_ymd && String(sc.founded_ymd).length >= 4) b.push(`${esc(String(sc.founded_ymd).slice(0, 4))}년 개교`);
+            if (sc.office) b.push(esc(sc.office));
+            return b.length ? `<p class="mp-hint" style="margin-top:8px">${b.join(" · ")}</p>` : "";
+          })()}
           ${sc.phone || sc.homepage ? `<div class="row" style="margin-top:10px">
             ${sc.phone ? `<a class="btn btn-line" href="tel:${esc(String(sc.phone).replace(/[^0-9+]/g, ""))}"><i class='ti ti-phone'></i> ${esc(sc.phone)}</a>` : ""}
             ${sc.homepage ? `<button class="btn-line" onclick="openExternal('${jsq(sc.homepage)}','학교 홈페이지')"><i class='ti ti-link'></i> 홈페이지</button>` : ""}
@@ -2999,12 +3028,37 @@ const Screens = {
 
         <!-- 공시에 없는 값은 「-」로 자리만 채우지 않는다. 빈 칸 하나가 «우리 학교는 교원이 없나»로 읽힌다. -->
         ${(() => {
+          const fy = sc.founded_ymd && String(sc.founded_ymd).length >= 4 ? String(sc.founded_ymd).slice(0, 4) : null;
           const st = [
             [sc.detail?.student_count, "전교생"],
             [sc.detail?.class_count, "학급"],
             [sc.detail?.teacher_count, "교원"],
+            [fy, "개교"],                                  // 웹 스탯 4칸과 같은 구성
           ].filter(([v]) => v != null);
-          return st.length ? `<div class="stats">${st.map(([v, k]) => `<div><b>${v}</b><span>${k}</span></div>`).join("")}</div>` : "";
+          return st.length ? `<div class="stats">${st.map(([v, k]) => `<div><b>${esc(String(v))}</b><span>${k}</span></div>`).join("")}</div>` : "";
+        })()}
+        <!-- 연간 수업일수·주당 수업시수 — 웹 학교정보 탭에 있던 카드(학교알리미 공시) -->
+        ${(() => {
+          const d = sc.detail || {};
+          if (d.school_days == null && d.week_class_hours == null) return "";
+          const cells = [
+            [d.school_days, "일", "연간 수업일수"],
+            [d.week_class_hours, "시수", "주당 총 수업시수"],
+          ].filter(([v]) => v != null);
+          return `<div class="stats">${cells.map(([v, u, k]) =>
+            `<div><b>${esc(String(v))}${u}</b><span>${k}</span></div>`).join("")}</div>`;
+        })()}
+        ${(() => {
+          /* 웹과 같은 부가 정보(2026-08-13) — 있는 것만 조용한 한 줄로 */
+          const bits = [];
+          const d = sc.detail || {};
+          if (d.male_count != null && d.female_count != null) bits.push(`남 ${d.male_count} · 여 ${d.female_count}`);
+          if (d.afterschool_program_count != null) {
+            bits.push(`방과후 ${d.afterschool_program_count}개 프로그램`
+              + (d.afterschool_student_count != null ? ` (참여 ${d.afterschool_student_count}명)` : ""));
+          }
+          if (d.care_class_yn === "Y") bits.push("돌봄교실 운영");
+          return bits.length ? `<p class="mp-hint" style="margin-top:10px">${bits.join(" · ")}</p>` : "";
         })()}
 
         <!-- 학년별 현황은 **자료가 있을 때만** 접이 카드를 그린다.
@@ -3013,20 +3067,31 @@ const Screens = {
         <div class="card foldbox">
           <button class="foldhd" onclick="App.toggleGrades()">
             <span><b style="font-size:13px">학년별 현황</b>
-              <span class="foldsum">${sc.detail.grade_breakdown.length}개 학년 · 학급수와 인원</span></span>
+              <span class="foldsum">전교생 ${esc(String(sc.detail.student_count ?? "-"))}명 ·
+                ${esc(String(sc.detail.class_count ?? "-"))}학급${sc.detail.disclosure_round ? ` · ${esc(sc.detail.disclosure_round)} 공시` : ""}</span></span>
             <span class="caret">${S.gradesOpen ? `<i aria-hidden="true" class="ti ti-chevron-up"></i>` : `<i aria-hidden="true" class="ti ti-chevron-down"></i>`}</span>
           </button>
           ${S.gradesOpen ? `
             <div class="gradelist">
-              ${sc.detail.grade_breakdown.map((g) => `
+              ${sc.detail.grade_breakdown.map((g) => {
+                // 웹은 학년을 또 펼쳐 반별 칸을 보여주지만, 값은 «학급당 평균» 하나뿐이다.
+                // 접이 안에 접이를 또 두지 않고 그 숫자만 한 줄로 붙인다.
+                const avg = (g.students && g.classes) ? Math.round(g.students / g.classes) : null;
+                return `
                 <div class="graderow">
                   <b>${g.grade}학년</b>
-                  <span class="gcls">${g.classes}학급</span>
+                  <span class="gcls">${g.classes}학급${avg != null ? `<span class="gsex">한 반 ${avg}명</span>` : ""}</span>
                   <span class="gnum">${g.students}명 <span class="gsex">남 ${g.male} · 여 ${g.female}</span></span>
-                </div>`).join("")}
+                </div>`; }).join("")}
             </div>
-            <p class="notice" style="padding:0 16px 14px">반별 인원은 공시되지 않아 학년 단위로만 제공돼요 ·
-              학교알리미 ${esc(String(sc.detail?.disclosure_round ?? ""))} 공시 기준</p>` : ""}
+            ${(() => {
+              const d = sc.detail || {};
+              const bits = [`전교생 ${d.student_count ?? "-"}명`, `${d.class_count ?? "-"}학급`];
+              if (d.teacher_count != null) bits.push(`교원 ${d.teacher_count}명`);
+              if (d.male_count != null || d.female_count != null) bits.push(`남 ${d.male_count ?? "-"} · 여 ${d.female_count ?? "-"}`);
+              return `<p class="notice" style="padding:0 16px 14px">${esc(bits.join(" · "))} ·
+                반별 인원은 공시되지 않아 학년 단위로만 제공돼요${d.disclosure_round ? ` · 학교알리미 ${esc(d.disclosure_round)} 공시 기준` : ""}</p>`;
+            })()}` : ""}
         </div>` : ""}`,
       meal: () => mealTab(),
       schedule: () => diaryTab(),
@@ -3237,6 +3302,7 @@ const Screens = {
       return `<button class="kd-btn" onclick="App.missionRevert(${x.id});location.hash='#mission'">${x.status === "skipped" ? "다시 줘볼까?" : "다시 해볼까?"}</button>`;
     })();
 
+    /* 미션은 부모도 듀오링고(2026-08-13 대표님 재확정) — 역할은 발판(foot)이 가른다 */
     return `
     <div class="kd-scr">
       <div class="kd-hd">
@@ -3249,6 +3315,68 @@ const Screens = {
       ${week}
       <div style="flex:1"></div>
       <div class="kd-act">${foot}</div>
+    </div>`;
+  },
+
+  /* ── 오늘 아이가 한 것 — 부모, 구글 캐논 (2026-08-12 허브 퇴역으로 이사) ──
+     소속(아침/학교/방과후) 밑에 그 미션들이 붙는다. 표기는 «완료 ★n»(대표님 지시). */
+  missiontoday: () => {
+    const coin = S.coin || { stars: 0 };
+    const sets = S.msets || {}, sc = S.schoolMs, q = S.quiz;
+    const ms = S.missions || [];
+    const secRow = (icon, name, d, all) => `
+      <p class="mp-sec" style="margin-top:16px">${icon} ${name} · ${all ? `${d} / ${all}` : "오늘 없음"}${d >= all && all > 0 ? " · 완료" : ""}</p>`;
+    const sub = (x) => x.status === "done"
+      ? `<div class="mk-row on" style="margin-bottom:6px"><span class="bd"><b>${esc(x.title)}</b></span><span class="mk-in">완료 ★${x.got || x.stars}</span></div>`
+      : x.status === "waiting"
+      ? `<button class="mk-row" style="margin-bottom:6px" onclick="App.msOpen(${x.id})"><span class="bd"><b>${esc(x.title)}</b></span><span class="mk-add">›</span></button>`
+      : `<div class="mk-row" style="margin-bottom:6px;opacity:.75"><span class="bd"><b>${esc(x.title)}</b></span><span class="bd" style="flex:none"><em>아직 · ★${x.stars}</em></span></div>`;
+    const scRows = (sc?.items || []).map((m) => `
+      <div class="mk-row ${m.done ? "on" : ""}" style="margin-bottom:6px${m.done ? "" : ";opacity:.75"}">
+        <span class="bd"><b>${m.icon || "🏫"} ${esc(m.name)}</b></span>
+        ${m.done ? `<span class="mk-in">완료 ★${m.stars || 1}</span>` : `<span class="bd" style="flex:none"><em>아직 · ★${m.stars || 1}</em></span>`}
+      </div>`).join("");
+    return `
+    <div class="kd-scr">
+    <div class="kd-hd">
+      <button class="kd-bk" onclick="location.hash='#mission'" aria-label="뒤로">‹</button>
+      <span class="ti">오늘 아이가 한 것</span>
+      <span class="kd-pill star">★ ${coin.stars || S.missionStars || 0}</span>
+    </div>
+    ${secRow("🌅", "아침 미션", sets.morning?.done || 0, sets.morning?.all || 0)}
+    ${ms.filter((x) => x.slot === "morning").map(sub).join("")}
+    ${sc && sc.available === false ? "" : secRow("🏫", "학교 미션", sc?.done || 0, sc?.all || 0)}
+    ${scRows}
+    ${secRow("📚", "방과후 미션", sets.after?.done || 0, sets.after?.all || 0)}
+    ${ms.filter((x) => x.slot !== "morning").map(sub).join("")}
+    ${secRow("⚔️", "오늘의 미션", q?.done ? 1 : 0, 1)}
+    ${q?.done ? `<p class="mp-hint">${q.correct} / ${q.total} 맞힘</p>` : ""}
+    </div>`;
+  },
+
+  /* ── 추가 증정 ＋1 — 부모, 구글 캐논 ── */
+  missionbonus: () => {
+    const coin = S.coin || { limit: COIN_LIMIT };
+    const done = (S.missions || []).filter((x) => x.status === "done");
+    const given = S.bonusGiven || [];
+    return `
+    <div class="kd-scr">
+    <div class="kd-hd">
+      <button class="kd-bk" onclick="location.hash='#mission'" aria-label="뒤로">‹</button>
+      <span class="ti">추가 증정</span>
+    </div>
+    ${!done.length ? `<p class="sub" style="margin-top:20px">아이가 미션을 끝내면 여기서 ＋1을 얹어 줄 수 있어요</p>`
+      : done.map((x) => {
+        const had = given.indexOf(x.id) >= 0;
+        return `
+        <div class="mk-row ${had ? "on" : ""}" style="margin-bottom:8px">
+          <span class="bd"><b>⭐ ${esc(x.title)}</b></span>
+          ${had ? `<span class="mk-in">＋1 줬어요</span>`
+                : `<button class="mk-add" style="width:auto;padding:0 14px;border:none;font-family:inherit" ${S.giveBusy === x.id ? "disabled" : ""}
+                     onclick="App.missionBonus(${x.id})">${S.giveBusy === x.id ? "…" : "＋1"}</button>`}
+        </div>`;
+      }).join("")}
+    <p class="mp-hint" style="margin-top:14px">한 미션에 한 번만 · 오늘 받은 것이 ${coin.limit}개를 넘으면 안 들어가요</p>
     </div>`;
   },
 
@@ -3274,7 +3402,7 @@ const Screens = {
     }
     const BANDS = [["low", "저학년"], ["mid", "중학년"], ["high", "고학년"]];
 
-    /* 2026-08-12 듀오링고 캐논 — kd-scr 껍데기 + 사탕알 머리. 반환부의 여닫이와 짝이다 */
+    /* 미션 세계는 부모도 듀오링고(2026-08-13 대표님 재확정) */
     const head = `
       <div class="kd-hd">
         <button class="kd-bk" onclick="location.hash='#mission'" aria-label="뒤로">‹</button>
@@ -4030,12 +4158,15 @@ const Screens = {
         <div class="wk-axis">${hours.map((h) => `<div style="height:${GRID.px * 2}px"><span>${h}시</span></div>`).join("")}</div>
         ${DAY_KO.map((d, i) => `
           <div class="wk-col d${i} ${i % 2 ? "alt" : ""} ${i === todayCol ? "today" : ""}"
-               role="button" aria-label="${d}요일 — 눌러서 일정 넣기" onclick="App.planTap(event, ${i + 1})">
+               role="button" aria-label="${d}요일 — 눌러서 일정 넣기" onclick="if(!App.holdGuard()&&!App.dragGuard())App.planTap(event, ${i + 1})">
             ${hours.map(() => `<div class="wk-slot" style="height:${GRID.px * 2}px"></div>`).join("")}
             ${byDay[i].map((a) => `
+              <!-- 🔴 event.stopPropagation() 필수 — 블록 클릭이 **밑의 요일 칸까지 흘러가서**
+                   메뉴와 「새 일정 폼」이 **동시에** 열렸다. 메뉴에서 「이동」을 고르면 메뉴만 닫히고
+                   뒤에 남은 폼이 드러나 «왜 수정 화면이 뜨냐»가 됐다(2026-08-13 실측으로 잡음). -->
               <div class="blk ${S.planMove?.id === a.id ? "moving" : ""}"
-                   onclick="if(!App.holdGuard()&&!App.dragGuard())App.planMenu(${a.id}, ${i + 1})"
-                   onpointerdown="App.blockDown(event, ${a.id}, ${i + 1})"
+                   onclick="event.stopPropagation();if(!App.holdGuard()&&!App.dragGuard())App.planMenu(${a.id}, ${i + 1})"
+                   onpointerdown="event.stopPropagation();App.blockDown(event, ${a.id}, ${i + 1})"
                    style="top:${gridTop(a.start_time)}px;height:${Math.max(GRID.px, gridTop(a.end_time) - gridTop(a.start_time))}px;--tag:${planColor(a.color, a.name).v}">
                 <b>${esc(a.name)}</b>
                 <i class="grip" onpointerdown="App.gripDown(event, ${a.id}, ${i + 1})"></i>
@@ -4488,13 +4619,20 @@ const Screens = {
     const k = S.docKind, isReport = S.docPhase === "report";
     const days = d.days ?? 3;
 
+    /* 성명 = 서식에 그대로 찍히는 값이라 **여기서 바로 고친다.**
+       예전엔 「실명은 상세에서」라고만 적혀 있고 그 상세가 없었다(2026-08-13 지적). */
+    const real = String(docNames()[String(c.id)] || "");
     const auto = `
       <div class="card autofill">
         <b style="font-size:13px">자동으로 채웠어요</b>
         <div class="afrow"><span>학교</span><b>${esc(schoolName(c))}</b></div>
         <div class="afrow"><span>학년·반</span><b>${c.grade}학년 ${c.class_name}반</b></div>
-        <div class="afrow"><span>이름</span><b>${esc(c.nickname)} <span class="todo">실명은 상세에서</span></b></div>
         <div class="afrow"><span>보호자</span><b>${esc(STUB.me.account.display_name)}</b></div>
+        <label class="f">성명 <span class="sdesc" style="display:inline">서식에 찍히는 이름이에요</span></label>
+        <input id="doc-realname" placeholder="${esc(c.nickname)} (실명을 적어주세요)" value="${esc(real)}"
+               oninput="App.docNameSet(this.value)">
+        <p class="sub">이 이름은 <b>이 기기에만</b> 저장돼요 — 서버로 보내지 않아요.
+          안 적으면 별명 「${esc(c.nickname)}」이 그대로 찍힙니다.</p>
       </div>`;
 
     const period = (label, note) => `
@@ -4793,11 +4931,29 @@ const Screens = {
      → 메뉴 목록은 **고르는 카드 하나로 합치고**, 순위는 1등만 받는다. */
   childmealrate: () => {
     const meal = mealsOf().find((m) => m.date === TODAY && m.type === "중식");
-    // 조용히 되돌리면 «눌렀는데 아무 일도 없는» 고장으로 읽힌다 — 이유를 말한다.
-    if (!meal) { toast("오늘은 급식이 없어요"); location.hash = "#game"; return ""; }
+    /* 급식이 없는 날(방학·주말) — 튕기지 말고 **쉬는 날이라고 말한다**(2026-08-12 대표님:
+       「아직 급식이 안 나와서 안 되면 방학중 미션 없음 이런 느낌 줘야」). */
+    if (!meal) return `
+    <div class="kd-scr">
+      <div class="kd-hd">
+        <button class="kd-bk" onclick="location.hash='#game'" aria-label="뒤로">‹</button>
+        <span class="ti">오늘 급식</span>
+      </div>
+      <div class="kd-hero">
+        <span class="bem" aria-hidden="true">🏖️</span>
+        <h2>오늘은 급식이 없는 날!</h2>
+      </div>
+      <div class="kd-why" style="text-align:center">방학이나 주말엔 이 미션이 쉬어요.<br>학교 가는 날 다시 만나!</div>
+      <div style="flex:1"></div>
+      <div class="kd-act"><button class="kd-btn" onclick="location.hash='#game'">돌아가기</button></div>
+    </div>`;
     const d = S.mealDraft;
     return `
-    <a class="back" href="#game" aria-label="뒤로"><i aria-hidden="true" class="ti ti-chevron-left"></i></a>
+    <div class="kd-scr">
+    <div class="kd-hd">
+      <button class="kd-bk" onclick="location.hash='#game'" aria-label="뒤로">‹</button>
+      <span class="ti">오늘 급식</span>
+    </div>
     <h1 class="kd2-h1">오늘 급식 어땠어?</h1>
 
     <p class="kd2-starhint">${d.stars ? "" : "별을 눌러서 골라줘"}</p>
@@ -4817,7 +4973,8 @@ const Screens = {
     </div>
 
     <button class="kd2-cta" ${d.stars && !S.mealBusy ? "" : "disabled"} onclick="App.mealRateSubmit()">
-      ${S.mealBusy ? "보내는 중…" : `<i aria-hidden="true" class="ti ti-send"></i>보내기`}</button>`;
+      ${S.mealBusy ? "보내는 중…" : `<i aria-hidden="true" class="ti ti-send"></i>보내기`}</button>
+    </div>`;
   },
 
   /* ── 자녀: 오늘 제일 재밌었던 과목? (2026-08-02) ────────────────
@@ -4826,9 +4983,26 @@ const Screens = {
      성적표가 알려주지 않는 것이다. 과목은 주 단위로 반복돼서 한 달이면 표본이 충분하다. */
   childsubject: () => {
     const subs = todaySubjects();
-    if (!subs.length) { toast("오늘은 수업이 없어요"); location.hash = "#game"; return ""; }
+    if (!subs.length) return `
+    <div class="kd-scr">
+      <div class="kd-hd">
+        <button class="kd-bk" onclick="location.hash='#game'" aria-label="뒤로">‹</button>
+        <span class="ti">재밌던 수업</span>
+      </div>
+      <div class="kd-hero">
+        <span class="bem" aria-hidden="true">🏖️</span>
+        <h2>오늘은 수업이 없는 날!</h2>
+      </div>
+      <div class="kd-why" style="text-align:center">방학이나 주말엔 이 미션이 쉬어요.<br>학교 가는 날 다시 만나!</div>
+      <div style="flex:1"></div>
+      <div class="kd-act"><button class="kd-btn" onclick="location.hash='#game'">돌아가기</button></div>
+    </div>`;
     return `
-    <a class="back" href="#game" aria-label="뒤로"><i aria-hidden="true" class="ti ti-chevron-left"></i></a>
+    <div class="kd-scr">
+    <div class="kd-hd">
+      <button class="kd-bk" onclick="location.hash='#game'" aria-label="뒤로">‹</button>
+      <span class="ti">재밌던 수업</span>
+    </div>
     <h1 class="kd2-h1">오늘 제일 재밌었던 건?</h1>
 
     <div class="kd2-pick1" style="margin-top:22px">
@@ -4840,7 +5014,8 @@ const Screens = {
     </div>
 
     <button class="kd2-cta" ${S.subjectBest && !S.subjectBusy ? "" : "disabled"}
-      onclick="App.subjectSubmit()">${S.subjectBusy ? "보내는 중…" : `<i aria-hidden="true" class="ti ti-send"></i>보내기`}</button>`;
+      onclick="App.subjectSubmit()">${S.subjectBusy ? "보내는 중…" : `<i aria-hidden="true" class="ti ti-send"></i>보내기`}</button>
+    </div>`;
   },
 
   /* ── 자녀: 오늘 누구랑 놀았어? (2026-08-02) ─────────────────────
@@ -4853,7 +5028,11 @@ const Screens = {
   childfriend: () => {
     const d = S.friendDraft;
     return `
-    <a class="back" href="#game" aria-label="뒤로"><i aria-hidden="true" class="ti ti-chevron-left"></i></a>
+    <div class="kd-scr">
+    <div class="kd-hd">
+      <button class="kd-bk" onclick="location.hash='#game'" aria-label="뒤로">‹</button>
+      <span class="ti">오늘 누구랑</span>
+    </div>
     <h1 class="kd2-h1">오늘 누구랑 놀았어?</h1>
     <p class="kd2-sub">여러 명 골라도 돼요</p>
 
@@ -4883,7 +5062,8 @@ const Screens = {
     </div>`}
 
     <button class="kd2-cta" ${(d.picked.length || d.alone) && !S.friendBusy ? "" : "disabled"}
-      onclick="App.friendSubmit()">${S.friendBusy ? "보내는 중…" : `<i aria-hidden="true" class="ti ti-send"></i>보내기`}</button>`;
+      onclick="App.friendSubmit()">${S.friendBusy ? "보내는 중…" : `<i aria-hidden="true" class="ti ti-send"></i>보내기`}</button>
+    </div>`;
   },
 
   /* ── 자녀: 화면 고르기 (첫 실행 + 「화면 바꾸기」) ────────────
@@ -5222,7 +5402,17 @@ function rememberTitle(kind, title) {
      문서 흐름에 넣으면 키보드가 올라올 때마다 목록이 출렁인다.
    ⚠ 「제대로 입력」으로 넘어가는 길을 옆에 둔다 — 날짜·반복이 필요하면 거기로 간다. */
 function inputBar(kind, ph) {
+  /* 준비물은 «언제 챙길 것인가»가 이름만큼 중요하다 — 날짜를 입력 줄에 올린다.
+     기본은 **내일**(저녁에 챙기는 건 내일 것이다). 오늘 것도 필요하면 한 번에 고른다. */
+  const supDate = kind === "sup" ? (S.ibDate || ymdPlus(TODAY, 1)) : null;
   return `
+  ${kind !== "sup" ? "" : `
+  <div class="ib-dates">
+    <button class="${supDate === TODAY ? "on" : ""}" onclick="App.ibDateSet('${TODAY}')">오늘</button>
+    <button class="${supDate === ymdPlus(TODAY, 1) ? "on" : ""}" onclick="App.ibDateSet('${ymdPlus(TODAY, 1)}')">내일</button>
+    <input type="date" class="ib-dpick" value="${supDate.slice(0,4)}-${supDate.slice(4,6)}-${supDate.slice(6)}"
+      onchange="App.ibDateSet(this.value.replace(/-/g,''))">
+  </div>`}
   <div class="ib">
     <input id="ib-t" class="ib-in" placeholder="${ph}" value="${esc(S.ibText || "")}"
       autocomplete="off" oninput="S.ibText=this.value"
@@ -5451,8 +5641,8 @@ function parentMissionAdmin(c, coin) {
             <span class="pm-i">⭐</span>
             <b>${esc(x.title)}</b>
             ${had ? `<span class="pm-ok">＋1 줬어요</span>`
-                  : `<button class="pm-plus" ${S.giveBusy ? "disabled" : ""}
-                       onclick="App.missionBonus(${x.id})">＋1</button>`}
+                  : `<button class="pm-plus" ${S.giveBusy === x.id ? "disabled" : ""}
+                       onclick="App.missionBonus(${x.id})">${S.giveBusy === x.id ? "…" : "＋1"}</button>`}
           </div>`;
         }).join("")}
       <p class="pm-fine">한 미션에 한 번만 · 오늘 받은 것이 ${coin.limit}개를 넘으면 안 들어가요</p>
@@ -5467,10 +5657,27 @@ function parentMissionAdmin(c, coin) {
         <span class="pm-n">${all ? `${d} / ${all}` : "오늘 없음"}</span>
         ${d >= all && all > 0 ? `<span class="pm-ok">완료</span>` : ""}${extra || ""}
       </div>`;
+    /* 🔴 소속별로 묶는다(2026-08-12 대표님: 「아침 미션이면 아침 미션에 소속되어져 이거 완료
+       이런 식으로」). 카테고리 줄 밑에 그 미션들이 붙고, 한 것은 완료·별, 기다리는 것은 눌러서 확인. */
+    const sub = (x) => x.status === "done"
+      ? `<div class="pm-row pm-in"><span class="pm-i">✅</span><b>${esc(x.title)}</b><span class="pm-ok">완료 ★${x.got || x.stars}</span></div>`
+      : x.status === "waiting"
+      ? `<button class="pm-row pm-in" style="width:100%;text-align:left;font-family:inherit" onclick="App.msOpen(${x.id})">
+           <span class="pm-i">🙋</span><b>${esc(x.title)}</b><span class="pm-n">확인하기 ›</span></button>`
+      : `<div class="pm-row pm-in"><span class="pm-i">·</span><b>${esc(x.title)}</b><span class="pm-n">아직 · ★${x.stars}</span></div>`;
+    const ms = S.missions || [];
+    const mor = ms.filter((x) => x.slot === "morning");
+    const aft = ms.filter((x) => x.slot !== "morning");
+    const scRows = (sc?.items || []).map((m) => `
+      <div class="pm-row pm-in"><span class="pm-i">${m.icon || "🏫"}</span><b>${esc(m.name)}</b>
+        <span class="${m.done ? "pm-ok" : "pm-n"}">${m.done ? "완료 ★" + (m.stars || 1) : "아직 · ★" + (m.stars || 1)}</span></div>`).join("");
     return `<div class="gmp">${head("오늘 아이가 한 것", "모은 스탬프 ★" + coin.stars)}
       ${row("🌅", "아침 미션", sets.morning?.done || 0, sets.morning?.all || 0)}
+      ${mor.map(sub).join("")}
       ${sc && sc.available === false ? "" : row("🏫", "학교 미션", sc?.done || 0, sc?.all || 0)}
+      ${scRows}
       ${row("📚", "방과후 미션", sets.after?.done || 0, sets.after?.all || 0)}
+      ${aft.map(sub).join("")}
       ${row("⚔️", "오늘의 미션", q?.done ? 1 : 0, 1,
             q?.done ? `<span class="pm-sub">${q.correct} / ${q.total} 맞힘</span>` : "")}
     </div>`;
@@ -5619,8 +5826,9 @@ function schoolMissionList() {
   const noSub = !todaySubjects().length;
   return s.items.map((x) => {
     const none = x.key === "meal" ? noMeal : x.key === "subject" ? noSub : false;
+    /* 2026-08-12 대표님: 「클리어처럼 비활성화된 느낌으로 방학중 써놓으라」 */
     return { ...x, none, go: none ? "" : "#" + x.go,
-      note: none ? (x.key === "meal" ? "오늘은 급식이 없어요" : "오늘은 수업이 없어요") : x.note };
+      note: none ? "학교 가는 날 다시 열려요" : x.note };
   });
 }
 
@@ -5629,7 +5837,7 @@ function gameTile(t) {
   const pct = t.all ? Math.round((t.done / t.all) * 100) : 0;
   const clear = t.all > 0 && t.done >= t.all;
   return `
-  <button class="gm-tile c-${t.c}${clear ? " clear" : t.done < t.all ? " todo" : ""}${t.boss ? " boss" : ""}"
+  <button class="gm-tile c-${t.c}${clear ? " clear" : t.done < t.all ? " todo" : ""}${t.boss ? " boss" : ""}${t.dim ? " vac" : ""}"
     ${t.act ? `onclick="${t.act}"`
     : t.go ? `onclick="location.hash='${t.go}'"`
     : t.tap ? `onclick="App.missionDone(${t.tap})"`
@@ -5664,7 +5872,7 @@ function gameCard(catKey) {
     stars = list.reduce((a, x) => a + x.stars, 0);
     tiles = list.map((x) => gameTile({ leaf: true, key: x.key, icon: x.icon, name: x.name, note: x.note,
       c: "cyan", done: x.done ? 1 : 0, all: 1, stars: x.stars, go: x.go,
-      foot: x.done ? "했어요" : x.none ? "오늘은 쉬어요" : "30초면 끝" })).join("");
+      foot: x.done ? "했어요" : x.none ? "방학중" : "30초면 끝", dim: x.none })).join("");
   } else {
     const list = (S.missions || []).filter((x) => slots.indexOf(x.slot || "any") >= 0);
     all = list.length; done = list.filter((x) => x.status === "done").length;
@@ -6221,7 +6429,24 @@ function drawerView(c) {
       ${badge ? `<span class="cnt">${badge}</span>` : ""}
     </button>`;
 
+  const kidSheet = !S.childSwitch ? "" : `
+  <div class="modal sheetwrap" style="z-index:60" onclick="App.childSwitchClose()">
+    <div class="sheet" onclick="event.stopPropagation()">
+      <div class="sheet-grip"></div>
+      <div class="sheet-hd"><b>자녀 전환</b></div>
+      <div style="max-height:46vh;overflow-y:auto">
+        ${STUB.children.map((k) => `
+        <button class="mp-row" style="width:100%" onclick="App.childSwitchClose();App.drawerClose();App.pickChild(${k.id})">
+          <span class="mp-i"><i aria-hidden="true" class="ti ti-user"></i></span>
+          <span class="n">${esc(k.nickname)}${k.grade ? `<em>${k.grade}학년${k.class_name ? ` ${esc(k.class_name)}반` : ""}</em>` : ""}</span>
+          ${k.id === S.currentChildId ? `<span class="v ok">지금</span>` : `<i aria-hidden="true" class="ti ti-chevron-right ar"></i>`}
+        </button>`).join("")}
+      </div>
+      <button class="msc-sub" onclick="App.childSwitchClose();App.drawerClose();App.childAddStart()">＋ 자녀 추가</button>
+    </div>
+  </div>`;
   return `
+  ${kidSheet}
   <div class="ns-dim" onclick="App.drawerClose()"></div>
   <nav class="ns-drawer"${S.art ? ` data-art="${jsq(S.art)}"` : ""} onclick="event.stopPropagation()">
 
@@ -6232,6 +6457,13 @@ function drawerView(c) {
         ${c ? `<button class="go" onclick="App.drawerClose();location.hash='#timeline'" aria-label="서랍">
           <i aria-hidden="true" class="ti ti-archive"></i></button>` : ""}
       </div>
+      <!-- 자녀 전환 (2026-08-13 대표님: 「화면 다 쓰지 말고 팝업으로. 셋째 들어가면 어쩔 건데」)
+           — 줄 하나만 차지하고, 누르면 시트가 뜬다. 몇 명이든 시트 안에서 구른다. -->
+      ${c && STUB.children.length > 1 ? `
+      <div class="ns-kids">
+        <button class="kchip on" onclick="App.childSwitchOpen()">
+          ${esc(c.nickname)} ▾ <span style="opacity:.75;font-weight:400">자녀 전환</span></button>
+      </div>` : ""}
       ${c ? `<div class="ns-stats">
         <span class="s">학교<b>${esc(schoolName(c))}${c.grade ? ` · ${c.grade}학년` : ""}${c.class_name ? ` ${esc(c.class_name)}반` : ""}</b></span>
         <span class="s">이용권<b>${esc(pass?.t || "확인 중")}</b></span>
@@ -6549,6 +6781,19 @@ const 결재란 = `
     <tr><td></td><td></td><td></td></tr>
   </table>`;
 
+/* 🔴 서식에 들어갈 «실명» (2026-08-13 대표님: 「성명 실명이 필요한데 상세화면에서 라고 적혀있고
+   상세화면??? 수정할 수 있는 데가 없음」)
+   ─ 여태 서식엔 별명(첫째)이 찍혀 나갔고, 고칠 자리도 없었다. 만들다 만 안내였다.
+   ─ 실명은 **이 기기에만** 둔다. 서버 children 테이블엔 실명 칸이 없고, 서식 한 장 때문에
+     아이 실명을 서버에 쌓는 건 남는 장사가 아니다(개인정보는 안 모으는 게 제일 싸다).
+   ─ 안 적었으면 별명으로 폴백 — 빈칸으로 인쇄되는 것보다 낫다. */
+const DOCNAME_KEY = "eduthink_doc_names_v1";
+function docNames() {
+  if (!S._docNames) { try { S._docNames = JSON.parse(localStorage.getItem(DOCNAME_KEY) || "{}"); } catch (_) { S._docNames = {}; } }
+  return S._docNames;
+}
+const docName = (c) => String(docNames()[String(c?.id)] || "").trim() || String(c?.nickname || "");
+
 function docPaper() {
   const c = curView();
   const d = S.docDraft || {};
@@ -6557,7 +6802,7 @@ function docPaper() {
   const guardian = STUB.me.account.display_name;
   const 기간 = `${dY(d.from)} ~ ${dY(d.to)}　기간 중 (${d.days ?? ""})일간`;
   const 서명 = `
-    <div class="sign">학　　생　${W(c.nickname)}</div>
+    <div class="sign">학　　생　${W(docName(c))}</div>
     <div class="sign">학 부 모　${W(guardian)}　(인)</div>`;
   // 학교명이 비면 «장 귀하»가 된다 — 인쇄해서 손으로 적을 수 있게 밑줄 자리를 준다
   const 귀하 = `<p class="to">${school ? esc(school) : `<span class="w">&nbsp;</span>`}장 귀하</p>`;
@@ -6569,7 +6814,7 @@ function docPaper() {
     <div class="pghd"><div class="pgtitle">2026학년도 교외체험학습 신청서</div>${결재란}</div>
     <p class="pgnote">※ 교육적 활동 내용으로, 펜으로 작성, 반일 체험학습은 조퇴 또는 등교 시간 기록(3일 전 제출)</p>
     <table class="fm">
-      <tr><td class="lb vt" rowspan="2">인적<br>사항</td><td class="lb">성명</td><td>${W(c.nickname)}　( ${d.sex === "남" ? "<b>남</b>" : "남"} · ${d.sex === "여" ? "<b>여</b>" : "여"} )</td>
+      <tr><td class="lb vt" rowspan="2">인적<br>사항</td><td class="lb">성명</td><td>${W(docName(c))}　( ${d.sex === "남" ? "<b>남</b>" : "남"} · ${d.sex === "여" ? "<b>여</b>" : "여"} )</td>
           <td class="lb">학년-반</td><td>${W(`${c.grade} - ${c.class_name}`)}</td></tr>
       <tr><td class="lb">주소</td><td colspan="3">${W(d.addr)}</td></tr>
       <tr><td class="lb">기간</td><td colspan="4">${W(기간)}
@@ -6601,7 +6846,7 @@ function docPaper() {
     <p class="pgnote">※ 체험학습 실시 후 7일 이내 제출함</p>
     <table class="fm">
       <tr><td class="lb">학습자</td><td>제 ${W(c.grade)} 학년 ${W(c.class_name)} 반 　 번</td>
-          <td class="lb">성명</td><td>${W(c.nickname)}</td></tr>
+          <td class="lb">성명</td><td>${W(docName(c))}</td></tr>
       <tr><td class="lb">학습일시</td><td colspan="3">${W(기간)}</td></tr>
       <tr><td class="lb vt">체험학습<br>내용</td><td colspan="3" class="big">
           <div class="tiny">(※ 교외체험학습 교육활동 내용이 잘 드러나도록 상세하게 작성합니다.)</div>
@@ -6620,7 +6865,7 @@ function docPaper() {
     return `
     <div class="pghd"><div class="pgtitle">2026학년도 결석신고서</div>${결재란}</div>
     <table class="fm">
-      <tr><td class="lb">학생명</td><td>${W(c.nickname)}</td><td class="lb">학년 반</td><td>${W(c.grade)} 학년 ${W(c.class_name)} 반　번</td>
+      <tr><td class="lb">학생명</td><td>${W(docName(c))}</td><td class="lb">학년 반</td><td>${W(c.grade)} 학년 ${W(c.class_name)} 반　번</td>
           <td class="lb">성별</td><td>${d.sex === "남" ? "<b>남</b>" : "남"} / ${d.sex === "여" ? "<b>여</b>" : "여"}</td></tr>
       <tr><td class="lb">기 간</td><td colspan="5">${W(`${dY(d.from)} ～ ${dY(d.to)} (${days}일간)`)}</td></tr>
       <tr><td class="lb vt">결석<br>사유</td><td colspan="5" class="mid">${W(d.reason)}
@@ -6655,7 +6900,7 @@ function docPaper() {
   return `
   <div class="pghd"><div class="pgtitle">2026학년도 학부모 상담 신청서</div></div>
   <table class="fm">
-    <tr><td class="lb">학생 이름</td><td>${W(c.nickname)}</td><td class="lb">학년 반</td><td>${W(c.grade)} 학년 ${W(c.class_name)} 반</td></tr>
+    <tr><td class="lb">학생 이름</td><td>${W(docName(c))}</td><td class="lb">학년 반</td><td>${W(c.grade)} 학년 ${W(c.class_name)} 반</td></tr>
     <tr><td class="lb">보호자 연락처</td><td>${W(d.phone)}</td><td class="lb">학생과의 관계</td><td>${W(d.relation)}</td></tr>
     <tr><td class="lb">상담 가능 시간</td><td colspan="3">${STUB.counselHours[c.grade] || ""}
         <div class="tiny">※ 학교 안전 관리의 이유로 야간 상담은 하지 않음을 양해 부탁드립니다.</div></td></tr>
@@ -6674,6 +6919,14 @@ function docPaper() {
 }
 // 그 날 급식에서 우리 아이 알레르기에 걸리는 코드들
 const hitAllergens = (meal) => [...new Set(meal.dishes.flatMap((d) => d.allergens).filter((a) => S.myAllergens.includes(a)))];
+
+/* NEIS 반찬 이름 다듬기 — 앞뒤 «*»와 뒤에 붙은 알레르기 번호를 뗀다.
+   접힌 줄 요약과 펼친 카드가 **같은 이름**을 쓰도록 한 곳에 둔다(2026-08-13 아코디언). */
+function dishName(raw) {
+  const clean = String(raw).replace(/^[*\s]+|[*\s]+$/g, "");
+  const mm = clean.match(/^(.*?)\s*\(([\d.\s]+)\)\s*$/);
+  return { nm: mm ? mm[1] : clean, no: mm ? mm[2].trim() : "" };
+}
 
 function mealTab() {
   const q = S.mealQuery.trim();
@@ -6721,6 +6974,15 @@ function mealTab() {
   });
   const evOf = (d) => schedulesOf().find((e) => e.date === d && classifyEvent(e.name, e.closure_type));
 
+  /* 아코디언 — 접힌 날은 «날짜 + 한 줄 요약»만. 검색 중엔 걸린 날을 다 펼친다(찾으러 온 것이니까)
+     기본으로 펼치는 날은 «오늘» 하나. 방학 끝처럼 오늘 급식이 없으면 **맨 첫 날**을 편다 —
+     다 접힌 채로 열리면 «급식이 안 왔나»로 보인다. */
+  const lead0 = byDate.some((g) => g.date === TODAY) ? TODAY : (byDate[0]?.date || null);
+  const isOpen = (d) => q ? true
+    : (Object.prototype.hasOwnProperty.call(S.mealOpen || {}, d) ? S.mealOpen[d]
+      : (S.mealAll === "open" ? true : S.mealAll === "closed" ? false : d === lead0));
+  const allOpen = byDate.length > 0 && byDate.every((g) => isOpen(g.date));
+
   return `
   ${DEV_TOOLS ? `<div class="dormtoggle devtool">
     <label class="check"><input type="checkbox" ${S.dorm ? "checked" : ""} onchange="App.toggleDorm()">
@@ -6729,8 +6991,10 @@ function mealTab() {
   ${typeTabs}
 
   <div class="ml-bar">
-    ${[["week", "주간"], ["month", "월간"]].map(([k, n]) =>
-      `<button class="ml-range ${S.mealRange === k ? "on" : ""}" onclick="App.mealRange('${k}')">${n}</button>`).join("")}
+    <!-- 월간 토글 폐지(2026-08-13) — 한 달 30줄은 목록이 아니라 벌이다. 주간 고정, 지난 것은 검색 -->
+    ${q || !byDate.length ? "" :
+      `<button class="ml-range on" onclick="App.mealFoldAll(${allOpen ? "false" : "true"})">
+         ${allOpen ? "전체 닫기" : "전체 펼치기"}</button>`}
     <span class="ml-gap"></span>
     <button class="ml-alg" onclick="App.toggleAllergenBox()">
       ${S.myAllergens.length
@@ -6752,7 +7016,7 @@ function mealTab() {
   ${q
     ? `<div class="ml-lead">"${esc(q)}" — ${days.length}일</div>`
     : `<div class="ml-lead">${days.length
-        ? (S.mealRange === "week" ? "이번 주" : "이번 달")
+        ? "이번 주"
         : (mealsOf().length
             ? `방학 중 · 마지막 급식 ${fmtDate(mealsOf()[mealsOf().length - 1].date)}`
             : "아직 올라오지 않음")}</div>`}
@@ -6761,19 +7025,24 @@ function mealTab() {
     const ev = evOf(g.date);
     const key0 = `${g.date}|${g.meals[0].type}`;
     const on = S.mealAlarms.includes(key0);
+    const open = isOpen(g.date);
+    const sum = g.meals.flatMap((m) => m.dishes).map((d) => dishName(d.name).nm).join(" · ");
     return `
-    <div class="ml-day">
+    <div class="ml-day ${g.date === TODAY ? "today" : ""} ${open ? "" : "fold"}">
       <div class="ml-dhd">
-        <b class="ml-dnum">${+g.date.slice(6)}</b>
-        <span class="ml-dwd">${weekdayKo(g.date)}</span>
-        ${ev ? `<span class="ml-dev">${esc(ev.name)}</span>` : ""}
-        <span class="ml-gap"></span>
-        <button class="ml-alarm ${on ? "on" : ""}" onclick="App.toggleMealAlarm('${jsq(key0)}')"
+        <button class="ml-dtog" onclick="App.mealFold('${jsq(g.date)}',${open})" aria-expanded="${open}">
+          <b class="ml-dnum">${+g.date.slice(6)}</b>
+          <span class="ml-dwd">${weekdayKo(g.date)}</span>
+          ${ev ? `<span class="ml-dev">${esc(ev.name)}</span>` : ""}
+          ${open ? "" : `<span class="ml-sum">${esc(sum)}</span>`}
+          <i class="ml-car" aria-hidden="true"></i>
+        </button>
+        <button class="ml-alarm ${on ? "on" : ""}" onclick="event.stopPropagation();App.toggleMealAlarm('${jsq(key0)}')"
                 aria-label="${fmtDate(g.date)} 알림 ${on ? "끄기" : "켜기"}">
           <i></i>${on ? `<em>${esc(S.remind?.evening || "18:00")} 알림</em>` : ""}
         </button>
       </div>
-      ${g.meals.map((m, i) => `
+      ${!open ? "" : g.meals.map((m, i) => `
         <div class="ml-meal ${i ? "sep" : ""}">
           <div class="ml-mhd"><b>${MEAL_KOR[m.type]}</b><span>${esc(m.calorie || "")}</span></div>
           <div class="ml-dishes">
@@ -6786,10 +7055,7 @@ function mealTab() {
                  → 번호를 떼어 작고 흐리게. 이름만 굵게 남긴다. */
               /* ⚠ NEIS 는 이름 앞뒤에 «*» 를 붙여 준다(자체 표기라 부모에겐 뜻이 없다).
                  서울과학고 급식에서 「*배추김치」처럼 그대로 노출됐다 — 걷어낸다. */
-              const clean = String(d.name).replace(/^[*\s]+|[*\s]+$/g, "");
-              const mm = clean.match(/^(.*?)\s*\(([\d.\s]+)\)\s*$/);
-              const nm = mm ? mm[1] : clean;
-              const no = mm ? mm[2].trim() : "";
+              const { nm, no } = dishName(d.name);
               const kd = mealKind(nm);
               const body = `<i class="ml-kd k-${kd.k}" aria-hidden="true"></i>`
                 + `${hit ? `<mark>${esc(nm)}</mark>` : esc(nm)}`
@@ -6805,7 +7071,6 @@ function mealTab() {
   }).join("")}
 
   <div class="ml-foot">
-    <button onclick="App.mealRange('month')">지난 급식</button>
     <button onclick="App.mealSearchToggle()">${S.mealSearchOpen ? "검색 닫기" : "메뉴 검색"}</button>
   </div>
 
@@ -7135,7 +7400,9 @@ function diaryTab() {
   const cell = (key, i) => {
     if (!key) return `<div class="gc-cell empty"></div>`;
     const d = +key.slice(6);
-    const wd = (first + d - 1) % 7;
+    /* ⚠ 빨강(일요일)은 **진짜 요일**로 칠한다 — 칸 위치(wd)로 칠하면 월요일 시작 설정에서
+       한 칸 밀려 월요일이 빨개진다(2026-08-12 대표님 스샷: 「날짜 정렬 안 맞고」). */
+    const dowReal = new Date(+key.slice(0, 4), +key.slice(4, 6) - 1, d).getDay();
     const sc = schoolOf(key), mine = mineOf(key);
     const holi = holiOn(key);
     // 점 하나만 — 공휴일 danger · 내 일정 accent · 학교 회색
@@ -7147,7 +7414,7 @@ function diaryTab() {
     const trace = !mk ? "" : `<i class="gc-trace">${mk.stamp ? "★" : ""}${mk.meal ? "🍚" : ""}</i>`;
     return `
     <button class="gc-cell ${key === pick ? "on" : ""} ${key === TODAY ? "today" : ""}" onclick="if(!App.holdGuard())App.calPick('${key}')" onpointerdown="App.holdDay(event, '${key}')">
-      <span class="gc-num ${holi || wd === 0 ? "sun" : ""} ${inVac(key) ? "vac" : ""}">${d}</span>
+      <span class="gc-num ${holi || dowReal === 0 ? "sun" : ""} ${inVac(key) ? "vac" : ""}">${d}</span>
       <i class="gc-dot ${dot}"></i>
       ${trace}
     </button>`;
@@ -7171,6 +7438,10 @@ function diaryTab() {
   for (let d = 1; d <= last; d++) {
     const key = ym + String(d).padStart(2, "0");
     const sc = schoolOf(key).filter((e) => {
+      /* 🔴 기간 방학은 목록에서 뺀다 — 달력 칸이 이미 회색으로 «방학»을 말하고 있고,
+         목록에까지 두면 달을 넘길 때마다 1일에 또 나와 «왜 계속 나오냐»가 된다.
+         «방학식·방학중 돌봄교실»처럼 그날 하루짜리는 남긴다(vacationRanges 와 같은 잣대). */
+      if (String(e.name || "").includes("방학") && !/식|교실|돌봄|상담/.test(e.name || "")) return false;
       if (shownName.has(e.name)) return false;
       shownName.add(e.name); return true;
     }).map((e) => ({ ...e, _end: runEnd[e.name] !== key ? runEnd[e.name] : null }))
@@ -7227,6 +7498,14 @@ function diaryTab() {
   <div class="gc-grid" id="gcgrid">${shown.map((r) => r.map(cell).join("")).join("")}</div>
 
   <!-- 아래는 «오늘부터 흐르는» 목록. 달력 칸을 누르면 이 목록이 그 날짜로 옮겨간다(§2) -->
+  ${(() => {
+    /* 방학은 목록 대신 **띠 한 줄**로(2026-08-13) — 지금 방학 중이거나 이 달에 걸쳐 있으면 */
+    const r = vac.find(([s, e]) => (s.slice(0, 6) <= ym && ym <= e.slice(0, 6)));
+    if (!r) return "";
+    const f = (d) => `${+d.slice(4, 6)}월 ${+d.slice(6)}일`;
+    const now = TODAY >= r[0] && TODAY < r[1];
+    return `<div class="gc-vacbar">🏖️ <b>방학</b> ${f(r[0])} ~ ${f(ymdPlus(r[1], -1))}${now ? ` · 개학 ${f(r[1])}` : ""}</div>`;
+  })()}
   ${agenda ? `<div class="gc-agenda">${agenda}</div>`
            : `<p class="gc-hint">이 달에는 남은 일정이 없어요</p>`}
   <p class="gc-hint">날짜를 꾹 누르면 일정을 넣어요 · 줄을 누르면 그날을 열어요</p>
@@ -7698,6 +7977,10 @@ const isGuest = () => !S.loggedIn && !isChildToken() && !!localStorage.getItem("
 const CHILD_SCREENS = ["childlink", "login", "terms", "policy",
   "childtheme", "childshoot", "childexpired", "childtt", "childmealrate", "childfriend", "childsubject", "childlocked",
   // 상점·티켓은 아이가 직접 쓴다(§5③). ⚠ childmode 는 넣지 않는다 — 자녀폰에서 열리면 아이가 제 잠금을 푼다
+  /* mission·missionone (2026-08-12) — 아이의 «오늘의 미션» 목록·상세다. 빠져 있어서
+     **진짜 자녀폰**에선 미션 상세가 홈으로 튕겨 「다 했어요!」를 누를 수 없었다
+     (부모 미리보기(kidMode)만 고치고 자녀토큰 목록을 빠뜨림 — 3대 실연결 검수에서 잡음). */
+  "mission", "missionone",
   "store", "tickets", "game"];
 /* §4.5 열람 잠금 — **비웠다**(2026-07-31 «기록 누르면 바로 기록잠금 나오게 하지마»).
    기록을 볼 때마다 지문을 묻는 건 제 폰에서 제 아이 기록을 보는 흐름을 막는다.
@@ -7763,8 +8046,15 @@ const App = {
       const h = location.hash || "#home";
       if (NAV.back) { NAV.back = false; NAV.last = h; }
       else if (NAV.last && NAV.last !== h) {
-        NAV.stack.push(NAV.last);
-        if (NAV.stack.length > 40) NAV.stack.shift();
+        /* 🔴 «온 곳으로 되돌아온» 직행 이동(href·location.hash)은 발자국을 **지운다**, 안 쌓는다.
+           안 그러면 A→B→(B의 ‹가 href 로 A 직행)→A 에서 스택이 [A,B]가 되어
+           A 의 ‹(goBack)가 B 로 «되돌아가» A↔B 무한 핑퐁이 된다
+           (2026-08-12 대표님: 내정보↔자녀편집 무한루프 — 미션↔상세도 같은 뿌리였다). */
+        if (NAV.stack[NAV.stack.length - 1] === h) NAV.stack.pop();
+        else {
+          NAV.stack.push(NAV.last);
+          if (NAV.stack.length > 40) NAV.stack.shift();
+        }
         NAV.last = h;
       } else if (!NAV.last) NAV.last = h;
     }
@@ -7827,8 +8117,12 @@ const App = {
       name = "game";
       if (location.hash !== "#game") history.replaceState(null, "", "#game");
     }
-    /* 🔒 아이 모드 — 열어 줄 화면은 넷뿐(§5④). 서랍만 감추면 주소·뒤로가기로 샌다 */
-    if (S.kidMode && !["game", "mission", "store", "tickets"].includes(name)) {
+    /* 🔒 아이 모드 — 아이 세계의 화면만 연다(§5④). 서랍만 감추면 주소·뒤로가기로 샌다.
+       ⚠ «넷뿐»으로 잠갔더니 **미션 상세(missionone)·사진 내기(childshoot)·학교미션 입력**까지
+         #game 으로 튕겨서 아이 모드에선 사진 미션을 낼 수도, 카드를 열 수도 없었다
+         (2026-08-12 전수검수 실클릭으로 잡음). 아이 세계 화면을 전부 연다 — 부모 화면은 여전히 막힌다. */
+    if (S.kidMode && !["game", "mission", "missionone", "store", "tickets", "childshoot",
+        "childmealrate", "childfriend", "childsubject", "childtt", "childtheme"].includes(name)) {
       name = "game";                       // 아이 모드의 홈도 게임이다(위 주석 참조)
       if (location.hash !== "#game") history.replaceState(null, "", "#game");
     }
@@ -7868,6 +8162,11 @@ const App = {
     /* 미션 화면의 «별 라인» 카드가 econ 을 필요로 한다 — 없으면 카드가 통째로 안 그려진다.
        loadCoin 이 econ 을 같이 받아 온다(2026-08-12). */
     if (name === "mission" && S.loggedIn && !S.econ) this.loadCoin();
+    /* 오늘한것·추가증정(구글) — 허브가 쓰던 로더 묶음을 그대로 부른다(once 가드 내장) */
+    if (["missiontoday", "missionbonus"].includes(name) && S.loggedIn) {
+      this.gameEnter();
+      if (this.loadBonusGiven) this.loadBonusGiven();
+    }
     // 보상 화면 로더 (2026-08-07) — 필요한 화면에서만(첫 화면을 늦추지 않게)
     if (["game"].includes(name) && S.loggedIn) { this.loadCoin(); if (S.missions === null) this.loadMissions(); }
     if (["store", "home", "game"].includes(name) && S.loggedIn && S.store === null) this.loadStore();
@@ -7898,6 +8197,7 @@ const App = {
     if (this._prev === "upload" && name !== "upload" && S.uploadStep === 1 && S.shots.length && !S.uploadBusy) {
       toast(`사진 ${S.shots.length}장이 아직 저장 전이에요 — 기록 넣기에서 「저장」을 눌러주세요`);
     }
+    const prevName = this._prev;   // ⚠ 아래 스크롤 유지 비교용 — 덮기 전에 붙잡는다
     this._prev = name;
     // 자녀가 하나도 없으면 어느 화면도 그릴 수 없다(전부 cur()를 읽는다) → 등록 화면으로 보낸다.
     // 예전엔 여기서 «face를 읽을 수 없다»로 앱이 통째로 멈췄다(2026-07-26 실측).
@@ -7945,14 +8245,21 @@ const App = {
        감싸면 그 그라데이션이 kd 바탕을 덮는다(에뮬 실측으로 잡음). 이제 감싸지 않는다.
        ⚠ edit(만들기)는 일정·준비물과 공용 폼이라 일단 A캐논 그대로 둔다 — STATUS ⓪ 남은 일. */
     const WORLD = [];
-    const KID_ONLY = ["childmealrate", "childfriend", "childsubject", "childtt"];
+    /* 급식·누구랑·수업 3종은 kd 세계로 이사(2026-08-12) — childtt(시간표 보기)만 옛 세계에 남는다 */
+    const KID_ONLY = ["childtt"];
     const kidNow = isChildToken() || S.kidMode;
     const asKid = WORLD.includes(name) || (kidNow && KID_ONLY.includes(name))
       ;
+    /* 🔴 같은 화면을 다시 그릴 때는 **스크롤을 지킨다**(2026-08-12 대표님 실사용:
+       「미션 선택을 하면 왜 미션이 다시 위로 올라가는거야」). innerHTML 교체 사이에 내용 높이가
+       잠깐 줄면 브라우저가 스크롤을 0으로 당긴다 — 도장 하나 찍을 때마다 맨 위로 튀었다.
+       다른 화면으로 넘어갈 때는 복원하지 않는다(새 화면은 맨 위부터가 맞다). */
+    const keepScroll = name === prevName ? (document.scrollingElement.scrollTop || 0) : null;
     const body = Screens[name]();
     document.getElementById("screen").innerHTML =
       (asKid ? `<div class="gmw">${body}</div>` : body)
       + planBar() + lunchSheet() + promoteSheet() + planKillView() + holdMenuView() + pwAskView();
+    /* 복원은 render 꼬리에서 한 번만 한다(아래 keepScroll 분기) — 두 곳에서 하면 값이 갈린다 */
 
     if (popBefore && popKey(document) === popBefore) {
       [...document.querySelectorAll(POPS)].forEach((e, i) => {
@@ -8046,7 +8353,11 @@ const App = {
        새 홈에 캐러셀이 없는데 3초마다 홈을 통째로 다시 그리고 있었다 — 보이는 것도 없이
        배터리만 쓰고, 그 순간 눌린 것·입력 중인 것을 날릴 수 있는 자리였다.
        startCarousel() 은 캐러셀이 돌아올 때를 위해 남겨둔다. */
-    window.scrollTo(0, 0);
+    /* 🔴 **같은 화면을 다시 그릴 땐 맨 위로 안 튄다**(2026-08-12 대표님 실사용:
+       도장 하나 찍을 때마다 목록이 맨 위로 올라갔다). 여기 무조건 scrollTo(0,0) 이 범인이었다 —
+       위의 keepScroll 복원을 이 줄이 도로 지웠다. 새 화면으로 넘어갈 때만 맨 위부터. */
+    if (keepScroll == null) window.scrollTo(0, 0);
+    else document.scrollingElement.scrollTop = keepScroll;
   },
   go(key) { const m = menuOf(key); if (m) { m.go(); this.render(); } },   // 원형 메뉴 → 해당 페이지
 
@@ -8628,6 +8939,14 @@ const App = {
 
   // ── 급식 ──────────────────────────────────────────────────
   mealRange(k) { S.mealRange = k; this.render(); },
+
+  /* 아코디언 — 날짜 한 줄 여닫기 / 전체 여닫기.
+     ⚠ 전체 버튼을 누르면 **날짜별 손수정을 지운다.** 안 그러면 「전체 펼치기」를 눌러도
+        아까 손으로 접어둔 날은 그대로 닫혀 있어서 버튼이 고장난 것처럼 보인다. */
+  /* ⚠ 지금 펼쳐져 있는지(cur)를 **화면이 알려준다.** 여기서 기본값을 다시 계산하면
+     화면의 판단과 어긋나 «한 번 눌렀는데 안 닫히는» 칸이 생긴다(기본 펼침 날이 그랬다). */
+  mealFold(date, cur) { S.mealOpen = { ...(S.mealOpen || {}), [date]: !cur }; this.render(); },
+  mealFoldAll(open) { S.mealAll = open ? "open" : "closed"; S.mealOpen = {}; this.render(); },
   supMemoToggle() {
     S.supMemoOpen = !S.supMemoOpen;
     if (!S.supMemoOpen) S.supDraft.memo = "";
@@ -8910,6 +9229,13 @@ const App = {
     location.hash = "#doc-form"; this.render();
   },
   docSet(key, val) { S.docDraft[key] = val; this.render(); },
+  /* 서식 성명 — 다시 그리지 않는다(글자 칠 때마다 그리면 커서가 튄다). 값만 기기에 남긴다. */
+  docNameSet(v) {
+    const c = curView(); if (!c) return;
+    const m = docNames(); m[String(c.id)] = String(v || "").trim();
+    if (!m[String(c.id)]) delete m[String(c.id)];
+    try { localStorage.setItem(DOCNAME_KEY, JSON.stringify(m)); } catch (_) {}
+  },
   docPlan(i, text) { S.docDraft.planDays[i].text = text; },
   docWish(i, key, val) {
     S.docDraft.wish = S.docDraft.wish || [{}, {}, {}];
@@ -9638,7 +9964,19 @@ const App = {
     try {
       const r = await api(`/missions/${id}/${path}`, { method: "POST", ...(body ? { body } : {}) });
       S.missionBusy = null;
-      if (!r?.ok) { this.render(); toast(r?.error?.message || "잘 안 됐어요"); return null; }
+      if (!r?.ok) {
+        /* «이미 처리된 미션» = 앞선 요청이 (타임아웃 뒤에라도) 먹힌 것 — 실패로 되돌리면
+           화면과 서버가 어긋난다. 서버 상태를 다시 받아 그대로 따른다(2026-08-13 실측). */
+        if ((r?.error?.message || "").includes("이미 처리된")) {
+          await this.loadMissions(true);
+          return { already: true, status: "done" };
+        }
+        this.render(); toast(r?.error?.message || "잘 안 됐어요"); return null;
+      }
+      /* 지갑 동기화(2026-08-12) — 응답에 coin 이 실려 오면 그대로 받고,
+         잔액(stars)만 오면 그 숫자만 갈아끼운다. 안 하면 되돌리기 뒤 ★알약이 옛값으로 남는다. */
+      if (r.data?.coin) S.coin = r.data.coin;
+      else if (typeof r.data?.stars === "number" && S.coin) S.coin = { ...S.coin, stars: r.data.stars };
       await this.loadMissions(true);
       return r.data;
     } catch (_) {
@@ -9647,8 +9985,21 @@ const App = {
   },
   async missionDone(id) {
     const m = (S.missions || []).find((x) => x.id === id);
+    /* ⚡ 낙관 갱신(2026-08-12 대표님 「느리다」) — 누르는 순간 화면이 먼저 답한다.
+       서버가 거절하면 원래대로 되돌리고 이유를 말한다. 원장(별 숫자)은 서버 응답만 믿는다. */
+    const wasKid = isChildToken() || S.childView || S.kidMode;
+    const before = m ? { status: m.status } : null;
+    if (m && m.verify === "instant" && m.status === "open") {
+      m.status = "done"; m.got = m.stars;
+      if (wasKid) S.kidHooray = { title: m.title || "", stars: m.stars };
+      if (location.hash === "#missionone") location.hash = "#mission";
+      this.render();
+    }
     const d = await this._mission(id, "done");
-    if (!d) return;
+    if (!d) { if (m && before) { m.status = before.status; m.got = 0; S.kidHooray = null; this.render(); } return; }
+    /* 서버가 준 지갑을 그대로 받는다(즉시통과 응답에 coin 이 실려 온다, 2026-08-12) —
+       안 받으면 ★알약이 다음 econ 로드까지 옛 숫자로 남는다(전수검수 실클릭으로 잡음) */
+    if (d.coin) S.coin = d.coin;
     /* 의뢰는 부모 확인을 거친다(2026-08-02). 별이 그 자리에서 안 나오는데 축하 오버레이를
        띄우면 «받았다»고 거짓말하는 것이다. 보낸 사실만 알리고, 카드가 «기다리는 중»으로 바뀐다. */
     if (d.status === "waiting") {
@@ -9843,8 +10194,12 @@ const App = {
   async missionApprove(id) {
     // 사진은 도장 **찍기 전에** 붙잡아 둔다 — 찍고 나면 그 미션 사진을 서버가 안 내줄 수 있다
     const keep = S.keepShot === id ? (S.missions || []).find((x) => x.id === id) : null;
+    /* ⚡ 낙관 — 도장은 누르는 순간 찍힌 걸로 보인다. 실패하면 되돌린다 */
+    const m0 = (S.missions || []).find((x) => x.id === id);
+    const was = m0 && m0.status;
+    if (m0 && m0.status === "waiting") { m0.status = "done"; m0.got = m0.stars; this.render(); }
     const d = await this._mission(id, "approve");
-    if (!d) return;
+    if (!d) { if (m0 && was) { m0.status = was; m0.got = 0; this.render(); } return; }
     toast(`확인했어요 — ★${d.got} 줬습니다`);
     S.keepShot = null;
     if (keep) this._keepShotSave(keep);   // 서랍행은 뒤에서 — 도장 찍히는 순간을 붙잡아 두지 않는다
@@ -10179,19 +10534,24 @@ const App = {
      ⚠ 자유 지급(＋3·＋5)은 없앴다 — 대표님 지시(08-08). */
   async missionBonus(assignId) {
     const c = cur();
-    if (!c?.server_id || S.giveBusy) return;
-    S.giveBusy = true; this.render();
+    /* ⚠ 잠금은 **누른 줄 하나만**(2026-08-12 대표님: 「＋1 누르면 왜 나머지 버튼도 비활성화」).
+       전역으로 잠그면 통신 도는 1~2초 동안 화면 전체가 죽은 것처럼 보인다.
+       같은 줄 두 번 누름만 막으면 된다 — 서버가 어차피 «한 미션에 한 번»을 지킨다. */
+    if (!c?.server_id || S.giveBusy === assignId) return;
+    /* ⚡ 낙관 — 누르는 순간 «＋1 줬어요». 실패하면 되살린다 */
+    S.giveBusy = assignId;
+    S.bonusGiven = [...(S.bonusGiven || []), assignId];
+    this.render();
     try {
       const r = await api(`/children/${c.server_id}/mission-bonus`, { method: "POST", body: { assign_id: assignId } });
-      if (!r?.ok) toast(r?.error?.message || "못 줬어요");
+      if (!r?.ok) { S.bonusGiven = (S.bonusGiven || []).filter((x) => x !== assignId); toast(r?.error?.message || "못 줬어요"); }
       else {
         if (r.data.coin) S.coin = r.data.coin;
-        S.bonusGiven = [...(S.bonusGiven || []), assignId];
         toast(r.data.already ? "이미 줬어요"
           : r.data.capped ? "오늘은 여기까지예요" : "★1 얹어 줬어요!");
       }
     } catch (_) { toast("못 줬어요"); }
-    S.giveBusy = false;
+    S.giveBusy = null;
     this.render();
   },
 
@@ -10349,9 +10709,17 @@ const App = {
     if (!c?.server_id || S.missionBusy) return;
     S.missionBusy = code; this.render();
     try {
+      /* ⚡ 빼기는 낙관 — 목록에서 즉시 사라진다. 실패하면 목록을 서버 것으로 되살린다 */
+      const snap = how === "drop" ? (S.missions || []).slice() : null;
+      if (how === "drop") {
+        S.missions = (S.missions || []).filter((x) => x.code !== code);
+        S.msDetail = null;
+        if ((location.hash || "") === "#missionone") location.hash = "#mission";
+        this.render();
+      }
       const r = await api(`/children/${c.server_id}/missions`, { method: "PUT", body: { [how]: [code] } });
       S.missionBusy = null;
-      if (!r?.ok) { this.render(); toast(r?.error?.message || "잘 안 됐어요"); return; }
+      if (!r?.ok) { if (snap) S.missions = snap; this.render(); toast(r?.error?.message || "잘 안 됐어요"); return; }
       /* ⚠ 상세 화면(#missionone)에 그대로 서 있으면 방금 바꾼 미션이 사라져
          「불러오는 중…」에 갇힌다 — 목록으로 돌려보낸다(2026-08-12 브라우저 실측). */
       S.msDetail = null;
@@ -10579,10 +10947,13 @@ const App = {
       S.missionNew = null;
       const code = r.data.mission.code;
       await this.missionPickReload();
-      if (S.missionPick.length < 3) S.missionPick.push(code);   // 만들자마자 오늘 것에 넣어준다
+      /* ⚠ 담기 상한은 서버 값(econ.max_per_day)이다 — 옛 「3」이 박혀 있었다 */
+      const cap = (S.econ && S.econ.max_per_day) || 8;
+      if (S.missionPick.length < cap) S.missionPick.push(code);
       this.render();
-      toast("우리 집 미션을 만들었어요");
-      return true;   // ⚠ 퀵입력(§4)이 이 값을 보고 시트를 닫는다 — 실패했는데 닫으면 «넣었다»는 거짓말이 된다
+      /* 🔴 code 를 돌려준다 — 미션 화면에서 만들었으면 **오늘 목록에도 바로 넣어야** 한다
+         (2026-08-13 대표님 검수: 「넣기」를 눌렀는데 오늘 목록에 없었다. 버튼 이름이 «넣기»다). */
+      return code;   // ⚠ 퀵입력(§4)이 truthy 를 보고 시트를 닫는다 — 실패하면 false
     } catch (_) { toast("만들지 못했어요"); return false; }
   },
   async missionCustomDelete(code) {
@@ -10604,6 +10975,8 @@ const App = {
     await this.loadBand(b);
   },
   drawerOpen() { S.drawer = true; this.render(); },
+  childSwitchOpen() { S.childSwitch = true; this.render(); },
+  childSwitchClose() { S.childSwitch = false; this.render(); },
   drawerClose() { S.drawer = false; this.render(); },
 
   /* ← 는 언제나 오늘 화면으로 (2026-08-03 «탈출 불가» 수정).
@@ -10620,7 +10993,9 @@ const App = {
     const t = String(S.ibText || "").trim();
     if (!t) return;
     S.ibText = "";
-    const date = kind === "sup" ? (S.day || ymdPlus(TODAY, 1)) : (S.day || TODAY);
+    /* ⚠ 준비물은 S.day(보고 있던 날)를 따르지 않는다 — 준비물 화면에서 넣으면 늘 «오늘»이 됐다.
+       입력 줄에서 고른 날짜(기본 내일)가 정본이다(2026-08-13). */
+    const date = kind === "sup" ? (S.ibDate || ymdPlus(TODAY, 1)) : (S.day || TODAY);
     if (kind === "sup") {
       const keep = { ...S.supDraft };
       S.supDraft = { date, item: t, memo: "" };
@@ -10634,6 +11009,7 @@ const App = {
     this.render();
     document.getElementById("ib-t")?.focus();
   },
+  ibDateSet(ymd) { S.ibDate = ymd; this.render(); document.getElementById("ib-t")?.focus(); },
   /* 치던 글자를 그대로 들고 «제대로 입력»으로 넘어간다 — 다시 치게 하면 안 쓴다 */
   ibToEditor(kind) {
     const t = String(S.ibText || "").trim();
@@ -10822,8 +11198,19 @@ const App = {
         }
       } else {
         S.missionNew = { title, minutes: e.minutes, verify: e.verify, area: "study" };
-        const ok = await this.missionNewSave();
-        if (!ok) { S.missionNew = null; e.busy = false; this.render(); return; }
+        const madeCode = await this.missionNewSave();
+        if (!madeCode) { S.missionNew = null; e.busy = false; this.render(); return; }
+        /* 「만들기」로 들어왔으면 **오늘 목록에도 넣는다** — 카탈로그에만 넣고 끝내면
+           부모는 「넣기를 눌렀는데 왜 없지」가 된다(2026-08-13 검수).
+           고르기(#missionpick)에서 왔을 때는 담기 목록에만 체크하고 저장은 그 화면이 한다. */
+        if ((e.from || "") === "#mission" && typeof madeCode === "string") {
+          const c0 = cur();
+          if (c0?.server_id) {
+            const rr = await api(`/children/${c0.server_id}/missions`, { method: "PUT", body: { add: [madeCode] } });
+            if (rr?.ok) { await this.loadMissions(true); toast("오늘 미션에 넣었어요"); }
+            else toast(rr?.error?.message || "만들었지만 오늘 목록엔 못 넣었어요");
+          }
+        } else toast("우리 집 미션을 만들었어요");
       }
       rememberTitle(e.kind, title);
       const back = e.from || "#day";
@@ -10983,8 +11370,11 @@ const App = {
      담는 자리에서 막고 왜 막았는지 말해 준다 — 잘려 나간 걸 나중에 알면 «저장이 안 됐다»로 읽힌다. */
   missionToggle(code) {
     const i = S.missionPick.indexOf(code);
+    /* ⚠ 상한은 서버가 준 값(econ.max_per_day)이다 — 옛 「하루 3개」가 여기 박혀 있어서
+       별 라인으로 4개 이상 받은 날 「고르기」에서 더 못 담았다(2026-08-12 전수검수에서 잡음). */
+    const cap = (S.econ && S.econ.max_per_day) || 8;
     if (i >= 0) S.missionPick.splice(i, 1);
-    else if (S.missionPick.length >= 3) return toast("하루에 세 개까지예요");
+    else if (S.missionPick.length >= cap) return toast(`하루에 ${cap}개까지예요`);
     else S.missionPick.push(code);
     this.render();
   },
@@ -11661,10 +12051,16 @@ const App = {
     this.render();
   },
   planKillCancel() { S.planKill = null; this.render(); },
-  planKillDo() {
+  async planKillDo() {
     const k = S.planKill;
     const i = STUB.activities.findIndex((a) => a.id === k.id);
     const gone = i >= 0 ? STUB.activities[i] : null;
+    /* 🔴 순서가 뒤집혀 있었다 — 지우고 나서 비번을 물었다(2026-08-13 대표님).
+       되돌릴 수 없는 일은 **표를 먼저 받고** 실행한다. 표는 5분간 유효해 연속 작업엔 안 묻는다. */
+    if (gone?.server_id && TOKENS.access) {
+      const t0 = await this.getReauth("학원 삭제");
+      if (!t0) { S.planKill = null; this.render(); return toast("본인 확인을 못 해서 지우지 않았어요"); }
+    }
     if (i >= 0) STUB.activities.splice(i, 1);
     S.planKill = null; S.planDraft = null;
     /* 🔴 폼(#editact)에서 지웠으면 **들어온 화면으로** 돌아간다(대표님 2026-08-11
@@ -11688,9 +12084,17 @@ const App = {
     }
     if (!r?.ok) toast(r?.error?.message || "서버에 반영하지 못했어요 — 앱을 다시 켜면 되돌아올 수 있어요");
   },
-  planSave() {
+  async planSave() {
     const d = S.planDraft;
     if (!d?.name.trim()) return toast("이름을 넣어주세요");
+    /* 고치는 것도 되돌리기 어렵다 — 표를 먼저 받는다(2026-08-13 「수정할 때도 마찬가지」) */
+    if (d.id && TOKENS.access) {
+      const ex = STUB.activities.find((a) => a.id === d.id);
+      if (ex?.server_id) {
+        const t0 = await this.getReauth("학원 수정");
+        if (!t0) return toast("본인 확인을 못 해서 고치지 않았어요");
+      }
+    }
     // 요일이 곧 «언제 가는지»다. 비면 시간표·방과후 어디에도 안 나타나므로 저장을 막는다.
     const days = (d.days && d.days.length ? d.days : (d.day ? [d.day] : [])).slice().sort();
     if (!days.length) return toast("요일을 하나는 골라주세요");
@@ -11805,7 +12209,14 @@ const App = {
       }
       S.planMove = null;
       App.render();
-      this._planPush && this._planPush(a, "PATCH");
+      /* 이동도 «수정»이다 — 표가 없으면 여기서 한 번 받는다(연속 이동은 5분간 안 묻는다) */
+      (async () => {
+        if (a.server_id && TOKENS.access) {
+          const t0 = await App.getReauth("학원 수정");
+          if (!t0) return toast("본인 확인을 못 해서 서버엔 반영되지 않았어요");
+        }
+        App._planPush && App._planPush(a, "PATCH");
+      })();
       toast(`${a.name} ${a.start_time}~${a.end_time}`);
     };
     blk.addEventListener("pointermove", move);
@@ -12061,7 +12472,8 @@ function deckCards() {
   (S.missions || []).filter((x) => x.status === "open").forEach((x) => out.push({
     key: "m" + x.id, id: x.id, title: x.title, stars: x.stars, now: false,
     sub: [x.minutes ? x.minutes + "분" : "", x.caution || ""].filter(Boolean).join(" · "),
-    go: x.verify === "review" ? `S.kidShootId=${x.id};location.hash='#childshoot'` : `App.missionDone(${x.id})`,
+    /* 한 탭 완료 금지(2026-08-12) — 카드를 눌러도 상세에서 「다 했어요!」로 확정한다 */
+    go: `App.msOpen(${x.id})`,
     goLabel: x.verify === "review" ? "사진 찍기"
            : x.verify === "endday" ? "오늘 지킬게요" : "완료 보고",
     skip: `App.missionSkip(${x.id})`,

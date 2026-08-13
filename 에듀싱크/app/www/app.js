@@ -829,6 +829,10 @@ const S = {
   planKill: null,         // 지우기 확인 중인 일정 {id, name} — L4 창(시안 10f)
   mealRange: "week",      // 급식 보기 범위 — 주간 · 월간
   mealQuery: "",          // 급식 메뉴 검색어
+  /* 급식 아코디언(2026-08-13) — 다 펼쳐 두면 한 날이 화면을 다 먹어 「이번 주」가 안 보인다.
+     기본은 «오늘만 펼침». mealAll 은 전체 버튼이 누른 값, mealOpen 은 날짜별 손수정. */
+  mealAll: null,          // null=기본(오늘만) · "open"=전체 펼침 · "closed"=전체 닫음
+  mealOpen: {},           // { "20260813": true/false } — 날짜 하나만 손으로 여닫은 것
   supMemoOpen: false,     // 준비물 메모칸을 폈나 — 평소엔 접는다(시안 10d: 입력은 한 줄)
   mealSearchOpen: false,  // 메뉴 검색칸을 폈나 — 시안 10a 는 평소엔 접어둔다(메뉴가 주인)
   myAllergens: [5, 6],    // 우리 아이 알레르기 코드(예시: 대두·밀). 실제로는 자녀 정보에 저장
@@ -3006,6 +3010,16 @@ const Screens = {
             const addr = esc(sc.address || "");
             return (head || addr) ? `<p class="sub" style="margin-top:0">${head}${head && addr ? "<br>" : ""}${addr}</p>` : "";
           })()}
+          <!-- 웹 학교 페이지의 머리 요약줄 그대로 — 「공립 · 남녀공학 · 1981년 개교 · ○○교육지원청」
+               (2026-08-13 「기존 웹으로 만든 부분 이식이 안 되어 있다」) -->
+          ${(() => {
+            const b = [];
+            if (sc.est_type) b.push(esc(sc.est_type));
+            if (sc.coedu) b.push(esc(String(sc.coedu).replace("남여", "남녀")));
+            if (sc.founded_ymd && String(sc.founded_ymd).length >= 4) b.push(`${esc(String(sc.founded_ymd).slice(0, 4))}년 개교`);
+            if (sc.office) b.push(esc(sc.office));
+            return b.length ? `<p class="mp-hint" style="margin-top:8px">${b.join(" · ")}</p>` : "";
+          })()}
           ${sc.phone || sc.homepage ? `<div class="row" style="margin-top:10px">
             ${sc.phone ? `<a class="btn btn-line" href="tel:${esc(String(sc.phone).replace(/[^0-9+]/g, ""))}"><i class='ti ti-phone'></i> ${esc(sc.phone)}</a>` : ""}
             ${sc.homepage ? `<button class="btn-line" onclick="openExternal('${jsq(sc.homepage)}','학교 홈페이지')"><i class='ti ti-link'></i> 홈페이지</button>` : ""}
@@ -3014,19 +3028,35 @@ const Screens = {
 
         <!-- 공시에 없는 값은 「-」로 자리만 채우지 않는다. 빈 칸 하나가 «우리 학교는 교원이 없나»로 읽힌다. -->
         ${(() => {
+          const fy = sc.founded_ymd && String(sc.founded_ymd).length >= 4 ? String(sc.founded_ymd).slice(0, 4) : null;
           const st = [
             [sc.detail?.student_count, "전교생"],
             [sc.detail?.class_count, "학급"],
             [sc.detail?.teacher_count, "교원"],
+            [fy, "개교"],                                  // 웹 스탯 4칸과 같은 구성
           ].filter(([v]) => v != null);
-          return st.length ? `<div class="stats">${st.map(([v, k]) => `<div><b>${v}</b><span>${k}</span></div>`).join("")}</div>` : "";
+          return st.length ? `<div class="stats">${st.map(([v, k]) => `<div><b>${esc(String(v))}</b><span>${k}</span></div>`).join("")}</div>` : "";
+        })()}
+        <!-- 연간 수업일수·주당 수업시수 — 웹 학교정보 탭에 있던 카드(학교알리미 공시) -->
+        ${(() => {
+          const d = sc.detail || {};
+          if (d.school_days == null && d.week_class_hours == null) return "";
+          const cells = [
+            [d.school_days, "일", "연간 수업일수"],
+            [d.week_class_hours, "시수", "주당 총 수업시수"],
+          ].filter(([v]) => v != null);
+          return `<div class="stats">${cells.map(([v, u, k]) =>
+            `<div><b>${esc(String(v))}${u}</b><span>${k}</span></div>`).join("")}</div>`;
         })()}
         ${(() => {
           /* 웹과 같은 부가 정보(2026-08-13) — 있는 것만 조용한 한 줄로 */
           const bits = [];
           const d = sc.detail || {};
           if (d.male_count != null && d.female_count != null) bits.push(`남 ${d.male_count} · 여 ${d.female_count}`);
-          if (d.afterschool_program_count != null) bits.push(`방과후 ${d.afterschool_program_count}개 프로그램`);
+          if (d.afterschool_program_count != null) {
+            bits.push(`방과후 ${d.afterschool_program_count}개 프로그램`
+              + (d.afterschool_student_count != null ? ` (참여 ${d.afterschool_student_count}명)` : ""));
+          }
           if (d.care_class_yn === "Y") bits.push("돌봄교실 운영");
           return bits.length ? `<p class="mp-hint" style="margin-top:10px">${bits.join(" · ")}</p>` : "";
         })()}
@@ -3037,20 +3067,31 @@ const Screens = {
         <div class="card foldbox">
           <button class="foldhd" onclick="App.toggleGrades()">
             <span><b style="font-size:13px">학년별 현황</b>
-              <span class="foldsum">${sc.detail.grade_breakdown.length}개 학년 · 학급수와 인원</span></span>
+              <span class="foldsum">전교생 ${esc(String(sc.detail.student_count ?? "-"))}명 ·
+                ${esc(String(sc.detail.class_count ?? "-"))}학급${sc.detail.disclosure_round ? ` · ${esc(sc.detail.disclosure_round)} 공시` : ""}</span></span>
             <span class="caret">${S.gradesOpen ? `<i aria-hidden="true" class="ti ti-chevron-up"></i>` : `<i aria-hidden="true" class="ti ti-chevron-down"></i>`}</span>
           </button>
           ${S.gradesOpen ? `
             <div class="gradelist">
-              ${sc.detail.grade_breakdown.map((g) => `
+              ${sc.detail.grade_breakdown.map((g) => {
+                // 웹은 학년을 또 펼쳐 반별 칸을 보여주지만, 값은 «학급당 평균» 하나뿐이다.
+                // 접이 안에 접이를 또 두지 않고 그 숫자만 한 줄로 붙인다.
+                const avg = (g.students && g.classes) ? Math.round(g.students / g.classes) : null;
+                return `
                 <div class="graderow">
                   <b>${g.grade}학년</b>
-                  <span class="gcls">${g.classes}학급</span>
+                  <span class="gcls">${g.classes}학급${avg != null ? `<span class="gsex">한 반 ${avg}명</span>` : ""}</span>
                   <span class="gnum">${g.students}명 <span class="gsex">남 ${g.male} · 여 ${g.female}</span></span>
-                </div>`).join("")}
+                </div>`; }).join("")}
             </div>
-            <p class="notice" style="padding:0 16px 14px">반별 인원은 공시되지 않아 학년 단위로만 제공돼요 ·
-              학교알리미 ${esc(String(sc.detail?.disclosure_round ?? ""))} 공시 기준</p>` : ""}
+            ${(() => {
+              const d = sc.detail || {};
+              const bits = [`전교생 ${d.student_count ?? "-"}명`, `${d.class_count ?? "-"}학급`];
+              if (d.teacher_count != null) bits.push(`교원 ${d.teacher_count}명`);
+              if (d.male_count != null || d.female_count != null) bits.push(`남 ${d.male_count ?? "-"} · 여 ${d.female_count ?? "-"}`);
+              return `<p class="notice" style="padding:0 16px 14px">${esc(bits.join(" · "))} ·
+                반별 인원은 공시되지 않아 학년 단위로만 제공돼요${d.disclosure_round ? ` · 학교알리미 ${esc(d.disclosure_round)} 공시 기준` : ""}</p>`;
+            })()}` : ""}
         </div>` : ""}`,
       meal: () => mealTab(),
       schedule: () => diaryTab(),
@@ -4578,13 +4619,20 @@ const Screens = {
     const k = S.docKind, isReport = S.docPhase === "report";
     const days = d.days ?? 3;
 
+    /* 성명 = 서식에 그대로 찍히는 값이라 **여기서 바로 고친다.**
+       예전엔 「실명은 상세에서」라고만 적혀 있고 그 상세가 없었다(2026-08-13 지적). */
+    const real = String(docNames()[String(c.id)] || "");
     const auto = `
       <div class="card autofill">
         <b style="font-size:13px">자동으로 채웠어요</b>
         <div class="afrow"><span>학교</span><b>${esc(schoolName(c))}</b></div>
         <div class="afrow"><span>학년·반</span><b>${c.grade}학년 ${c.class_name}반</b></div>
-        <div class="afrow"><span>이름</span><b>${esc(c.nickname)} <span class="todo">실명은 상세에서</span></b></div>
         <div class="afrow"><span>보호자</span><b>${esc(STUB.me.account.display_name)}</b></div>
+        <label class="f">성명 <span class="sdesc" style="display:inline">서식에 찍히는 이름이에요</span></label>
+        <input id="doc-realname" placeholder="${esc(c.nickname)} (실명을 적어주세요)" value="${esc(real)}"
+               oninput="App.docNameSet(this.value)">
+        <p class="sub">이 이름은 <b>이 기기에만</b> 저장돼요 — 서버로 보내지 않아요.
+          안 적으면 별명 「${esc(c.nickname)}」이 그대로 찍힙니다.</p>
       </div>`;
 
     const period = (label, note) => `
@@ -6733,6 +6781,19 @@ const 결재란 = `
     <tr><td></td><td></td><td></td></tr>
   </table>`;
 
+/* 🔴 서식에 들어갈 «실명» (2026-08-13 대표님: 「성명 실명이 필요한데 상세화면에서 라고 적혀있고
+   상세화면??? 수정할 수 있는 데가 없음」)
+   ─ 여태 서식엔 별명(첫째)이 찍혀 나갔고, 고칠 자리도 없었다. 만들다 만 안내였다.
+   ─ 실명은 **이 기기에만** 둔다. 서버 children 테이블엔 실명 칸이 없고, 서식 한 장 때문에
+     아이 실명을 서버에 쌓는 건 남는 장사가 아니다(개인정보는 안 모으는 게 제일 싸다).
+   ─ 안 적었으면 별명으로 폴백 — 빈칸으로 인쇄되는 것보다 낫다. */
+const DOCNAME_KEY = "eduthink_doc_names_v1";
+function docNames() {
+  if (!S._docNames) { try { S._docNames = JSON.parse(localStorage.getItem(DOCNAME_KEY) || "{}"); } catch (_) { S._docNames = {}; } }
+  return S._docNames;
+}
+const docName = (c) => String(docNames()[String(c?.id)] || "").trim() || String(c?.nickname || "");
+
 function docPaper() {
   const c = curView();
   const d = S.docDraft || {};
@@ -6741,7 +6802,7 @@ function docPaper() {
   const guardian = STUB.me.account.display_name;
   const 기간 = `${dY(d.from)} ~ ${dY(d.to)}　기간 중 (${d.days ?? ""})일간`;
   const 서명 = `
-    <div class="sign">학　　생　${W(c.nickname)}</div>
+    <div class="sign">학　　생　${W(docName(c))}</div>
     <div class="sign">학 부 모　${W(guardian)}　(인)</div>`;
   // 학교명이 비면 «장 귀하»가 된다 — 인쇄해서 손으로 적을 수 있게 밑줄 자리를 준다
   const 귀하 = `<p class="to">${school ? esc(school) : `<span class="w">&nbsp;</span>`}장 귀하</p>`;
@@ -6753,7 +6814,7 @@ function docPaper() {
     <div class="pghd"><div class="pgtitle">2026학년도 교외체험학습 신청서</div>${결재란}</div>
     <p class="pgnote">※ 교육적 활동 내용으로, 펜으로 작성, 반일 체험학습은 조퇴 또는 등교 시간 기록(3일 전 제출)</p>
     <table class="fm">
-      <tr><td class="lb vt" rowspan="2">인적<br>사항</td><td class="lb">성명</td><td>${W(c.nickname)}　( ${d.sex === "남" ? "<b>남</b>" : "남"} · ${d.sex === "여" ? "<b>여</b>" : "여"} )</td>
+      <tr><td class="lb vt" rowspan="2">인적<br>사항</td><td class="lb">성명</td><td>${W(docName(c))}　( ${d.sex === "남" ? "<b>남</b>" : "남"} · ${d.sex === "여" ? "<b>여</b>" : "여"} )</td>
           <td class="lb">학년-반</td><td>${W(`${c.grade} - ${c.class_name}`)}</td></tr>
       <tr><td class="lb">주소</td><td colspan="3">${W(d.addr)}</td></tr>
       <tr><td class="lb">기간</td><td colspan="4">${W(기간)}
@@ -6785,7 +6846,7 @@ function docPaper() {
     <p class="pgnote">※ 체험학습 실시 후 7일 이내 제출함</p>
     <table class="fm">
       <tr><td class="lb">학습자</td><td>제 ${W(c.grade)} 학년 ${W(c.class_name)} 반 　 번</td>
-          <td class="lb">성명</td><td>${W(c.nickname)}</td></tr>
+          <td class="lb">성명</td><td>${W(docName(c))}</td></tr>
       <tr><td class="lb">학습일시</td><td colspan="3">${W(기간)}</td></tr>
       <tr><td class="lb vt">체험학습<br>내용</td><td colspan="3" class="big">
           <div class="tiny">(※ 교외체험학습 교육활동 내용이 잘 드러나도록 상세하게 작성합니다.)</div>
@@ -6804,7 +6865,7 @@ function docPaper() {
     return `
     <div class="pghd"><div class="pgtitle">2026학년도 결석신고서</div>${결재란}</div>
     <table class="fm">
-      <tr><td class="lb">학생명</td><td>${W(c.nickname)}</td><td class="lb">학년 반</td><td>${W(c.grade)} 학년 ${W(c.class_name)} 반　번</td>
+      <tr><td class="lb">학생명</td><td>${W(docName(c))}</td><td class="lb">학년 반</td><td>${W(c.grade)} 학년 ${W(c.class_name)} 반　번</td>
           <td class="lb">성별</td><td>${d.sex === "남" ? "<b>남</b>" : "남"} / ${d.sex === "여" ? "<b>여</b>" : "여"}</td></tr>
       <tr><td class="lb">기 간</td><td colspan="5">${W(`${dY(d.from)} ～ ${dY(d.to)} (${days}일간)`)}</td></tr>
       <tr><td class="lb vt">결석<br>사유</td><td colspan="5" class="mid">${W(d.reason)}
@@ -6839,7 +6900,7 @@ function docPaper() {
   return `
   <div class="pghd"><div class="pgtitle">2026학년도 학부모 상담 신청서</div></div>
   <table class="fm">
-    <tr><td class="lb">학생 이름</td><td>${W(c.nickname)}</td><td class="lb">학년 반</td><td>${W(c.grade)} 학년 ${W(c.class_name)} 반</td></tr>
+    <tr><td class="lb">학생 이름</td><td>${W(docName(c))}</td><td class="lb">학년 반</td><td>${W(c.grade)} 학년 ${W(c.class_name)} 반</td></tr>
     <tr><td class="lb">보호자 연락처</td><td>${W(d.phone)}</td><td class="lb">학생과의 관계</td><td>${W(d.relation)}</td></tr>
     <tr><td class="lb">상담 가능 시간</td><td colspan="3">${STUB.counselHours[c.grade] || ""}
         <div class="tiny">※ 학교 안전 관리의 이유로 야간 상담은 하지 않음을 양해 부탁드립니다.</div></td></tr>
@@ -6858,6 +6919,14 @@ function docPaper() {
 }
 // 그 날 급식에서 우리 아이 알레르기에 걸리는 코드들
 const hitAllergens = (meal) => [...new Set(meal.dishes.flatMap((d) => d.allergens).filter((a) => S.myAllergens.includes(a)))];
+
+/* NEIS 반찬 이름 다듬기 — 앞뒤 «*»와 뒤에 붙은 알레르기 번호를 뗀다.
+   접힌 줄 요약과 펼친 카드가 **같은 이름**을 쓰도록 한 곳에 둔다(2026-08-13 아코디언). */
+function dishName(raw) {
+  const clean = String(raw).replace(/^[*\s]+|[*\s]+$/g, "");
+  const mm = clean.match(/^(.*?)\s*\(([\d.\s]+)\)\s*$/);
+  return { nm: mm ? mm[1] : clean, no: mm ? mm[2].trim() : "" };
+}
 
 function mealTab() {
   const q = S.mealQuery.trim();
@@ -6905,6 +6974,15 @@ function mealTab() {
   });
   const evOf = (d) => schedulesOf().find((e) => e.date === d && classifyEvent(e.name, e.closure_type));
 
+  /* 아코디언 — 접힌 날은 «날짜 + 한 줄 요약»만. 검색 중엔 걸린 날을 다 펼친다(찾으러 온 것이니까)
+     기본으로 펼치는 날은 «오늘» 하나. 방학 끝처럼 오늘 급식이 없으면 **맨 첫 날**을 편다 —
+     다 접힌 채로 열리면 «급식이 안 왔나»로 보인다. */
+  const lead0 = byDate.some((g) => g.date === TODAY) ? TODAY : (byDate[0]?.date || null);
+  const isOpen = (d) => q ? true
+    : (Object.prototype.hasOwnProperty.call(S.mealOpen || {}, d) ? S.mealOpen[d]
+      : (S.mealAll === "open" ? true : S.mealAll === "closed" ? false : d === lead0));
+  const allOpen = byDate.length > 0 && byDate.every((g) => isOpen(g.date));
+
   return `
   ${DEV_TOOLS ? `<div class="dormtoggle devtool">
     <label class="check"><input type="checkbox" ${S.dorm ? "checked" : ""} onchange="App.toggleDorm()">
@@ -6914,6 +6992,9 @@ function mealTab() {
 
   <div class="ml-bar">
     <!-- 월간 토글 폐지(2026-08-13) — 한 달 30줄은 목록이 아니라 벌이다. 주간 고정, 지난 것은 검색 -->
+    ${q || !byDate.length ? "" :
+      `<button class="ml-range on" onclick="App.mealFoldAll(${allOpen ? "false" : "true"})">
+         ${allOpen ? "전체 닫기" : "전체 펼치기"}</button>`}
     <span class="ml-gap"></span>
     <button class="ml-alg" onclick="App.toggleAllergenBox()">
       ${S.myAllergens.length
@@ -6944,19 +7025,24 @@ function mealTab() {
     const ev = evOf(g.date);
     const key0 = `${g.date}|${g.meals[0].type}`;
     const on = S.mealAlarms.includes(key0);
+    const open = isOpen(g.date);
+    const sum = g.meals.flatMap((m) => m.dishes).map((d) => dishName(d.name).nm).join(" · ");
     return `
-    <div class="ml-day">
+    <div class="ml-day ${g.date === TODAY ? "today" : ""} ${open ? "" : "fold"}">
       <div class="ml-dhd">
-        <b class="ml-dnum">${+g.date.slice(6)}</b>
-        <span class="ml-dwd">${weekdayKo(g.date)}</span>
-        ${ev ? `<span class="ml-dev">${esc(ev.name)}</span>` : ""}
-        <span class="ml-gap"></span>
-        <button class="ml-alarm ${on ? "on" : ""}" onclick="App.toggleMealAlarm('${jsq(key0)}')"
+        <button class="ml-dtog" onclick="App.mealFold('${jsq(g.date)}',${open})" aria-expanded="${open}">
+          <b class="ml-dnum">${+g.date.slice(6)}</b>
+          <span class="ml-dwd">${weekdayKo(g.date)}</span>
+          ${ev ? `<span class="ml-dev">${esc(ev.name)}</span>` : ""}
+          ${open ? "" : `<span class="ml-sum">${esc(sum)}</span>`}
+          <i class="ml-car" aria-hidden="true"></i>
+        </button>
+        <button class="ml-alarm ${on ? "on" : ""}" onclick="event.stopPropagation();App.toggleMealAlarm('${jsq(key0)}')"
                 aria-label="${fmtDate(g.date)} 알림 ${on ? "끄기" : "켜기"}">
           <i></i>${on ? `<em>${esc(S.remind?.evening || "18:00")} 알림</em>` : ""}
         </button>
       </div>
-      ${g.meals.map((m, i) => `
+      ${!open ? "" : g.meals.map((m, i) => `
         <div class="ml-meal ${i ? "sep" : ""}">
           <div class="ml-mhd"><b>${MEAL_KOR[m.type]}</b><span>${esc(m.calorie || "")}</span></div>
           <div class="ml-dishes">
@@ -6969,10 +7055,7 @@ function mealTab() {
                  → 번호를 떼어 작고 흐리게. 이름만 굵게 남긴다. */
               /* ⚠ NEIS 는 이름 앞뒤에 «*» 를 붙여 준다(자체 표기라 부모에겐 뜻이 없다).
                  서울과학고 급식에서 「*배추김치」처럼 그대로 노출됐다 — 걷어낸다. */
-              const clean = String(d.name).replace(/^[*\s]+|[*\s]+$/g, "");
-              const mm = clean.match(/^(.*?)\s*\(([\d.\s]+)\)\s*$/);
-              const nm = mm ? mm[1] : clean;
-              const no = mm ? mm[2].trim() : "";
+              const { nm, no } = dishName(d.name);
               const kd = mealKind(nm);
               const body = `<i class="ml-kd k-${kd.k}" aria-hidden="true"></i>`
                 + `${hit ? `<mark>${esc(nm)}</mark>` : esc(nm)}`
@@ -8856,6 +8939,14 @@ const App = {
 
   // ── 급식 ──────────────────────────────────────────────────
   mealRange(k) { S.mealRange = k; this.render(); },
+
+  /* 아코디언 — 날짜 한 줄 여닫기 / 전체 여닫기.
+     ⚠ 전체 버튼을 누르면 **날짜별 손수정을 지운다.** 안 그러면 「전체 펼치기」를 눌러도
+        아까 손으로 접어둔 날은 그대로 닫혀 있어서 버튼이 고장난 것처럼 보인다. */
+  /* ⚠ 지금 펼쳐져 있는지(cur)를 **화면이 알려준다.** 여기서 기본값을 다시 계산하면
+     화면의 판단과 어긋나 «한 번 눌렀는데 안 닫히는» 칸이 생긴다(기본 펼침 날이 그랬다). */
+  mealFold(date, cur) { S.mealOpen = { ...(S.mealOpen || {}), [date]: !cur }; this.render(); },
+  mealFoldAll(open) { S.mealAll = open ? "open" : "closed"; S.mealOpen = {}; this.render(); },
   supMemoToggle() {
     S.supMemoOpen = !S.supMemoOpen;
     if (!S.supMemoOpen) S.supDraft.memo = "";
@@ -9138,6 +9229,13 @@ const App = {
     location.hash = "#doc-form"; this.render();
   },
   docSet(key, val) { S.docDraft[key] = val; this.render(); },
+  /* 서식 성명 — 다시 그리지 않는다(글자 칠 때마다 그리면 커서가 튄다). 값만 기기에 남긴다. */
+  docNameSet(v) {
+    const c = curView(); if (!c) return;
+    const m = docNames(); m[String(c.id)] = String(v || "").trim();
+    if (!m[String(c.id)]) delete m[String(c.id)];
+    try { localStorage.setItem(DOCNAME_KEY, JSON.stringify(m)); } catch (_) {}
+  },
   docPlan(i, text) { S.docDraft.planDays[i].text = text; },
   docWish(i, key, val) {
     S.docDraft.wish = S.docDraft.wish || [{}, {}, {}];

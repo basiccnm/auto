@@ -66,6 +66,12 @@ function schoolOut(r) {
     phone: r.phone || null,
     homepage: r.homepage || null,
     sem2_start: r.sem2_start || null,
+    /* 웹 학교 페이지의 «머리 요약줄»과 같은 값 — 공립/사립 · 남녀공학 · 개교년도 · 교육지원청.
+       앱에만 없어서 「기존 웹으로 만든 부분 이식이 안 되어 있다」는 지적을 받았다(2026-08-13). */
+    est_type: r.est_type || null,
+    coedu: r.coedu || null,
+    founded_ymd: r.founded_ymd || null,
+    office: r.jurisdiction_office || r.office_name || null,
     /* 2026-08-13 대표님: 「웹에 있던 내용 다 넣을 수 있게」 — 웹 학교 페이지가 쓰는
        학교알리미 값(교원 수·학년별 현황·남녀·방과후·돌봄)을 앱에도 그대로 실어 보낸다.
        앱 화면(학교정보 탭)은 이미 teacher_count·grade_breakdown 을 그릴 줄 안다. */
@@ -76,16 +82,24 @@ function schoolOut(r) {
       male_count: r.male_count ?? null,
       female_count: r.female_count ?? null,
       afterschool_program_count: r.afterschool_program_count ?? null,
+      afterschool_student_count: r.afterschool_student_count ?? null,
       care_class_yn: r.care_class_yn ?? null,
+      school_days: r.school_days ?? null,
+      week_class_hours: r.week_class_hours ?? null,
+      /* 앱 화면은 이 값을 이미 «학교알리미 N차 공시 기준»에 쓰고 있었는데 서버가 안 보냈다 —
+         그래서 「학교알리미  공시 기준」처럼 빈 자리로 나갔다. */
+      disclosure_round: r.disclosure_round ?? null,
       grade_breakdown: (() => { try { return r.grade_breakdown ? JSON.parse(r.grade_breakdown) : null; } catch (_) { return null; } })(),
     } : null,
   };
 }
 
 const SCHOOL_COLS = `s.id AS sid, s.slug, s.name, s.school_kind, s.sido, s.address_road, s.address_detail,
-                     s.phone, s.homepage, s.sem2_start, d.class_count, d.student_count,
+                     s.phone, s.homepage, s.sem2_start, s.est_type, s.coedu, s.founded_ymd,
+                     s.jurisdiction_office, s.office_name, d.class_count, d.student_count,
                      d.teacher_count, d.male_count, d.female_count, d.grade_breakdown,
-                     d.afterschool_program_count, d.care_class_yn`;
+                     d.afterschool_program_count, d.afterschool_student_count, d.care_class_yn,
+                     d.school_days, d.week_class_hours, d.disclosure_round`;
 const SCHOOL_FROM = `FROM schools s LEFT JOIN school_details d ON d.school_id = s.id`;
 
 // 급식 dishes — dishes_parsed(JSON) 우선, 없으면 원문을 분해.
