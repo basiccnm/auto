@@ -172,6 +172,9 @@
     await go("#game", 500);
   }
 
+  /* ⛔ 검수가 로그인을 깨고 끝나면 대표님 화면에 «첫 실행 안내»가 뜬다 — 마지막에 반드시 확인 */
+  ok(99, "검수 후 로그인유지", !!TOKENS.access && S.loggedIn, "token " + !!TOKENS.access);
+
   const fails = R.filter((x) => x.v === "FAIL");
   return JSON.stringify({ 역할: ROLE, 통과: R.length - fails.length, 전체: R.length, 실패: fails, 전부: R });
 })();
