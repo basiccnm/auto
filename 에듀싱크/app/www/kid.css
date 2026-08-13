@@ -316,3 +316,34 @@ body:has(.kd-scr)::before{ background:var(--kd-sky); }
   .kd-path .bar i{ transition:none; }
   .kd-tile:active, .kd-btn:active, .kd-bk:active, .kd-kn:active{ transform:none; }
 }
+
+/* ── 미션 완료 축하 (2026-08-14) — 색종이 12장 + 카드 팝. 소리는 app.js dingSound() ──
+   ⚠ 층은 400 — 시트(300)·본인확인(120) 무엇 위에서도 축하는 보인다. 탭하면 닫힘 */
+.kd-hoo { position: fixed; inset: 0; z-index: 400; background: rgba(40, 40, 30, .35);
+  display: flex; align-items: center; justify-content: center; overflow: hidden; }
+.kd-hoo .in { background: var(--kd-canvas, #fff); border: 3px solid var(--kd-grass, #58CC02);
+  box-shadow: 0 6px 0 var(--kd-grass-lip, #46A302); border-radius: 24px;
+  padding: 26px 34px; text-align: center; animation: hooPop .35s cubic-bezier(.2, 1.6, .4, 1); }
+.kd-hoo .big { font-size: 54px; display: block; }
+.kd-hoo b { display: block; font-size: 24px; margin-top: 6px; color: var(--kd-ink, #33404F); }
+.kd-hoo em { display: block; font-style: normal; font-size: 14px; color: var(--kd-sub, #8A93A6); margin-top: 4px; }
+.kd-hoo .st { display: inline-block; margin-top: 10px; font-size: 18px; font-weight: 900;
+  color: #8A5B00; background: #FFF6D9; border: 2px solid #FFE08A; border-radius: 999px; padding: 5px 16px; }
+@keyframes hooPop { from { transform: scale(.5); opacity: 0; } to { transform: none; opacity: 1; } }
+/* 색종이 — 위에서 흩날리며 떨어진다. 12장 각자 다른 자리·색·박자 */
+.kd-hoo .cf { position: absolute; top: -20px; width: 10px; height: 16px; border-radius: 3px;
+  animation: cfFall 1.6s ease-in infinite; }
+@keyframes cfFall { 0% { transform: translateY(0) rotate(0); opacity: 1; }
+  100% { transform: translateY(105vh) rotate(540deg); opacity: .6; } }
+.kd-hoo .c0 { left: 6%;  background: #58CC02; animation-delay: 0s; }
+.kd-hoo .c1 { left: 14%; background: #FFC800; animation-delay: .25s; }
+.kd-hoo .c2 { left: 23%; background: #1CB0F6; animation-delay: .1s; }
+.kd-hoo .c3 { left: 31%; background: #FF9600; animation-delay: .4s; }
+.kd-hoo .c4 { left: 40%; background: #CE82FF; animation-delay: .05s; }
+.kd-hoo .c5 { left: 48%; background: #FF7A45; animation-delay: .3s; }
+.kd-hoo .c6 { left: 57%; background: #58CC02; animation-delay: .18s; }
+.kd-hoo .c7 { left: 65%; background: #FFC800; animation-delay: .45s; }
+.kd-hoo .c8 { left: 74%; background: #1CB0F6; animation-delay: .08s; }
+.kd-hoo .c9 { left: 82%; background: #CE82FF; animation-delay: .35s; }
+.kd-hoo .c10 { left: 90%; background: #FF9600; animation-delay: .15s; }
+.kd-hoo .c11 { left: 96%; background: #22C39A; animation-delay: .5s; }

@@ -2238,7 +2238,7 @@ const Screens = {
           <button class="kd-btn" onclick="location.hash='#game';App.gameTab('today')">오늘의 퀴즈 풀기</button>
         </div>
       </div>
-      ${stickerView()}`;
+      ${stickerView()}${hoorayView()}`;
     }
 
     /* ── 부모 화면 (목업 ①) ── */
@@ -2365,7 +2365,7 @@ const Screens = {
       : S.gameTab === "profile" ? gameProfile(c, coin)
       : S.gameTab === "today"   ? gameQuiz()
       :                           gameCard(S.gameTab)
-      }</div>${stickerView()}${clearView()}`;
+      }</div>${stickerView()}${clearView()}${hoorayView()}`;
     }
 
     const pct = coin.limit ? Math.min(100, Math.round((coin.earned_today / coin.limit) * 100)) : 0;
@@ -2453,7 +2453,7 @@ const Screens = {
         <button class="kd-btn" onclick="App.gameTab('today')">퀘스트 시작하기</button>
       </div>
     </div>
-    ${stickerView()}${clearView()}`;
+    ${stickerView()}${clearView()}${hoorayView()}`;
   },
 
   /* ── 스타코인 상점 (2026-08-07 지시서 §5③) ────────────────────────────
@@ -3335,7 +3335,7 @@ const Screens = {
       ${week}
       <div style="flex:1"></div>
       <div class="kd-act">${foot}</div>
-    </div>`;
+    </div>${hoorayView()}`;
   },
 
   /* ── 오늘 아이가 한 것 — 부모, 구글 캐논 (2026-08-12 허브 퇴역으로 이사) ──
@@ -6446,6 +6446,42 @@ function reactSheetView() {
 }
 
 /* 아이 화면에 뜨는 큰 칭찬 팝업 — «받았다»는 순간이 이 앱의 봉우리다 */
+/* ── 미션 완료 축하 — 색종이 + 딩동 소리 (2026-08-14 대표님 「이펙트나 소리가 나도 좋을 것 같은데」)
+   🔴 그동안 S.kidHooray 를 «넣기만» 하고 그리는 곳이 없었다 — 축하가 화면에 안 떴다.
+   소리는 파일 없이 웹오디오 합성(용량 0·네트워크 0). 소리가 막혀도(무음모드) 축하는 뜬다. */
+function dingSound() {
+  try {
+    const C = window.AudioContext || window.webkitAudioContext; if (!C) return;
+    const ctx = dingSound._c || (dingSound._c = new C());
+    if (ctx.state === "suspended") ctx.resume();
+    const t = ctx.currentTime;
+    [[659, 0], [880, .13]].forEach(([f, d]) => {           // 미(E5) → 라(A5) 두 음
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = "triangle"; o.frequency.value = f;
+      g.gain.setValueAtTime(.0001, t + d);
+      g.gain.exponentialRampToValueAtTime(.28, t + d + .02);
+      g.gain.exponentialRampToValueAtTime(.0001, t + d + .5);
+      o.connect(g); g.connect(ctx.destination);
+      o.start(t + d); o.stop(t + d + .55);
+    });
+  } catch (_) { /* 소리는 덤이다 — 실패해도 조용히 */ }
+}
+function cheer(title, stars) { S.kidHooray = { title, stars }; dingSound(); }
+function hoorayView() {
+  const h = S.kidHooray;
+  if (!h) return "";
+  return `
+  <div class="kd-hoo" onclick="App.kidHoorayClose()">
+    ${Array.from({ length: 12 }, (_, i) => `<i class="cf c${i}"></i>`).join("")}
+    <div class="in">
+      <span class="big" aria-hidden="true">🎉</span>
+      <b>해냈다!</b>
+      ${h.title ? `<em>${esc(h.title)}</em>` : ""}
+      ${h.stars ? `<span class="st">＋★${h.stars}</span>` : ""}
+    </div>
+  </div>`;
+}
+
 function stickerView() {
   const s = S.kidSticker;
   if (!s) return "";
@@ -10128,7 +10164,7 @@ const App = {
     const before = m ? { status: m.status } : null;
     if (m && m.verify === "instant" && m.status === "open") {
       m.status = "done"; m.got = m.stars;
-      if (wasKid) S.kidHooray = { title: m.title || "", stars: m.stars };
+      if (wasKid) cheer(m.title || "", m.stars);
       if (location.hash === "#missionone") location.hash = "#mission";
       this.render();
     }
@@ -10147,7 +10183,7 @@ const App = {
     }
     /* 자녀 화면에선 토스트 대신 **축하 오버레이** — 완료 순간이 이 앱의 봉우리다(테마 시안 확정).
        ⚠ kidMode(부모의 아이 화면 미리보기)도 포함 — 빠뜨리면 미리보기에서 축하가 안 보인다(08-12 실측). */
-    if (isChildToken() || S.childView || S.kidMode) { S.kidHooray = { title: m?.title || "", stars: d.got }; this.render(); }
+    if (isChildToken() || S.childView || S.kidMode) { cheer(m?.title || "", d.got); this.render(); }
     else toast(`★${d.got} 받았어요!`);
     this.loadMissionSets(true);   // 세트가 완주됐는지는 **서버가** 판단한다
   },
@@ -10197,7 +10233,7 @@ const App = {
     S.mealRated = true;
     App.loadSchoolMissions(true);   // 학교 미션 카드를 새로 받는다(1/3 → 2/3)
     S.mealDraft = { stars: 0, best: null };
-    S.kidHooray = { title: "급식 평가", stars: got };
+    cheer("급식 평가", got);
     location.hash = "#game";
     this.render();
   },
@@ -10219,7 +10255,7 @@ const App = {
     S.subjectLogged = true;
     App.loadSchoolMissions(true);   // 학교 미션 카드를 새로 받는다(1/3 → 2/3)
     S.subjectBest = null;
-    S.kidHooray = { title: "오늘 재밌었던 것", stars: got };
+    cheer("오늘 재밌었던 것", got);
     location.hash = "#game";
     this.render();
   },
@@ -10270,7 +10306,7 @@ const App = {
     S.friendLogged = true;
     App.loadSchoolMissions(true);   // 학교 미션 카드를 새로 받는다(1/3 → 2/3)
     S.friendDraft = { picked: [], alone: false, adding: null };
-    S.kidHooray = { title: "오늘 논 친구", stars: got };
+    cheer("오늘 논 친구", got);
     location.hash = "#game";
     this.render();
   },
