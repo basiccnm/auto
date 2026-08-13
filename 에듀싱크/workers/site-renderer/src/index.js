@@ -388,6 +388,93 @@ async function refreshSchedules(db, school, today) {
   return true;
 }
 
+/* ═══ 우리 사용자 학교 «먼저» 자동 갱신 (2026-08-13 대표님:
+     「학교일정·시간표·급식 등을 자동으로 가져올 수 있게 돌려야 해」) ═══════════
+
+   여태 크론이 한 건 **학사일정뿐**이었고, 그것도 전국 12,564 개 학교를 무차별로
+   3곳/분씩 돌았다(한 바퀴 ≈ 3일). **급식과 시간표는 크론이 아예 안 건드렸다** —
+   사용자가 그 화면을 열 때만(온디맨드) 받아왔다.
+   실측(2026-08-13): 학교 12,564 곳 중 급식 보유 14곳 · 시간표 보유 8곳.
+
+   그래서 이런 구멍이 난다 — 개학해서 새 급식표가 올라왔는데 **앱을 열기 전까지는**
+   앱이 아직 방학인 줄 안다. 홈 「오늘 급식」과 알림이 그 사이 빈 채로 있다.
+
+   → 자녀가 등록된 학교는 **전국 롤링보다 먼저, 더 자주** 채운다.
+     대상이 «우리 아이 학교»뿐이라 수가 적고, 주기를 두어 NEIS 부담도 작다.
+   ⚠ 시각 기록(sync_state)을 **성공·실패와 무관하게** 찍는다 — 안 그러면 NEIS 가 조용한
+     학교 하나 때문에 매분 같은 곳을 때린다(웹방화벽에 걸리는 지름길이다). */
+const KID_MEAL_HOURS = 12;   // 급식 — 반나절에 한 번(개학·식단 변경을 그날 안에 잡는다)
+const KID_SCHED_DAYS = 3;    // 학사일정 — 사흘에 한 번
+const KID_TT_DAYS = 3;       // 시간표 — 사흘에 한 번
+const KID_BATCH = 2;         // 한 틱에 학교 2곳까지 (매분 도니 금세 한 바퀴)
+
+async function rollChildSchoolsRefresh(db, today) {
+  const mealCut = new Date(Date.now() - KID_MEAL_HOURS * 3600000).toISOString();
+  const schedCut = new Date(Date.now() - KID_SCHED_DAYS * 86400000).toISOString();
+  const ttCut = new Date(Date.now() - KID_TT_DAYS * 86400000).toISOString();
+
+  /* 자녀가 실제로 등록된 학교만. 검수용(is_test=1)은 뺀다 — 대표님 검수 계정 때문에
+     NEIS 를 도는 건 낭비다. 오래 안 받은 학교부터. */
+  const { results: targets } = await db.prepare(
+    `SELECT s.id, s.office_code, s.school_code, s.school_kind,
+            st.meals_synced_at, st.schedules_synced_at, st.timetable_synced_at
+       FROM schools s
+       JOIN (SELECT DISTINCT school_id FROM children WHERE is_test = 0) k ON k.school_id = s.id
+       LEFT JOIN sync_state st ON st.school_id = s.id
+      WHERE st.school_id IS NULL
+         OR COALESCE(st.meals_synced_at, '') < ?
+         OR COALESCE(st.schedules_synced_at, '') < ?
+         OR COALESCE(st.timetable_synced_at, '') < ?
+      ORDER BY COALESCE(st.meals_synced_at, '') ASC
+      LIMIT ?`
+  ).bind(mealCut, schedCut, ttCut, KID_BATCH).all();
+
+  const now = new Date().toISOString();
+  for (const school of targets || []) {
+    // ── 급식 — 지금부터 앞으로. ensureMeals 는 «주 1회» 잠금이 걸려 있어 여기선 직접 받는다
+    if (!school.meals_synced_at || school.meals_synced_at < mealCut) {
+      try {
+        const rows = await neisGet("mealServiceDietInfo", {
+          ATPT_OFCDC_SC_CODE: school.office_code, SD_SCHUL_CODE: school.school_code,
+          MLSV_FROM_YMD: today, MLSV_TO_YMD: ymdAddDays(today, MEAL_FETCH_DAYS),
+        });
+        const stmts = rows.map((r) => {
+          const raw = r.DDISH_NM || "";
+          return db.prepare("INSERT OR IGNORE INTO meals (school_id, meal_date, meal_type_code, meal_type_name, dishes, dishes_parsed, calorie_info, origin_info, nutrition_info, last_synced_at) VALUES (?,?,?,?,?,?,?,?,?,?)")
+            .bind(school.id, r.MLSV_YMD, r.MMEAL_SC_CODE, r.MMEAL_SC_NM, raw,
+                  JSON.stringify(parseDishesJs(raw)), r.CAL_INFO || null, r.ORPLC_INFO || null, r.NTR_INFO || null, now);
+        });
+        if (stmts.length) await batchChunked(db, stmts);
+      } catch { /* 시각은 아래에서 찍는다 — 다음 주기에 재시도 */ }
+      await db.prepare(
+        "INSERT INTO sync_state (school_id, meals_synced_at) VALUES (?, ?) ON CONFLICT(school_id) DO UPDATE SET meals_synced_at = excluded.meals_synced_at"
+      ).bind(school.id, now).run();
+    }
+
+    // ── 학사일정 — 이미 있는 강제 갱신을 그대로 쓴다(빈 응답이면 기존 것을 안 지운다)
+    if (!school.schedules_synced_at || school.schedules_synced_at < schedCut) {
+      try { await refreshSchedules(db, school, today); } catch { /* 다음 주기 */ }
+      await db.prepare(
+        "INSERT INTO sync_state (school_id, schedules_synced_at) VALUES (?, ?) ON CONFLICT(school_id) DO UPDATE SET schedules_synced_at = excluded.schedules_synced_at"
+      ).bind(school.id, now).run();
+    }
+
+    // ── 시간표 — 학교가 아니라 **학년·반**마다다. 그 학교에 등록된 자녀들의 반만 받는다
+    if (!school.timetable_synced_at || school.timetable_synced_at < ttCut) {
+      try {
+        const { results: classes } = await db.prepare(
+          "SELECT DISTINCT grade, class_name FROM children WHERE school_id = ? AND is_test = 0"
+        ).bind(school.id).all();
+        for (const c of classes || []) await ensureTimetable(db, school, c.grade, c.class_name, today);
+      } catch { /* 다음 주기 */ }
+      await db.prepare(
+        "INSERT INTO sync_state (school_id, timetable_synced_at) VALUES (?, ?) ON CONFLICT(school_id) DO UPDATE SET timetable_synced_at = excluded.timetable_synced_at"
+      ).bind(school.id, now).run();
+    }
+  }
+  return (targets || []).length;
+}
+
 // 롤링 갱신 1틱 — 갱신한 지 REFRESH_DAYS 지난(또는 미시도) 학교를 BATCH곳 골라 다시 받는다.
 // 매분 실행돼도 대부분의 분엔 대상 0곳(전부 최신)이라 NEIS 호출이 없다. 연초(1월)엔 조회 연도가
 // 바뀌므로 한 바퀴(약 3일) 돌면서 새해 일정으로 자동 교체된다. 신규 학교(sync_state 없음)가 최우선.
@@ -3127,6 +3214,11 @@ export default {
         await db.prepare("UPDATE personal_events SET remind_sent = 1 WHERE id = ?").bind(evId).run();
       }
     }
+
+    /* ②-0 **우리 아이 학교 먼저** — 급식·학사일정·시간표를 자동으로 받아 둔다(2026-08-13).
+       전국 롤링(②)보다 앞에 둔다. 사용자가 앱을 열기 전에 이미 채워져 있어야
+       홈의 「오늘 급식」과 알림이 개학 첫날부터 맞는다. */
+    try { await rollChildSchoolsRefresh(db, todayYmd()); } catch { /* 다음 분에 재시도 */ }
 
     // ② 학사일정 롤링 갱신 — 30일 지난 학교 3곳/분. 전국 1바퀴 ≈ 3일, 평소엔 대상 0곳(호출 없음).
     try { await rollSchedulesRefresh(db, todayYmd()); } catch { /* 다음 분에 재시도 */ }

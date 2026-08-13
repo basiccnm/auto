@@ -259,15 +259,33 @@ async function schoolTimetable(db, url, schoolId) {
      예전엔 시간표를 통째로 받아 반 이름을 추려 썼는데, **페이징 기본 50건**에 잘려서
      경기초 4학년이 「난초·매화·장미」인데 「난초·매화」만 나왔다.
      반이 많은 학교는 상한 200건으로도 모자란다 → 반 이름만 주는 길을 따로 낸다. */
+  /* 🔴 학기 폴백 (2026-08-13 실측 사고)
+     8월이 되면 `semesterOf` 가 «2학기»로 넘어간다. 그런데 학교는 아직 방학이고
+     NEIS 에 2학기 시간표가 안 올라와 있다 — 실제로 서울숭미초는 1학기분 431행만 있고
+     2학기는 0행이었다. 그대로 두면 **개학 무렵 시간표 화면이 통째로 빈다.**
+     학교가 새 학기 표를 올리기 전까지는 **지난 학기 표라도 보여준다.**
+     어느 학기 것인지는 응답의 `semester` 가 말하고, 화면이 그걸 그대로 띄운다. */
+  const other = sem === "2" ? "1" : "2";
+  const semFor = async (g, cn) => {
+    let s = "SELECT COUNT(*) AS n FROM timetables WHERE school_id=? AND school_year=? AND semester=?";
+    const b = [schoolId, ay, sem];
+    if (g) { s += " AND grade = ?"; b.push(g); }
+    if (cn) { s += " AND COALESCE(class_name,'') = ?"; b.push(cn); }
+    const r = await db.prepare(s).bind(...b).first();
+    return (r && r.n > 0) ? sem : other;
+  };
+
   if (url.searchParams.get("classes") === "1") {
+    const use = await semFor(grade, "");
     const { results } = await db.prepare(
       "SELECT DISTINCT class_name FROM timetables WHERE school_id=? AND school_year=? AND semester=? AND grade=? AND COALESCE(class_name,'')<>'' ORDER BY class_name"
-    ).bind(schoolId, ay, sem, grade).all();
-    return apiOk({ items: results.map((r) => r.class_name), semester: sem, neis_year: ay });
+    ).bind(schoolId, ay, use, grade).all();
+    return apiOk({ items: results.map((r) => r.class_name), semester: use, neis_year: ay });
   }
 
+  const use = await semFor(grade, className);
   let sql = "SELECT weekday, period, subject, grade, class_name, school_year, semester FROM timetables WHERE school_id = ? AND school_year = ? AND semester = ?";
-  const binds = [schoolId, ay, sem];
+  const binds = [schoolId, ay, use];
   if (grade) { sql += " AND grade = ?"; binds.push(grade); }
   if (className) { sql += " AND COALESCE(class_name,'') = ?"; binds.push(className); }
   sql += " ORDER BY CAST(grade AS INTEGER), class_name, weekday, CAST(period AS INTEGER), id LIMIT ? OFFSET ?";

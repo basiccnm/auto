@@ -5828,11 +5828,18 @@ function schoolMissionList() {
        숨기면 「0/3」이 날마다 「0/1」로 들쭉날쭉해져 아이가 뭘 놓쳤는지 모른다. */
   const noMeal = !mealsOf().some((m) => m.date === TODAY && m.type === "중식");
   const noSub = !todaySubjects().length;
+  /* 🔴 «방학»과 «자료가 아직 없음»은 다르다 (2026-08-13, 개학한 학교로 실측하다 잡음).
+     인천 강화초는 **오늘 개학**해서 급식이 나오는데, NEIS 에 시간표가 없다는 이유로
+     「재밌던 수업」에 「방학중」이 붙었다 — 학교 간 아이한테 방학이라고 말한 셈이다.
+     오늘 급식이 있으면 = 학교 가는 날이다. 그때 못 하는 칸은 «자료가 아직 안 올라온 것»이다. */
+  const schoolDay = !noMeal;
   return s.items.map((x) => {
     const none = x.key === "meal" ? noMeal : x.key === "subject" ? noSub : false;
     /* 2026-08-12 대표님: 「클리어처럼 비활성화된 느낌으로 방학중 써놓으라」 */
-    return { ...x, none, go: none ? "" : "#" + x.go,
-      note: none ? "학교 가는 날 다시 열려요" : x.note };
+    return { ...x, none, schoolDay, go: none ? "" : "#" + x.go,
+      note: !none ? x.note
+        : schoolDay ? "시간표가 아직 안 올라왔어요"
+        : "학교 가는 날 다시 열려요" };
   });
 }
 
@@ -5876,7 +5883,8 @@ function gameCard(catKey) {
     stars = list.reduce((a, x) => a + x.stars, 0);
     tiles = list.map((x) => gameTile({ leaf: true, key: x.key, icon: x.icon, name: x.name, note: x.note,
       c: "cyan", done: x.done ? 1 : 0, all: 1, stars: x.stars, go: x.go,
-      foot: x.done ? "했어요" : x.none ? "방학중" : "30초면 끝", dim: x.none })).join("");
+      /* 딱지도 «방학»과 «자료 없음»을 가른다 — 학교 간 날에 「방학중」은 거짓말이다(2026-08-13) */
+      foot: x.done ? "했어요" : x.none ? (x.schoolDay ? "준비 중" : "방학중") : "30초면 끝", dim: x.none })).join("");
   } else {
     const list = (S.missions || []).filter((x) => slots.indexOf(x.slot || "any") >= 0);
     all = list.length; done = list.filter((x) => x.status === "done").length;

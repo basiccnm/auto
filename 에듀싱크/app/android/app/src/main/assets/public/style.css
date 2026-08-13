@@ -8576,8 +8576,12 @@ body {
 
 /* 로그인 화면 «닫기» — 홈에서 들어왔다가 못 나오던 것 (2026-08-10 폰 실측).
    ⚠ 안전영역을 못 주는 폰이 있어 max() 로 바닥값을 깐다(하단 3버튼에서 겪은 것과 같다). */
+/* 🔴 왼쪽에 두면 **로고를 덮는다**(2026-08-13 릴리스 빌드 실기: ✕ 가 별 로고 위에 얹혀
+   «깨진 그림»으로 보였다). 제목·로고가 왼쪽 정렬이니 닫기는 오른쪽으로 보낸다.
+   ⚠ 아래 «위에 붙는 것» 묶음이 top 을 다시 정하므로 바닥값(40px)이 사라진다 —
+     그래서 여기서 좌우만 정하고, 세로는 그쪽 한 줄이 정본이다. */
 :root .lg-close {
-  position: absolute; left: 10px; z-index: 5;
+  position: absolute; right: 10px; left: auto; z-index: 5;
   top: max(calc(var(--sa-t) + 8px), 40px);
   width: 44px; height: 44px; min-height: 44px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center; line-height: 0;
@@ -8655,7 +8659,10 @@ body {
 :root .in-skip     { top: calc(var(--sa-t) + 14px); }
 :root .sub-top     { padding-top: calc(var(--sa-t) + 2px); }
 :root body::before { height: var(--sa-t); }
-:root .lg-close    { top: calc(var(--sa-t) + 8px); }
+/* 안전영역을 0 으로 주는 폰이 있어 바닥값을 깐다 — 안 그러면 상태바에 걸린다 */
+:root .lg-close    { top: max(calc(var(--sa-t) + 8px), 40px); }
+/* 로고가 닫기 버튼 아래에서 시작하게 — 화면이 짧으면 가운데 정렬이 위로 밀려 겹친다 */
+:root .lg-wrap .lg { padding-top: 52px; }
 
 /* ☰ — 스크롤해도 남아야 한다(2026-08-10). 그림이 덮지 못하게 위로 올리고,
    본문 위에도 얹히므로 유리 원을 깔아 어느 배경에서도 읽히게 한다. */
