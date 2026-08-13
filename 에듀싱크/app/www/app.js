@@ -2273,7 +2273,10 @@ const Screens = {
              **부모 미션의 ‹ 는 홈(A모듈)이다**(2026-08-12 확정 → 08-13 kd 복원 때 원본째 되돌아가
              다시 깨졌다. 옛 판을 통째로 붙여 넣을 때는 이 줄을 꼭 확인할 것). -->
         <button class="kd-bk" onclick="App.goHome()" aria-label="뒤로">‹</button>
-        <span class="ti">미션</span>
+        <!-- 🔴 어느 아이 것인지 안 보였다 (2026-08-14 대표님: 「어떤 자녀 페이지인지 확인해야 할 것 같고」).
+             자녀가 셋이면 별 라인·미션·상점이 전부 그 아이 것인데 화면엔 「미션」뿐이었다.
+             바꾸는 곳(드로어 «자녀 전환»)은 따로 있으니 여기선 **누구 것인지만** 말한다. -->
+        <span class="ti">${esc(c.nickname || "")} 미션</span>
         <span class="kd-pill star">★ ${S.missionStars}</span>
       </div>
       ${childLinkWarn()}
