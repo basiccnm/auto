@@ -12375,6 +12375,18 @@ function wipeParentData() {
   STUB.children = []; STUB.records = []; STUB.documents = []; STUB.supplies = [];
   STUB.notices = []; STUB.myEvents = []; STUB.activities = []; STUB.communityPosts = [];
   S.currentChildId = null; S.devices = null; S.planList = null; S.inquiries = null;
+  /* 🔴 미션·별·상점은 **아이마다 다른 값**이다. 여기서 안 지우면 폰을 다른 아이로 다시
+     연결했을 때 **앞 아이의 미션 이름과 별이 화면에 그대로 남는다**
+     (2026-08-13 셋째 연결 실측: 둘째의 미션 6줄이 그대로 떠 있었다. 새로고침해야 사라졌다).
+     남의 집 아이 이야기가 아니라 **형제끼리도 보면 안 되는 것**이다. */
+  S.missions = null; S.missionStars = 0; S.coin = null; S.econ = null;
+  S.msets = null; S.schoolMs = null; S.verifyPending = null; S.msWeek = null; S.msDetail = null;
+  S.store = null; S.quiz = null; S.quizIdx = 0; S.quizResult = null; S.report = null;
+  /* 🔴 값만 지우면 **새 아이 것이 영영 안 들어온다.** 로더는 «부른 적 있나»(_gameTried)로
+     한 번만 돌게 막혀 있어서, 표시만 비우면 빈 화면에서 멈춘다
+     (2026-08-13: 셋째로 다시 연결하니 학교 미션이 «오늘 할 게 없어요» 0/0 이었다).
+     지울 때는 «부른 적 있다»는 기억도 같이 지운다. */
+  S._gameTried = {}; S._gameLoading = false;
   SCHOOL.slug = null; SCHOOL.info = SCHOOL.meals = SCHOOL.schedules = SCHOOL.timetable = null;
   SCHOOL.from = "stub";
   LOADED.childId = null; LOADED.busy = false;
