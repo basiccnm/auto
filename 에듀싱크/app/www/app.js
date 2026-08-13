@@ -2902,7 +2902,11 @@ const Screens = {
     ];
     const on = CARDS.filter(([k]) => S.todayCards[k]).length;
     return `
-    ${subHeader("오늘 카드", "끈 것은 없어지지 않아요 — 각자의 화면에 그대로 있어요")}
+    <!-- 🔴 부제(subHeader 두 번째 인자)는 «어느 학교인가» 같은 **짧은 말** 자리다 — nowrap 이라
+         문장을 넣으면 「…각자의 화면에 그」에서 말없이 잘린다(2026-08-13 전화면 검사에서 잡힘).
+         문장은 부제가 아니라 본문 힌트로 내린다. -->
+    ${subHeader("오늘 카드", "")}
+    <p class="mp-hint" style="margin-top:0">끈 것은 없어지지 않아요 — 각자의 화면에 그대로 있어요</p>
 
     <div class="card" style="padding:8px 10px">
       <div class="edhd"><b>오늘 화면에 보일 줄</b><span class="sub" style="margin:0">${on}/${CARDS.length}개</span></div>
@@ -7539,7 +7543,17 @@ function timetableTab() {
   ${nowCard()}
   <button class="tt-hd" onclick="App.ttFold('school')">
     <b>시간표</b>
-    <span>${tt.grade}학년 ${tt.class_name}반 · ${tt.semester}학기</span>
+    <!-- 🔴 서버 시간표가 없으면 EMPTY_TT 라 grade·class_name·semester 가 통째로 없다.
+         그걸 그대로 이어 붙여서 「undefined학년 undefined반 · undefined학기」가 찍혔다
+         (2026-08-13 대표님 스샷). 없는 값은 **자녀 정보로 메우고, 그래도 없으면 뺀다.** -->
+    <span>${(() => {
+      const c0 = curView() || {};
+      const gr = tt.grade ?? c0.grade, cl = tt.class_name ?? c0.class_name;
+      const bits = [];
+      if (gr != null && gr !== "") bits.push(`${esc(String(gr))}학년${cl != null && cl !== "" ? ` ${esc(String(cl))}반` : ""}`);
+      if (tt.semester != null && tt.semester !== "") bits.push(`${esc(String(tt.semester))}학기`);
+      return bits.join(" · ");
+    })()}</span>
     <i class="ttp-caret ${schoolOpen ? "on" : ""}"></i>
   </button>
   <div class="${schoolOpen ? "" : "hide"}">

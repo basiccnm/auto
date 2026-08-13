@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>아이 홈 — 지금(A) vs 새안(C)</title>
+<link rel="stylesheet" href="maple.css">
+<!--
+  ══════════════════════════════════════════════════════════════
+  아이 홈 개선안 C (2026-08-13) — 대표님 「애들 페이지 아직도 보고 쓰기 어려우니깐」
+
+  지금(A)의 문제 — 셋 다 «구조» 문제라 색을 만져서는 안 없어진다.
+    ① 시작점이 없다. 리본 · 타일3 · 엄마아빠 퀘스트 · 상점이 **동시에** 말을 건다.
+       아이는 «오늘 뭐부터?»를 스스로 골라야 한다 — 그게 어른한테도 피곤한 일이다.
+    ② 미션이 두 군데 산다. 타일 안(아침/학교/방과후)과 엄마아빠 퀘스트 카드.
+       같은 «오늘 할 일»인데 사는 곳이 달라 다 했는지 세려면 두 곳을 봐야 한다.
+    ③ 맨 아래 큰 버튼이 「퀘스트 시작하기」인데 실제로는 **퀴즈**로 간다.
+
+  새안(C)가 바꾼 것 — 더한 게 아니라 **자리를 정한다.**
+    ① 「지금 할 것」 카드 하나가 맨 위에. 오늘 안 한 것 중 하나를 앱이 골라 준다.
+       아이가 할 일은 큰 초록 버튼 하나 누르기.
+    ② 그 아래 «오늘 남은 것» **한 줄짜리 목록 하나**로 합친다.
+       아침·학교·방과후·엄마아빠를 딱지(🌅🏫📚💛)로만 구분한다 — 칸을 나누지 않는다.
+       타일 3개는 «진행 눈금»으로 줄여 목록 위에 얹는다(누르면 그 갈래만 걸러 보기).
+    ③ 맨 아래 버튼은 「오늘의 퀴즈 ⚔️」 — 가는 곳 이름을 그대로 쓴다.
+    ④ 눌러서 끝내는 미션은 목록에서 **오른쪽 ○ 한 번**으로 끝낸다.
+       오탭이 무서워 두 번 누르게 했었는데, 대신 «되돌리기» 5초를 준다.
+       (사진 미션은 그대로 상세로 — 되돌릴 수 없는 일이라)
+
+  듀오링고 문법은 그대로: 2px 테두리 = 떠 있음 · 아래 입술 = 눌림 · 그림자 없음.
+  ══════════════════════════════════════════════════════════════
+-->
+<style>
+:root{
+  --sky:#E8F4FF; --cream:#FFFDF6; --ink:#33404F; --sub:#8A93A6;
+  --grass:#58CC02; --grass-lip:#46A302; --grass-tint:#F0FAE4; --grass-line:#B7E88C;
+  --sun:#FFC800; --sun-lip:#E5A500; --sun-ink:#8A5B00;
+  --dawn:#FF9600; --dawn-tint:#FFF4E3; --dawn-line:#FFD9A0; --dawn-ink:#A85E00;
+  --pool:#1CB0F6; --pool-tint:#E9F6FF; --pool-line:#A6DFFF; --pool-ink:#0E7DB8;
+  --grape:#CE82FF; --grape-tint:#F7EFFF; --grape-line:#E3C6FF; --grape-ink:#8A4DBF;
+  --mint:#22C39A; --mint-tint:#E6F9F3; --mint-line:#A6E9D5; --mint-ink:#0E7A5F;
+  --canvas:#fff; --r-sm:10px; --r-md:14px; --r-lg:18px; --r-full:999px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#3f3f3f;padding:24px;display:flex;gap:32px;flex-wrap:wrap;justify-content:center}
+.wrap{width:393px}
+.cap{color:#fff;font-size:13px;font-weight:700;margin-bottom:6px;min-height:52px;
+  font-family:system-ui,"Malgun Gothic",sans-serif}
+.cap em{display:block;font-style:normal;font-weight:400;color:#c2c2c2;font-size:12px;margin-top:3px;line-height:1.5}
+.phone{width:393px;height:852px;overflow:hidden;display:flex;flex-direction:column;position:relative;
+  font-family:"Maple",system-ui,"Malgun Gothic",sans-serif;color:var(--ink);
+  background:linear-gradient(180deg,var(--sky) 0%,var(--sky) 18%,var(--cream) 42%)}
+.sb{height:44px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 20px;font-size:13px;font-weight:600}
+.body{flex:1;overflow:hidden;padding:0 16px;display:flex;flex-direction:column}
+.scroll{flex:1;overflow:hidden}
+.cloud{position:absolute;background:#fff;border-radius:var(--r-full);opacity:.9}
+.cloud.c1{width:64px;height:20px;left:36px;top:64px}
+.cloud.c1::after{content:'';position:absolute;width:30px;height:30px;border-radius:50%;background:#fff;left:12px;top:-12px}
+.cloud.c2{width:44px;height:16px;right:44px;top:96px;opacity:.7}
+
+.top{display:flex;align-items:center;gap:8px;padding:10px 2px 4px;position:relative}
+.top .av{width:46px;height:46px;border-radius:var(--r-full);background:var(--canvas);
+  border:2.5px solid var(--grass-line);display:grid;place-items:center;font-size:24px}
+.top .who{font-size:21px;font-weight:700}
+.top .who em{display:block;font-style:normal;font-size:12px;color:var(--sub)}
+.pill{display:flex;align-items:center;gap:4px;height:34px;padding:0 12px;border-radius:var(--r-full);
+  background:var(--canvas);font-size:14px;font-weight:700;font-variant-numeric:tabular-nums}
+.pill.fire{margin-left:auto;color:#D14B1F;border:2px solid #FFC9AE;box-shadow:0 3px 0 #FFD9C6}
+.pill.star{color:var(--sun-ink);border:2px solid #FFE08A;box-shadow:0 3px 0 #FFE9AE}
+
+.path{position:relative;margin:12px 2px 14px}
+.path .bar{height:18px;border-radius:var(--r-full);background:#EAEFE2;border:2px solid #DDE6D2;overflow:hidden}
+.path .bar i{display:block;height:100%;border-radius:var(--r-full);
+  background:linear-gradient(180deg,#7CDC3A 0%,var(--grass) 55%);box-shadow:inset 0 -4px 0 rgba(0,0,0,.12)}
+.path .flag{position:absolute;right:-2px;top:-14px;font-size:20px}
+.path .lb{display:flex;justify-content:space-between;margin-top:6px;font-size:13px;font-weight:700;color:var(--sub);font-variant-numeric:tabular-nums}
+.path .lb b{color:var(--grass-lip)}
+
+.card{background:var(--canvas);border:2px solid #E4E9F0;border-radius:var(--r-lg);
+  box-shadow:0 3px 0 #E4E9F0;padding:12px 14px;margin-bottom:12px}
+.card .h{display:flex;align-items:center;gap:7px;font-size:14px;font-weight:700;margin-bottom:8px}
+.card .h .cnt{margin-left:auto;color:var(--sub);font-size:13px;font-variant-numeric:tabular-nums}
+.sec{display:flex;justify-content:space-between;align-items:baseline;margin:2px 2px 8px;font-size:13.5px;font-weight:700;color:var(--sub)}
+.sec b{color:var(--ink);font-variant-numeric:tabular-nums}
+
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:12px}
+.tile{background:var(--canvas);border:2px solid #E4E9F0;border-radius:var(--r-lg);box-shadow:0 3px 0 #E4E9F0;
+  padding:12px 6px;display:flex;flex-direction:column;align-items:center;gap:3px}
+.tile .em{font-size:26px} .tile .nm{font-size:13px;font-weight:700} .tile .vv{font-size:12px;color:var(--sub);font-weight:700}
+.tile.dawn{border-color:var(--dawn-line);box-shadow:0 3px 0 var(--dawn-line);background:var(--dawn-tint)}
+.tile.mint{border-color:var(--mint-line);box-shadow:0 3px 0 var(--mint-line);background:var(--mint-tint)}
+.tile.pool{border-color:var(--pool-line);box-shadow:0 3px 0 var(--pool-line);background:var(--pool-tint)}
+
+.q{display:flex;align-items:center;gap:9px;width:100%;padding:11px 4px;border:none;background:none;
+  border-bottom:1.5px solid #F0F3F7;font:inherit;color:inherit;text-align:left}
+.q:last-child{border-bottom:none}
+.q .bx{width:24px;height:24px;flex:none;border-radius:8px;border:2px solid #DCE3EC;display:grid;place-items:center;font-size:13px;color:#fff}
+.q.done .bx{background:var(--grass);border-color:var(--grass-lip)}
+.q .n{flex:1;font-size:15px;font-weight:700}
+.q.done .n{color:var(--sub);text-decoration:line-through}
+.q .st{font-size:12.5px;font-weight:800;color:var(--sun-ink);background:#FFF6D9;border-radius:var(--r-full);padding:3px 9px}
+.shop{display:flex;align-items:center;gap:10px;width:100%;border:2px solid var(--grape-line);
+  box-shadow:0 3px 0 var(--grape-line);background:var(--grape-tint);border-radius:var(--r-lg);padding:12px 14px;margin-bottom:12px}
+.shop .t{flex:1;font-size:15px;font-weight:700;text-align:left}
+.shop .t em{display:block;font-style:normal;font-size:12px;color:var(--sub);font-weight:600}
+.act{flex:none;padding:10px 0 14px}
+.btn{display:block;width:100%;height:54px;border:none;border-radius:var(--r-md);background:var(--grass);
+  box-shadow:0 4px 0 var(--grass-lip);color:#fff;font:inherit;font-size:17px;font-weight:800;letter-spacing:.5px}
+
+/* ── 새안 C 전용 ── */
+.now{border:2.5px solid var(--grass-line);box-shadow:0 4px 0 var(--grass-line);
+  background:linear-gradient(180deg,var(--grass-tint) 0%,#fff 60%);border-radius:20px;padding:14px;margin-bottom:12px}
+.now .lab{font-size:12.5px;font-weight:800;color:var(--grass-lip);letter-spacing:.4px}
+.now .row{display:flex;align-items:center;gap:12px;margin:8px 0 12px}
+.now .bem{width:62px;height:62px;flex:none;border-radius:18px;background:#fff;border:2px solid var(--grass-line);
+  display:grid;place-items:center;font-size:32px}
+.now .tt{flex:1}
+.now .tt b{display:block;font-size:19px;font-weight:800;line-height:1.25}
+.now .tt span{display:inline-block;margin-top:5px;font-size:12.5px;font-weight:800;color:var(--sun-ink);
+  background:#FFF6D9;border-radius:var(--r-full);padding:3px 9px}
+.now .tt span+span{margin-left:5px;color:var(--sub);background:#F1F4F8}
+.now .go{display:block;width:100%;height:50px;border:none;border-radius:var(--r-md);background:var(--grass);
+  box-shadow:0 4px 0 var(--grass-lip);color:#fff;font:inherit;font-size:17px;font-weight:800}
+.left{font-size:13px;font-weight:700;color:var(--sub);text-align:center;margin:-4px 0 12px}
+
+.chips{display:flex;gap:7px;margin-bottom:10px}
+.chip{flex:1;display:flex;align-items:center;justify-content:center;gap:5px;height:38px;border-radius:var(--r-full);
+  background:#fff;border:2px solid #E4E9F0;box-shadow:0 2px 0 #E4E9F0;font-size:12.5px;font-weight:800;color:var(--sub)}
+.chip b{color:var(--ink);font-variant-numeric:tabular-nums}
+.chip.dawn{border-color:var(--dawn-line);box-shadow:0 2px 0 var(--dawn-line);background:var(--dawn-tint)}
+.chip.mint{border-color:var(--mint-line);box-shadow:0 2px 0 var(--mint-line);background:var(--mint-tint)}
+.chip.pool{border-color:var(--pool-line);box-shadow:0 2px 0 var(--pool-line);background:var(--pool-tint)}
+
+.q .who{font-size:14px;flex:none}
+.q .tick{width:34px;height:34px;flex:none;border-radius:var(--r-full);border:2px solid var(--grass-line);
+  background:#fff;display:grid;place-items:center;font-size:16px;color:var(--grass-lip);box-shadow:0 2px 0 var(--grass-line)}
+.q.shot .tick{border-color:var(--dawn-line);color:var(--dawn-ink);box-shadow:0 2px 0 var(--dawn-line)}
+.undo{position:absolute;left:16px;right:16px;bottom:78px;height:46px;border-radius:var(--r-md);
+  background:#33404F;color:#fff;display:flex;align-items:center;gap:10px;padding:0 14px;font-size:13.5px;font-weight:700}
+.undo b{margin-left:auto;color:#7CDC3A}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="cap">A — 지금 (앱에 들어가 있는 화면)
+    <em>시작점이 없다 · 미션이 타일 안과 「엄마아빠 퀘스트」 두 군데 산다 · 맨 아래 버튼은 퀴즈로 간다</em></div>
+  <div class="phone">
+    <div class="sb"><span>3:58</span><span>▲ ▮</span></div>
+    <span class="cloud c1"></span><span class="cloud c2"></span>
+    <div class="body">
+      <div class="top">
+        <span class="av">🐧</span>
+        <span class="who">첫째<em>Lv.1 새싹</em></span>
+        <span class="pill fire">🔥 0</span><span class="pill star">★ 6</span>
+      </div>
+      <div class="path"><div class="bar"><i style="width:17%"></i></div><span class="flag">🚩</span>
+        <div class="lb"><span>오늘의 길</span><span><b>6</b> / 35</span></div></div>
+      <div class="scroll">
+        <div class="sec"><span>오늘의 퀘스트</span><b>2 / 9</b></div>
+        <div class="tiles">
+          <div class="tile dawn"><span class="em">🌅</span><span class="nm">아침</span><span class="vv">1 / 3</span></div>
+          <div class="tile mint"><span class="em">🏫</span><span class="nm">학교</span><span class="vv">0 / 3</span></div>
+          <div class="tile pool"><span class="em">📚</span><span class="nm">방과후</span><span class="vv">1 / 3</span></div>
+        </div>
+        <div class="card">
+          <div class="h"><span>💛</span><span>엄마아빠 퀘스트</span><span class="cnt">0 / 2</span></div>
+          <div class="q"><span class="bx"></span><span class="n">쌀 씻어 밥솥에 안치기</span><span class="st">★2</span></div>
+          <div class="q"><span class="bx"></span><span class="n">오늘 쓴 돈 적기</span><span class="st">★1</span></div>
+        </div>
+        <div class="shop"><span style="font-size:22px">🏪</span>
+          <span class="t">스타코인 상점<em>모은 ★로 바꿔요</em></span><span>›</span></div>
+      </div>
+    </div>
+    <div class="act" style="padding:0 16px 14px"><button class="btn">퀘스트 시작하기</button></div>
+  </div>
+</div>
+
+<div class="wrap">
+  <div class="cap">C — 새안 (제안)
+    <em>① 「지금 할 것」 하나로 시작 ② 오늘 할 일은 목록 하나로 합침(딱지로 구분) ③ 눌러 끝내는 미션은 오른쪽 ○ 한 번 + 되돌리기 ④ 아래 버튼 이름을 가는 곳 그대로</em></div>
+  <div class="phone">
+    <div class="sb"><span>3:58</span><span>▲ ▮</span></div>
+    <span class="cloud c1"></span><span class="cloud c2"></span>
+    <div class="body">
+      <div class="top">
+        <span class="av">🐧</span>
+        <span class="who">첫째<em>Lv.1 새싹</em></span>
+        <span class="pill fire">🔥 0</span><span class="pill star">★ 6</span>
+      </div>
+      <div class="path"><div class="bar"><i style="width:17%"></i></div><span class="flag">🚩</span>
+        <div class="lb"><span>오늘의 길</span><span><b>6</b> / 35</span></div></div>
+
+      <div class="scroll">
+        <!-- ① 시작점 하나 -->
+        <div class="now">
+          <span class="lab">지금 할 것</span>
+          <div class="row">
+            <span class="bem">🎒</span>
+            <span class="tt"><b>내일 준비물<br>가방에 넣기</b>
+              <span>★2</span><span>5분</span></span>
+          </div>
+          <button class="go">지금 하기</button>
+        </div>
+        <p class="left">오늘 남은 것 4개 · 다 하면 ★9</p>
+
+        <!-- ② 갈래는 «눈금»으로만. 누르면 그 갈래만 걸러 본다 -->
+        <div class="chips">
+          <span class="chip dawn">🌅 <b>1/3</b></span>
+          <span class="chip mint">🏫 <b>0/3</b></span>
+          <span class="chip pool">📚 <b>1/3</b></span>
+        </div>
+
+        <!-- ③ 목록 하나 — 딱지로 어디 것인지만 표시 -->
+        <div class="card">
+          <div class="h"><span>📋</span><span>오늘 할 일</span><span class="cnt">2 / 9</span></div>
+          <div class="q done"><span class="bx">✓</span><span class="who">🌅</span>
+            <span class="n">아침 여덟 시 전에 일어나기</span><span class="st">★1</span></div>
+          <div class="q"><span class="who">💛</span><span class="n">쌀 씻어 밥솥에 안치기</span>
+            <span class="tick">○</span></div>
+          <div class="q shot"><span class="who">📚</span><span class="n">책 십오 분 자리 지키기</span>
+            <span class="tick">📷</span></div>
+          <div class="q"><span class="who">💛</span><span class="n">오늘 쓴 돈 적기</span>
+            <span class="tick">○</span></div>
+        </div>
+
+        <div class="shop"><span style="font-size:22px">🏪</span>
+          <span class="t">스타코인 상점<em>★6 으로 바꿀 수 있는 것 1개</em></span><span>›</span></div>
+      </div>
+    </div>
+    <!-- ④ 가는 곳 이름 그대로 -->
+    <div class="act" style="padding:0 16px 14px"><button class="btn">오늘의 퀴즈 ⚔️</button></div>
+    <div class="undo">✓ 「쌀 씻어 밥솥에 안치기」 ★2 받았어요 <b>되돌리기</b></div>
+  </div>
+</div>
+
+</body>
+</html>

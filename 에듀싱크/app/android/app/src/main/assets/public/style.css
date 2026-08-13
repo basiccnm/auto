@@ -5832,7 +5832,10 @@ body:has(#tabbar.hidden) #screen:has(.ib),
 .ob-mid { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; }
 /* 주 버튼은 아래 고정 */
 .ob-bot { margin-top: auto; padding-top: 18px; }
-.in-art2 { height: min(48vh, 420px); flex: none; margin: 8px -20px 0; border-radius: 0 0 32px 32px;
+/* 🔴 화면 밖으로 그림을 흘리는 «가장자리까지» 기법 — 빼는 값은 **지금 화면 여백**이어야 한다.
+   -20px 로 못 박아 뒀는데 여백이 --ns-16(≈16.8px)으로 바뀌면서 좌우로 3px 씩 삐져나가
+   360px 폰에서 로그인·소개 화면이 통째로 옆으로 밀렸다(2026-08-13 로그아웃 검사에서 잡힘). */
+.in-art2 { height: min(48vh, 420px); flex: none; margin: 8px calc(-1 * var(--ns-16)) 0; border-radius: 0 0 32px 32px;
   background-image: var(--intro-slot, none),
     radial-gradient(70% 90% at 30% 25%, color-mix(in srgb, var(--accent) 22%, transparent), transparent 70%),
     linear-gradient(160deg, var(--art-1), var(--art-3));
