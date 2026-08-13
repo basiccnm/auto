@@ -1105,7 +1105,12 @@ mark { background: var(--mark); color: var(--mark-ink); padding: 0 2px; border-r
    밝은 글씨가 앉는 사고가 났다(2026-07-25 실측 대비 1.0). 이제 글씨는 늘 카드 위에 있다. */
 .blk {
   position: absolute; left: 2px; right: 2px; overflow: hidden;
-  background: var(--card); border: 1px solid var(--ns-line); border-left: 6px solid var(--tag, var(--accent));
+  /* 학교 시간표는 칸 전체가 과목색인데 방과후만 흰 칸 + 색막대였다
+     (2026-08-14 대표님: 「방과후 시간표도 학교 시간표처럼 색이 들어가야 할 듯」)
+     → 칸을 그 학원 색으로 옅게 채운다. 막대는 «어느 색 계열인지» 표지로 남긴다. */
+  background: color-mix(in srgb, var(--tag, var(--accent)) 22%, var(--card));
+  border: 1px solid color-mix(in srgb, var(--tag, var(--accent)) 45%, var(--card));
+  border-left: 6px solid var(--tag, var(--accent));
   border-radius: 6px; box-shadow: 0 2px 0 rgba(32,33,36,.10);   /* 앞판 두께 — 서랍과 같은 눈맛 */
   padding: 4px 4px 0 8px; font-size: var(--fs-xs); line-height: 1.25; cursor: pointer;
   color: var(--ink);

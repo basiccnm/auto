@@ -13,6 +13,7 @@
 
 import { apiOk, apiList, apiErr, readJson } from "./api_core.js";
 import { resolveAuth } from "./auth_core.js";
+import { sendPush } from "./push.js";
 // 스타코인은 star_core 한 곳에서만 다룬다 — 리밋을 여기저기서 세면 반드시 어긋난다(2026-08-08)
 import { grantStars, spendStars, starsOf as coinBalance, coinState, BONUS,
          ECON, clampLine, starLineOf, coinLimitOf, missionBudgetOf } from "./star_core.js";
@@ -553,6 +554,35 @@ async function findAssign(db, ownerToken, id) {
    RPG로 치면 일일 퀘스트는 자동 정산, 의뢰는 의뢰인 검수다.
    부모가 안 봐도 다음날 아침 8시에 자동으로 나간다(autoAtIso) — 아이가 손해 보지 않는다.
    사진 미션은 원래부터 이 길이었다. 이제 셋이 같은 길로 모인다. */
+/* ── 아이가 미션 버튼을 누르면 부모 폰에 알림 (2026-08-14 대표님) ──────────
+   kind: "done"(즉시 완료) | "wait"(확인 요청 — 사진·다했어요 보냄)
+   · 종류별로 끌 수 있다 — notif_settings.push_mission_done / push_mission_wait
+   · enabled(웹푸시 자체 스위치)가 꺼져 있으면 아무것도 안 보낸다
+   · 실패는 삼킨다 — 알림이 미션 처리(별 지급)를 막으면 주객전도다
+   · 죽은 구독(404/410)은 그 자리에서 지운다(크론 발송 경로와 같은 규칙) */
+async function pushParent(db, env, ownerToken, kind) {
+  try {
+    if (!env.VAPID_PRIVATE || !ownerToken) return;
+    const ns = await db.prepare(
+      "SELECT enabled, push_mission_done, push_mission_wait FROM notif_settings WHERE owner_token = ?"
+    ).bind(ownerToken).first();
+    if (!ns || !ns.enabled) return;
+    if (kind === "done" && ns.push_mission_done === 0) return;
+    if (kind === "wait" && ns.push_mission_wait === 0) return;
+    const { results } = await db.prepare(
+      "SELECT endpoint, p256dh, auth FROM push_subscriptions WHERE owner_token = ?"
+    ).bind(ownerToken).all();
+    for (const r of results || []) {
+      try {
+        const st = await sendPush({ endpoint: r.endpoint, keys: { p256dh: r.p256dh, auth: r.auth } }, env);
+        if (st === 404 || st === 410) {
+          await db.prepare("DELETE FROM push_subscriptions WHERE endpoint = ?").bind(r.endpoint).run();
+        }
+      } catch (_) { /* 다음 구독 계속 */ }
+    }
+  } catch (_) { /* 알림 실패는 조용히 */ }
+}
+
 async function claim(request, db, env, id) {
   const auth = await resolveAuth(request, db, env, readCookie);
   if (!auth.ownerToken) return apiErr("AUTH_REQUIRED");
@@ -581,6 +611,8 @@ async function claim(request, db, env, id) {
       .bind(now, now, g.granted, id).run();
     /* ⚠ `stars` 에 **실제로 들어간 양**을 적는다(a.mstars 가 아니라 g.granted).
        상한에 걸려 깎였는데 원래 값을 적으면, 되돌릴 때 안 받은 별까지 회수된다. */
+    // 아이 폰에서 누른 것만 알린다 — 부모가 미리보기로 누른 걸 자기한테 알리면 소음이다
+    if (auth.role === "child") await pushParent(db, env, auth.ownerToken, "done");
     return apiOk({ status: "done", got: g.granted, capped: g.capped,
                    coin: await coinState(db, a.child_id), stars: g.stars });
   }
@@ -590,6 +622,7 @@ async function claim(request, db, env, id) {
   const auto = autoAtIso();
   await db.prepare("UPDATE mission_assign SET status='waiting', claimed_at=?, auto_at=? WHERE id=?")
     .bind(now, auto, id).run();
+  if (auth.role === "child") await pushParent(db, env, auth.ownerToken, "wait");
   return apiOk({ status: "waiting", auto_at: auto });
 }
 
@@ -715,6 +748,7 @@ async function submitPhoto(request, db, env, id) {
   const now = nowIso();
   await db.prepare("UPDATE mission_assign SET status='waiting', photo_key=?, claimed_at=?, auto_at=? WHERE id=?")
     .bind(key, now, autoAtIso(), id).run();
+  if (auth.role === "child") await pushParent(db, env, auth.ownerToken, "wait");   // 사진이 왔어요
   return apiOk({ status: "waiting", auto_at: autoAtIso() });
 }
 
@@ -991,6 +1025,38 @@ export async function handleMissionApi(request, db, env, url) {
   if (p === "/api/v1/missions" && m === "POST") return createCustom(request, db, env);
   const mine = p.match(/^\/api\/v1\/missions\/(U-[0-9a-f]{8})$/);
   if (mine && m === "DELETE") return deleteCustom(request, db, env, mine[1]);
+
+  // 🔔 미션 알림 종류별 설정 (2026-08-14 대표님 「그 알람도 설정할 수 있게」)
+  if (p === "/api/v1/notify-prefs") {
+    const auth = await resolveAuth(request, db, env, readCookie);
+    if (!auth.ownerToken || auth.role === "child") return apiErr("AUTH_REQUIRED");
+    if (m === "GET") {
+      const r = await db.prepare(
+        "SELECT enabled, push_mission_done, push_mission_wait FROM notif_settings WHERE owner_token = ?"
+      ).bind(auth.ownerToken).first();
+      return apiOk({ enabled: !!(r && r.enabled),
+        mission_done: r ? r.push_mission_done !== 0 : true,
+        mission_wait: r ? r.push_mission_wait !== 0 : true });
+    }
+    if (m === "PUT") {
+      const b = await readJson(request);
+      const d = b && typeof b.mission_done === "boolean" ? (b.mission_done ? 1 : 0) : null;
+      const w2 = b && typeof b.mission_wait === "boolean" ? (b.mission_wait ? 1 : 0) : null;
+      if (d === null && w2 === null) return apiErr("VALIDATION", null, "바꿀 값이 없어요.");
+      const now = new Date().toISOString();
+      // 행이 없으면 만든다 — enabled 는 «푸시 자체» 스위치라 여기서 켜지 않는다(기본 0 유지)
+      await db.prepare(
+        "INSERT INTO notif_settings (owner_token, enabled, updated_at) VALUES (?, 0, ?) ON CONFLICT(owner_token) DO NOTHING"
+      ).bind(auth.ownerToken, now).run();
+      const sets = [], binds = [];
+      if (d !== null) { sets.push("push_mission_done = ?"); binds.push(d); }
+      if (w2 !== null) { sets.push("push_mission_wait = ?"); binds.push(w2); }
+      sets.push("updated_at = ?"); binds.push(now, auth.ownerToken);
+      await db.prepare(`UPDATE notif_settings SET ${sets.join(", ")} WHERE owner_token = ?`).bind(...binds).run();
+      return apiOk({ saved: true });
+    }
+    return apiErr("VALIDATION", null, "지원하지 않는 요청 방식이에요.");
+  }
 
   // ⚙️ 경제 설정 — 앱이 상수를 안 들고 여기서 받아 간다(2026-08-12)
   let x = p.match(/^\/api\/v1\/children\/(\d+)\/econ\/?$/);

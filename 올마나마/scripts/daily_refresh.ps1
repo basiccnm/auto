@@ -52,8 +52,10 @@ Step "gen_sitemap"                  "python scripts\gen_sitemap.py"
 Step "build_dist"                   "python scripts\build_dist.py"
 Step "healthcheck (deploy gate)"    "python scripts\healthcheck.py"
 
-Set-Location (Join-Path $BASE "workers\site-renderer")
-Step "wrangler deploy" "npx wrangler deploy"
+# 2026-08-14 fix: deploy via scripts\deploy.py (file-count guard + --config + live check).
+# Bare "npx wrangler deploy" picked the ROOT wrangler.jsonc even when run from
+# workers\site-renderer (verified 2026-07-24) -> deployed to a domainless worker.
+Step "deploy (guarded)" "python scripts\deploy.py"
 Add-Content $LOG ("OK: refresh + deploy done " + (Get-Date -Format "HH:mm:ss"))
 # success: remove any stale failure marker from today
 $desktop = [Environment]::GetFolderPath("Desktop")

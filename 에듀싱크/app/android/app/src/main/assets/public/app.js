@@ -2403,7 +2403,10 @@ const Screens = {
             : `<button class="kd-av" onclick="App.gameTab('profile')" aria-label="내 프로필">${gmAvatar(c)}</button>`}
           <span class="kd-who">${esc(c.nickname || "나")}
             <em>Lv.${coin.level || 1} ${gmRank(coin.level || 1)}</em></span>
-          <span class="kd-pill fire">🔥 ${coin.streak || S.streakDays || 0}</span>
+          <!-- 🔥 = 며칠 연속 했나. 「🔥 0」은 아무 뜻도 안 읽힌다(2026-08-14 대표님 「불 표시는 뭐야」)
+               — 0이면 숨기고, 있을 때만 «3일째»로 말을 붙인다 -->
+          ${(coin.streak || S.streakDays || 0) > 0
+            ? `<span class="kd-pill fire">🔥 ${coin.streak || S.streakDays}일째</span>` : ""}
           <span class="kd-pill star">★ ${coin.stars}</span>
         </div>
 
@@ -4846,6 +4849,8 @@ const Screens = {
      기기 등록·보낸 내역은 아래로 내렸다. 안내문(「~해요」)은 전부 뺐다. */
   notify: () => {
     const c = curView();
+    // 미션 알림 스위치의 진짜 값은 서버에 있다 — 처음 열 때 한 번 받아 온다
+    if (S.notifyPrefs === undefined && TOKENS.access) { S.notifyPrefs = null; App.loadNotifyPrefs(); }
     const sent = STUB.notices.slice().reverse().filter((n) => n.from === "parent");
     return `
     ${subHeader("대화 · 알림")}
@@ -4872,6 +4877,20 @@ const Screens = {
         <input class="mp-time" type="time" value="${S.remind.evening}" onchange="App.remindTime('evening',this.value)"></label>
       <label class="mp-row"><span class="mp-l">아침</span>
         <input class="mp-time" type="time" value="${S.remind.morning}" onchange="App.remindTime('morning',this.value)"></label>` : ""}
+      <!-- 🔔 미션 알림 (2026-08-14 대표님 「자녀들이 미션 버튼 누르면 알림 + 설정도」)
+           서버 notify-prefs 가 정본 — 화면은 받은 값을 보여주고, 스위치는 서버에 바로 저장한다 -->
+      <label class="mp-row">
+        <span class="mp-l">미션 해냈을 때<em>아이가 «다 했어요»를 누르면</em></span>
+        <input type="checkbox" ${(S.notifyPrefs?.mission_done ?? true) ? "checked" : ""}
+               onchange="App.notifyPrefSet('mission_done',this.checked)">
+        <i class="mp-swt"></i>
+      </label>
+      <label class="mp-row">
+        <span class="mp-l">확인 기다릴 때<em>사진·확인 요청이 오면</em></span>
+        <input type="checkbox" ${(S.notifyPrefs?.mission_wait ?? true) ? "checked" : ""}
+               onchange="App.notifyPrefSet('mission_wait',this.checked)">
+        <i class="mp-swt"></i>
+      </label>
     </div>
 
     ${sent.length ? `
@@ -5923,9 +5942,14 @@ function gameCard(catKey) {
         done: x.status === "done" ? 1 : 0, all: 1, stars: x.stars || 1,
         foot: x.status === "done" ? "했어요"
             : x.status === "waiting" ? "확인 기다리는 중"
-            : shot ? "사진 찍기" : "눌러서 완료",
-        act: !open ? null : shot ? `App.missionShotOrDone(${x.id})` : null,
-        tap: open && !shot ? x.id : null,
+            : shot ? "눌러서 확인" : "눌러서 확인",
+        /* 🔴 완료 규칙은 **한 가지**다 (2026-08-14 대표님: 「눌렀다가 풀렸다가 코딩 꼬인 듯」).
+           목록(#mission)은 «줄 → 상세 → 다 했어요»인데 이 카드만 «탭 한 번 = 즉시 완료»였다.
+           같은 미션이 들어온 문에 따라 다르게 움직이니 «눌렀는데 이상하다»가 된다.
+           게다가 즉시 완료는 대표님이 이미 금지한 것이다(08-12 「누르면 바로 완성이 된다고???」).
+           → 타일 탭 = 상세(msOpen). 확정은 상세의 큰 「다 했어요!」 하나뿐이다.
+             사진 미션도 상세로 — 거기 「📷 사진 찍기」가 있다(③ 사진 안 되던 것도 이 길로 풀린다). */
+        act: !open ? null : `App.msOpen(${x.id})`,
       });
     }).join("");
   }
@@ -9459,6 +9483,21 @@ const App = {
      ⚠ 안드로이드는 «정확한 시각» 알림에 권한이 따로 있다. 우리는 몇 분 늦어도 되는
        내용이라 굳이 요구하지 않는다(allowWhileIdle 없이 반복 예약). */
   NOTI_ID: { evening: 4101, morning: 4102 },
+
+  /* 미션 알림 종류별 스위치 — 서버(notify-prefs)가 정본. 낙관 갱신 + 실패 시 되돌림 */
+  async notifyPrefSet(key, on) {
+    S.notifyPrefs = { ...(S.notifyPrefs || { mission_done: true, mission_wait: true }), [key]: on };
+    this.render();
+    const r = await api("/notify-prefs", { method: "PUT", body: { [key]: on } }).catch(() => null);
+    if (!r?.ok) {
+      S.notifyPrefs = { ...S.notifyPrefs, [key]: !on };
+      this.render(); toast("저장하지 못했어요 — 다시 눌러주세요");
+    }
+  },
+  async loadNotifyPrefs() {
+    const r = await api("/notify-prefs").catch(() => null);
+    if (r?.ok) { S.notifyPrefs = { mission_done: r.data.mission_done, mission_wait: r.data.mission_wait }; this.render(); }
+  },
 
   async remindToggle(on) {
     S.remind.on = !!on;

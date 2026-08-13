@@ -2802,7 +2802,9 @@ export default {
         const { mealRate } = await import("./api_mission.js");
         res = await mealRate(request, db, a);
       }
-      else if (path === "/api/v1/missions" || path.match(/^\/api\/v1\/missions\/(\d+\/|U-)/))
+      else if (path === "/api/v1/missions" || path.match(/^\/api\/v1\/missions\/(\d+\/|U-)/)
+               // 🔔 미션 알림 설정(2026-08-14) — 접두어 화이트리스트에 안 넣으면 HTML 404 로 샌다(아래 주석 참조)
+               || path === "/api/v1/notify-prefs")
         res = await handleMissionApi(request, db, env, url);
       else if (path.startsWith("/api/v1/schools")) res = await handleSchoolsApi(request, db, env, url);
       // 별도장 상점·2단계 보상 (2026-08-07) — /children/* 밖에 있는 것들
