@@ -2561,12 +2561,18 @@ async function handleLoginPage(request, db, env) {
   return html(loginPage(providersFrom(env), account));
 }
 
-// GET /auth/:provider — state 쿠키 심고 제공자 로그인 화면으로.
+/* GET /auth/:provider — state 쿠키 심고 제공자 로그인 화면으로.
+   🔴 2026-08-14 «앱 모드» 추가 — 여태 이 길은 **웹 브라우저 전용**(쿠키+리디렉션)이었다.
+      앱은 Bearer 토큰으로 도는데 콜백이 쿠키만 심어 줘서, 앱에서 소셜로 들어오면
+      로그인이 «안 된 것»으로 보였다. `?app=1` 이 붙으면 끝에 **딥링크로 토큰을 넘긴다.**
+   ⚠ state 안에 앱 여부를 실어 보낸다 — 콜백은 쿼리로 돌아오지 않으므로 쿠키/state 말고는 알 길이 없다. */
+const APP_STATE_PREFIX = "app.";
 function handleAuthStart(provider, env, url) {
   if (!providersFrom(env).includes(provider)) {
     return html(noticePage("준비 중인 로그인이에요", "이 로그인 방식은 아직 준비 중입니다. 다른 방법으로 로그인해 주세요.", "/login", "🔧"));
   }
-  const state = crypto.randomUUID();
+  const isApp = url.searchParams.get("app") === "1";
+  const state = (isApp ? APP_STATE_PREFIX : "") + crypto.randomUUID();
   const target = authorizeUrl(provider, env, url.origin, state);
   const resp = new Response(null, { status: 302, headers: { Location: target } });
   resp.headers.append("Set-Cookie", `oauth_state=${state}; Path=/; Max-Age=600; HttpOnly; SameSite=Lax`);
@@ -2610,6 +2616,25 @@ async function handleAuthCallback(provider, request, db, env, url) {
     await linkSocialAccount(db, provider, identity.uid, identity.nickname, ownerToken);
   } catch (e) {
     console.error("[auth] linkSocialAccount 실패:", e && e.message);
+  }
+
+  /* 🔴 앱에서 온 로그인이면 **쿠키가 아니라 토큰**을 줘야 한다 (2026-08-14).
+     앱은 Bearer 로 돌기 때문에 쿠키를 심어 봐야 «로그인 안 된 화면»만 본다.
+     계정을 찾아 access/refresh 를 발급하고 딥링크(eduthink://auth)로 앱에 넘긴다.
+     ⚠ 토큰이 주소창에 실려 나간다 — 그래서 **앱 스킴으로만** 보내고(브라우저 히스토리에 안 남는 경로),
+       수명이 짧은 access 와 refresh 만 넘긴다. owner_token 같은 원본 키는 절대 싣지 않는다. */
+  if (state.startsWith(APP_STATE_PREFIX)) {
+    const acc = await accountForToken(db, ownerToken);
+    if (!acc) return fail("계정을 만들지 못했어요.");
+    const secret = authSecret(env);
+    const [access, refresh] = await Promise.all([
+      signToken({ sub: acc.id, typ: "access", tok: acc.owner_token, dev: null }, secret, TOKEN_TTL.access),
+      signToken({ sub: acc.id, typ: "refresh", dev: null }, secret, TOKEN_TTL.refresh),
+    ]);
+    const deep = `eduthink://auth?access=${encodeURIComponent(access)}&refresh=${encodeURIComponent(refresh)}`;
+    const r = new Response(null, { status: 302, headers: { Location: deep } });
+    r.headers.append("Set-Cookie", "oauth_state=; Path=/; Max-Age=0; HttpOnly; SameSite=Lax");
+    return r;
   }
 
   // 로그인 후 복귀: 게이트가 남긴 login_next(같은 오리진 경로)로, 없으면 /mypage.
@@ -2822,7 +2847,14 @@ export default {
           return withCors(apiErrJson("FORBIDDEN"), origin);
         }
       }
-      if (path.startsWith("/api/v1/auth") || path === "/api/v1/me" || path.startsWith("/api/v1/me/")) res = await handleAuthApi(request, db, env, url);
+      /* 🔴 쓸 수 있는 소셜 로그인 목록 (2026-08-14) — **auth 접두어 검사보다 먼저** 와야 한다.
+         아래 startsWith("/api/v1/auth") 가 먼저 잡으면 handleAuthApi 로 새서 404 가 난다
+         (이 파일에 이미 같은 함정 주석이 있다 — 접두어 라우팅은 순서가 전부다).
+         앱은 이 목록으로 **버튼을 그릴지 말지**를 정한다. 키 없는 제공자의 버튼은 아예 안 그린다. */
+      if (path === "/api/v1/auth/providers" && request.method === "GET") {
+        res = json({ ok: true, data: { items: providersFrom(env) } });
+      }
+      else if (path.startsWith("/api/v1/auth") || path === "/api/v1/me" || path.startsWith("/api/v1/me/")) res = await handleAuthApi(request, db, env, url);
       else if (path === "/api/v1/plans" || path.startsWith("/api/v1/orders") || path.startsWith("/api/v1/admin/orders")
                || path === "/api/v1/billing/verify")
         res = await handleOrdersApi(request, db, env, url, checkBasicAuth(request, env));

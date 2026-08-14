@@ -23,6 +23,18 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- 소셜 로그인 되돌아오는 길 (2026-08-14).
+                 서버 콜백이 인증을 끝내고 eduthink://auth?token=… 으로 앱을 다시 부른다.
+                 ⚠ launchMode="singleTask" 라 앱이 새로 뜨지 않고 살아 있는 화면으로 들어온다
+                    → app.js 의 appUrlOpen 리스너가 받는다.
+                 ⚠ 이 스킴을 바꾸면 카카오·구글·네이버 콘솔의 리디렉션 URI 도 같이 바꿔야 한다. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="eduthink" android:host="auth" />
+            </intent-filter>
+
         </activity>
 
         <!-- FCM이 만들어 쓰는 기본 채널을 우리 채널로 바꾼다(2026-07-25).

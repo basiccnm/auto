@@ -775,6 +775,8 @@ const ART_SETS = [
 
 const S = {
   loggedIn: false,
+  providers: undefined,    // 쓸 수 있는 소셜 제공자 — 서버가 준다(undefined = 아직 안 받음)
+  socialWait: null,       // 소셜 인증하러 브라우저에 나가 있는 중
   theme: "light",         // 앱 테마 — 밝게 / 어둡게 두 벌 (2026-08-02, 그 전엔 6종)
   kidTheme: null,         // 자녀 앱 테마 (pastel/quest) — null 이면 첫 실행 = 고르는 화면
   kidAccent: null,        // 자녀 앱 포인트 색 키
@@ -1655,6 +1657,28 @@ function backPressed() {
    그리고 안드로이드는 **toggleBackButtonHandler(true)** 를 켜야 뒤로가기를 JS로 넘겨준다 —
    안 켜면 리스너를 붙여도 안드로이드가 그냥 액티비티를 닫는다. */
 const CapApp = window.Capacitor?.Plugins?.App || null;
+
+/* 소셜 로그인 되돌아오기 — 서버가 eduthink://auth?access=…&refresh=… 로 앱을 다시 부른다.
+   뒤로가기와 **같은 브리지 방식**을 쓴다(위 주석 참조 — npm 래퍼가 안 돌아서 Plugins.App 이 빈다).
+   ⚠ 앱이 죽어 있다가 이 링크로 살아날 수도 있다 → getLaunchUrl 로 첫 주소도 한 번 확인한다. */
+function bindDeepLink() {
+  const C = window.Capacitor;
+  if (!C || !C.isPluginAvailable?.("App")) return false;
+  try {
+    C.addListener("App", "appUrlOpen", (d) => {
+      const u = d && (d.url || d.data || "");
+      if (String(u).startsWith("eduthink://auth")) App.socialReturn(u);
+    });
+    // 앱이 꺼져 있다가 링크로 켜진 경우
+    const get = C.Plugins?.App?.getLaunchUrl || ((o) => C.nativePromise?.("App", "getLaunchUrl", o));
+    Promise.resolve(get({})).then((r) => {
+      const u = r && r.url;
+      if (u && String(u).startsWith("eduthink://auth")) App.socialReturn(u);
+    }).catch(() => {});
+    return true;
+  } catch (e) { return false; }
+}
+
 function bindBackButton() {
   const C = window.Capacitor;
   if (!C || !C.isPluginAvailable?.("App")) return false;
@@ -1670,11 +1694,21 @@ if (!bindBackButton()) {
   // 브리지가 아직 안 붙었을 수 있다 — 로드가 끝난 뒤 한 번 더
   window.addEventListener("load", bindBackButton);
 }
+if (!bindDeepLink()) window.addEventListener("load", bindDeepLink);
 
 /* 바깥 브라우저로 열기 — 학교 홈페이지·자매 사이트처럼 **우리 앱 밖**으로 나가는 주소.
    앱 안 웹뷰에 띄우면 권한·쿠키가 섞이고, 사용자는 «앱이 이상해졌다»고 느낀다.
    @capacitor/browser 는 앱 안 탭으로 열어서 «기본 브라우저»가 아니다(2026-07-27 지시) —
    그래서 네이티브 플러그인에서 Intent.ACTION_VIEW 로 바로 넘긴다. */
+/* ── 소셜 로그인 (2026-08-14) ─────────────────────────────────────
+   흐름: 앱이 시스템 브라우저로 /auth/{제공자}?app=1 을 연다
+        → 카카오·구글·네이버에서 인증
+        → 서버 콜백이 토큰을 만들어 eduthink://auth?access=…&refresh=… 로 앱을 부른다
+        → 아래 appUrlOpen 리스너가 토큰을 저장하고 홈으로 보낸다
+   ⚠ 제공자 목록은 **서버가 정한다**(키가 있는 것만). 앱이 셋을 박아 두면
+     키 없는 버튼이 남아서 눌러도 아무 일이 안 난다 — 그게 원래 버그였다. */
+const SOCIAL_LABEL = { kakao: "카카오", naver: "네이버", google: "Google" };
+
 function openExternal(url, label) {
   const u = String(url || "").trim();
   if (!/^https?:\/\//i.test(u)) return toast(`${label || "주소"}가 없어요`);
@@ -1932,6 +1966,7 @@ const Screens = {
        «덜 만든 화면»으로 읽힌다 — 첫 실행(.ob-wrap)과 **같은 문법**으로 세로로 펼친다:
        가운데가 남는 자리를 차지하고, 자녀폰 줄은 아래에 붙는다. */
   login: () => `
+    ${(S.providers === undefined ? (setTimeout(() => App.loadProviders(), 0), "") : "")}
     <div class="lg-wrap">
     <!-- ⚠ 나가는 길이 없었다(폰 실측 2026-08-10). 홈에서 로그인으로 들어가면
          시스템 뒤로가기 말고는 못 돌아왔다 — «구경만 하려던» 사람이 갇힌다.
@@ -1969,10 +2004,13 @@ const Screens = {
 
       <div class="lg-or"><i></i><span>간편하게</span><i></i></div>
       <!-- 브랜드색·아이콘 없이 윤곽선 3등분 — 368px에서 안 잘리고 어떤 테마에서도 성립한다(시안 9c) -->
+      <!-- 🔴 2026-08-14 — 여기 셋이 전부 App.login() 이었다. 카카오를 눌러도 카카오 창이 안 뜨고
+           빈 아이디로 로그인만 시도하다 실패했다(대표님 지적). 이제 진짜 소셜 인증으로 간다.
+           ⚠ 키가 없는 제공자는 **버튼을 아예 안 그린다** — 눌러도 아무 일 없는 버튼이 제일 나쁘다. -->
       <div class="lg-social">
-        <button onclick="App.login()">카카오</button>
-        <button onclick="App.login()">네이버</button>
-        <button onclick="App.login()">Google</button>
+        ${(S.providers || []).map((p) =>
+          `<button onclick="App.socialLogin('${jsq(p)}')">${esc(SOCIAL_LABEL[p] || p)}</button>`).join("")
+          || `<span class="sub" style="grid-column:1/-1;text-align:center">간편 로그인은 준비 중이에요</span>`}
       </div>
 
       ${DEV_TOOLS ? `<p class="sub" style="text-align:center;margin-top:14px">비워두고 눌러도 둘러볼 수 있어요. <b class="stub">개발용</b></p>` : ""}
@@ -8629,6 +8667,41 @@ const App = {
   setTheme() { S.theme = "light"; document.documentElement.setAttribute("data-theme", "light"); saveHome(); this.render(); },
   /* 로그인 — 서버가 있으면 **진짜로** 로그인해 토큰을 받는다(2026-07-25).
      토큰이 있어야 기록을 올리고 다시 볼 수 있다. 서버가 없으면 지금까지처럼 목업으로 들어간다. */
+  /* 쓸 수 있는 소셜 제공자 — 서버가 키를 가진 것만 준다. 로그인 화면이 뜰 때 한 번 받는다. */
+  async loadProviders() {
+    if (S._provTried) return;
+    S._provTried = true;
+    const r = await api("/auth/providers").catch(() => null);
+    S.providers = (r?.ok && r.data.items) || [];
+    this.render();
+  },
+
+  /* 소셜 로그인 시작 — 시스템 브라우저로 보낸다.
+     ⚠ 웹뷰 안에서 열면 카카오·구글이 «보안상 허용 안 됨»으로 막는다. 반드시 밖으로 연다. */
+  socialLogin(provider) {
+    const url = `${API_BASE}/auth/${encodeURIComponent(provider)}?app=1`;
+    S.socialWait = provider; this.render();
+    openExternal(url, "로그인");
+  },
+
+  /* 딥링크로 돌아온 토큰 받기 — eduthink://auth?access=…&refresh=…
+     ⚠ 토큰만 받고 **주소는 즉시 버린다.** 화면·기록에 남기지 않는다. */
+  async socialReturn(rawUrl) {
+    try {
+      const q = String(rawUrl).split("?")[1] || "";
+      const p = new URLSearchParams(q);
+      const access = p.get("access"), refresh = p.get("refresh");
+      S.socialWait = null;
+      if (!access) { toast("로그인을 마치지 못했어요"); this.render(); return; }
+      saveTokens({ access_token: access, refresh_token: refresh });
+      S.loggedIn = true;
+      await loadMe();
+      toast("로그인했어요");
+      location.hash = "#home";
+      this.render();
+    } catch (_) { S.socialWait = null; toast("로그인을 마치지 못했어요"); this.render(); }
+  },
+
   async login(id, pw) {
     if (S.loginBusy) return;
     const userid = (id ?? document.querySelector('#login-id')?.value ?? "").trim();
