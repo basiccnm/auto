@@ -201,3 +201,7 @@ client_secret*.json
 # 🔴 열지 않는 것 — google-services.json(파이어베이스 키) · eduthink_config.json ·
 #    android/app/build/** · assets/capacitor.*.json(빌드가 만든 사본) · 수집 데이터·진행파일.
 #    특히 키가 든 파일은 **절대 예외에 넣지 마라**(2026-08-07 .dev.vars 유출 건).
+
+# 🔴 레시피 본문은 «생성물이 아니라 원고»다 — 위 `*.txt` 에 걸려 한 번도 커밋된 적이 없었다.
+#    `git clean -fdx` 한 번이면 통째로 날아가는 자리였다(2026-08-14 레시피 세션에서 발견).
+!올마나마/data/recipes_new/*.txt
