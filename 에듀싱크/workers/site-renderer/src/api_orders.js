@@ -15,35 +15,37 @@ import { resolveAuth, verifyReauth } from "./auth_core.js";
 // 회신18에서 1개월 1만원 확정, 나머지는 작업 기준값. 기간권이라 이 상수 하나로 다음 구매분부터 조정된다.
 // ⚠ 앱(app.js STUB.plans)과 **같은 값이어야 한다.** 다르면 결제 금액이 화면과 어긋난다.
 //    2026-07-28 인하: 월 10,000 → 2,900 (시장 조사 — 경쟁 앱이 전부 무료)
-export const PLAN_PRICES = { 1: 2900, 3: 7900, 6: 14900, 12: 25000 };
-const PLAN_DISCOUNT = { 1: null, 3: "10% 할인", 6: "15% 할인", 12: "20% 할인" };
+/* 🔴 2026-08-14 대표님 확정 — «1자녀 / 패밀리» 2단. 자녀 자리별 차등(2,900/2,000/1,500)은 폐기.
+   ─ 1자녀 월 5,900 · 패밀리(자녀 3명까지) 월 9,900
+   ─ 기간 할인은 «할인율»이 아니라 «무료 개월»로 말한다 — 16.7%보다 「2개월 무료」가 잘 팔린다
+       3개월 = 약 1주 덤 · 6개월 = 약 보름 덤 · **12개월 = 딱 10개월 값(2개월 무료)**
+   ─ 3·6개월 할인폭을 일부러 작게 뒀다. 계단이 12개월로 몰려야 장기 결제가 는다
+   ⚠ 앱(app.js STUB.plans)과 **같은 값이어야 한다.** 다르면 화면과 청구액이 어긋난다 */
+export const PLAN_PRICES = { 1: 5900, 3: 16900, 6: 32900, 12: 59000 };
+const PLAN_DISCOUNT = { 1: null, 3: "1주 덤", 6: "보름 덤", 12: "2개월 무료" };
 
-/* ── 둘째부터 싸게 (2026-08-01) ─────────────────────────────
-   자녀별 과금은 그대로 둔다 — 성적·기록은 아이마다 다른 개인 자료라 한 장으로 나눠 쓸 수 없다.
-   대신 자녀가 둘·셋이면 부담이 2배·3배로 뛰는 게 문제였다(월 8,700원). 순번마다 값을 낮춘다.
-     누적 월액 = 1명 2,900 · 2명 4,900 · 3명 6,400   (둘째 +2,000 · 셋째 +1,500)
-   기간권도 첫째와 같은 할인 비율을 태워 100원 단위로 맞췄다.
-   ⚠ 앱(app.js PLAN_SEATS)과 **같은 값이어야 한다.** 다르면 화면과 결제 금액이 어긋난다. */
-const PLAN_PRICES_BY_SEAT = {
-  1: { 1: 2900, 3: 7900, 6: 14900, 12: 25000 },
-  2: { 1: 2000, 3: 5400, 6: 10300, 12: 17200 },
-  3: { 1: 1500, 3: 4100, 6:  7700, 12: 12900 },
-};
-const MAX_SEAT = 3;
+/* ── 티어 «1자녀 / 패밀리» (2026-08-14 대표님 확정) ───────────────
+   자녀 자리별 차등(2,900/2,000/1,500)을 버리고 두 갈래로 바꿨다.
+   ─ 이유 ①: 원가가 자녀 수와 거의 무관하다. NEIS 조회는 **학교 단위**라 형제는 같은 자료를 쓴다
+   ─ 이유 ②: 「월 5,900원, 아이 몇이든 9,900원」이 한 줄로 설명된다. 자리별 할인표는 설명이 길다
+   ─ 이유 ③: 자녀 2명이면 5,900×2=11,800 > 9,900 이라 **2명부터 패밀리가 저절로 이득**이 된다
+   ⚠ 앱(app.js STUB.plans·PLAN_FAMILY)과 **같은 값이어야 한다.** */
+export const PLAN_PRICES_FAMILY = { 1: 9900, 3: 27900, 6: 54900, 12: 99000 };
+const FAMILY_MAX_CHILDREN = 3;   // 패밀리 한 장으로 덮는 자녀 수(MAX_CHILDREN 과 같게)
 
-/* 이 자녀가 몇 번째 자리인가 — **이 자녀 말고** 이용권이 살아 있는 자녀 수 + 1.
-   그 자녀 자신은 세지 않는다(연장할 때 자기 때문에 한 칸 밀리면 안 된다).
-   첫째 이용권이 끝나면 남은 아이가 다시 1번 자리(정가)가 된다 — 하나만 쓰면 정가가 맞다. */
-async function seatOf(db, accountId, childId) {
+/* 이 계정이 «패밀리»인가 — 이용권이 살아 있는 다른 자녀가 있으면 패밀리 값으로 본다.
+   ⚠ 자기 자신은 안 센다(연장할 때 자기 때문에 티어가 바뀌면 안 된다).
+   혼자만 쓰면 다시 1자녀 값이 된다 — 하나만 쓰는 집에 패밀리 값을 물리지 않는다. */
+async function isFamily(db, accountId, childId) {
   const now = new Date().toISOString();
   const row = await db.prepare(
     `SELECT COUNT(DISTINCT child_id) AS n FROM orders
       WHERE account_id = ? AND child_id != ? AND status = 'active' AND expires_at > ?`
   ).bind(accountId, childId, now).first();
-  return Math.min(MAX_SEAT, ((row && row.n) || 0) + 1);
+  return ((row && row.n) || 0) > 0;
 }
 
-const priceOf = (seat, months) => (PLAN_PRICES_BY_SEAT[seat] || PLAN_PRICES_BY_SEAT[1])[months];
+const priceOf = (family, months) => (family ? PLAN_PRICES_FAMILY : PLAN_PRICES)[months];
 
 const METHODS = ["mock", "bank_transfer", "pg", "google_iap"];
 
@@ -126,25 +128,29 @@ async function requireAccount(request, db, env) {
 // 회신18: "표시용으로만 노출 OK. 1차는 모의결제라 실결제 연결 없음 → 정책 리스크 없음."
 // child_id 를 주면 **그 자녀의 자리값**으로 계산해서 돌려준다. 안 주면 첫째 기준(정가).
 async function plans(request, db, env, url) {
-  let seat = 1;
+  let family = false;
   const childId = parseInt(url?.searchParams.get("child_id") || "", 10);
   if (Number.isFinite(childId)) {
     const auth = await resolveAuth(request, db, env, readCookie);
     if (auth.account) {
       const child = await db.prepare("SELECT id FROM children WHERE id = ? AND owner_token = ?")
         .bind(childId, auth.account.owner_token).first();
-      if (child) seat = await seatOf(db, auth.account.id, childId);
+      if (child) family = await isFamily(db, auth.account.id, childId);
     }
   }
   return apiList(
     [1, 3, 6, 12].map((m) => ({
       months: m,
-      amount: priceOf(seat, m),
+      amount: priceOf(family, m),
       list_amount: PLAN_PRICES[m],                 // 정가 — 화면에서 취소선으로 보여준다
       discount: PLAN_DISCOUNT[m],
-      per_month: Math.round(priceOf(seat, m) / m),
+      per_month: Math.round(priceOf(family, m) / m),
     })),
-    { seat, note: seat > 1 ? `${seat}번째 자녀라 더 저렴해요.` : "자녀 1명당 가격입니다." }
+    { family,
+      tier: family ? "family" : "single",
+      note: family
+        ? `패밀리 이용권이에요 — 자녀 ${FAMILY_MAX_CHILDREN}명까지 한 장으로 씁니다.`
+        : "자녀 1명 기준이에요. 둘째부터는 패밀리가 더 저렴해요." }
   );
 }
 
@@ -185,8 +191,8 @@ async function createOrder(request, db, env) {
   const status = method === "bank_transfer" ? "awaiting_deposit" : "pending";
 
   // 값은 **서버가 정한다.** 앱이 보낸 금액을 믿으면 100원짜리 주문이 들어온다.
-  const seat = await seatOf(db, account.id, childId);
-  const amount = priceOf(seat, months);
+  const family = await isFamily(db, account.id, childId);
+  const amount = priceOf(family, months);
 
   const r = await db
     .prepare(
@@ -290,7 +296,14 @@ async function mockPay(request, db, env, id) {
    그 전까지는 검증을 통과시키지 않는다 — 열어두면 그게 곧 구멍이다.
 
    흐름: 상품ID→개월수 → 토큰 중복 확인(재사용 차단) → 구글 확인 → orders 기록 → activate() 로 연장. */
-const IAP_PRODUCTS = { pass_1m: 1, pass_3m: 3, pass_6m: 6, pass_12m: 12 };
+/* 🔴 2026-08-14 — 가격이 «1자녀 / 패밀리» 2단이 되면서 상품도 **8개**가 됐다(4개 → 8개).
+   Play Console 에 아래 ID 그대로 등록한다. 상품 ID 는 한 번 만들면 못 바꾸니 오타 주의.
+   ⚠ 개월수만 보고 값을 정하면 안 된다 — 패밀리 상품인지도 같이 봐야 청구액이 맞다. */
+const IAP_PRODUCTS = {
+  pass_1m: 1, pass_3m: 3, pass_6m: 6, pass_12m: 12,                       // 1자녀
+  pass_family_1m: 1, pass_family_3m: 3, pass_family_6m: 6, pass_family_12m: 12,  // 패밀리
+};
+const IAP_IS_FAMILY = (productId) => String(productId).includes("_family_");
 
 const PLAY_PKG = "com.eduthink.app";
 const PLAY_SCOPE = "https://www.googleapis.com/auth/androidpublisher";
@@ -429,14 +442,14 @@ async function billingVerify(request, db, env) {
   }
 
   const now = new Date().toISOString();
-  /* ⚠ 인앱결제는 **구글이 받은 금액**이 진짜다. 여기 amount 는 우리 장부용 기록이라
-     자리값으로 계산해 둔다. 실제 청구액과 어긋나지 않으려면 Play Console 상품 가격도
-     자리별로 나눠 등록해야 한다(pass_1m_2 처럼) — 계정이 열리면 그때 맞춘다. */
-  const seat = await seatOf(db, account.id, childId);
+  /* ⚠ 인앱결제는 **구글이 받은 금액**이 진짜다. 여기 amount 는 우리 장부용 기록이다.
+     티어는 «계정 상태»가 아니라 **산 상품 ID**로 정한다 — 사용자가 패밀리 상품을 샀으면
+     그 값으로 적어야 구글 영수증과 우리 장부가 맞는다(계정 상태로 재계산하면 어긋난다). */
+  const family = IAP_IS_FAMILY(productId);
   const r = await db.prepare(
     `INSERT INTO orders (account_id, child_id, months, amount, method, status, provider_token, created_at, updated_at)
      VALUES (?, ?, ?, ?, 'google_iap', 'pending', ?, ?, ?)`
-  ).bind(account.id, childId, months, priceOf(seat, months), token, now, now).run();
+  ).bind(account.id, childId, months, priceOf(family, months), token, now, now).run();
 
   const order = await db.prepare("SELECT * FROM orders WHERE id = ?").bind(r.meta.last_row_id).first();
   const expires = await activate(db, order);

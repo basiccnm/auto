@@ -224,16 +224,21 @@ const STUB = {
   // 아이가 손가락 한 번으로 보내는 답 — 아이는 타자가 느리다. 답장은 고르는 게 기본, 쓰는 건 덤.
   childPresets: ["응 알았어", "지금 가는 중", "조금 늦어", "데리러 와줘", "학원 끝났어"],
 
-  /* GET /api/v1/plans (§6.2) — 자녀 1명당.
-     ⚠ 2026-07-28 값을 내렸다(월 10,000 → 2,900). 시장 조사 결과가 이유다 —
-       급식·시간표 앱(오늘학교·김급식류)이 전부 **무료**라 만 원은 학습앱 가격대 신호를 줬다.
-       다만 준비물·방과후·위젯·자녀폰·기록보관을 합쳐놓은 곳은 없어서 무료로 갈 이유도 없다.
-       구글 수수료 15% + 부가세 10% 를 빼면 2,900원 중 **약 2,240원**이 남는다. */
+  /* GET /api/v1/plans (§6.2)
+     ─ 값의 내력: 7/28 에 월 10,000 → 2,900 으로 내렸다(급식·시간표 앱이 전부 무료라서).
+       그런데 그건 **우리를 「급식 앱」으로 놓고 잰 값**이었다. 우리가 실제로 만든 건
+       학교정보 + 준비물·방과후 + 서류 자동작성 + 아이 미션·별·상점(자녀폰 포함)이고,
+       미션·습관 쪽 비교 대상은 학습지·습관 코칭(월 3~10만)이다(기획-스타코인 §10.5 앵커 전략).
+     ─ 8/14 대표님 확정: **1자녀 5,900 · 패밀리 9,900**. 구글 15% + 부가세를 빼면
+       5,900 중 약 4,550 원이 남는다. */
+  /* 🔴 2026-08-14 확정 — 1자녀 월 5,900 / 패밀리 월 9,900(자녀 3명까지).
+     기간 할인은 «무료 개월»로 말한다: 12개월 = 딱 10개월 값 = 2개월 무료.
+     ⚠ 서버 api_orders.js PLAN_PRICES 와 **같은 값이어야 한다.** 여긴 서버를 못 붙었을 때의 폴백이다. */
   plans: [
-    { months: 1,  amount: 2900,  discount: null,       per_month: 2900 },
-    { months: 3,  amount: 7900,  discount: "9% 할인",  per_month: 2633 },
-    { months: 6,  amount: 14900, discount: "14% 할인", per_month: 2483 },
-    { months: 12, amount: 25000, discount: "28% 할인", per_month: 2083 },
+    { months: 1,  amount: 5900,  discount: null,          per_month: 5900 },
+    { months: 3,  amount: 16900, discount: "1주 덤",      per_month: 5633 },
+    { months: 6,  amount: 32900, discount: "보름 덤",     per_month: 5483 },
+    { months: 12, amount: 59000, discount: "2개월 무료",  per_month: 4917 },
   ],
 };
 
@@ -865,7 +870,7 @@ const S = {
   commLeaveAsk: false,    // 나가기 확인 시트
   commTimer: null,        // 새 대화 받아오는 타이머
   planList: null,         // 서버가 준 요금표(자녀 자리값 반영). null = 아직 안 받음 → STUB.plans 폴백
-  planSeat: 1,            // 이 자녀가 몇 번째 자리인가 — 둘째부터 값이 내려간다
+  planFamily: false,      // 패밀리 이용권 값인가 — 서버 /plans 가 판정한다(화면이 세지 않는다)
   devices: [],            // 이 계정을 보는 폰 목록(엄마·아빠). 2대까지
   deviceLimit: 2,
   // ── 미션 (2026-08-01) ──
@@ -1686,7 +1691,7 @@ const LEGAL = {
     ["제2조 (서비스 내용)", "서비스는 ① NEIS·학교알리미 등 공공데이터 기반의 급식·시간표·학사일정 안내 ② 자녀 기록(상장·통지표 등) 보관 ③ 교외체험학습 신청서·결석신고서 등 서식 작성 도움 ④ 준비물·일정 관리와 알림 ⑤ 자녀 기기 연결 기능을 제공합니다."],
     ["제3조 (정보의 성격)", "급식·시간표·학사일정은 공공데이터 공시 시점 기준이며 학교 사정으로 실제와 다를 수 있습니다. 서식은 일반적인 양식을 기준으로 하며 학교마다 다를 수 있으므로 제출 전 학교 안내를 확인해야 합니다. 서비스가 제공하는 정보는 참고용입니다."],
     ["제4조 (계정)", "가입은 보호자 본인이 해야 하며, 계정·비밀번호 관리 책임은 이용자에게 있습니다. 만 14세 미만 아동은 직접 가입할 수 없고, 자녀 기기 연결은 보호자가 발급한 코드로만 가능합니다."],
-    ["제5조 (이용권과 결제)", "서비스는 무료 체험 기간(자녀 등록 후 7일) 후 유료 이용권으로 이용합니다. 결제는 Google Play 인앱 결제로 처리되며, 가격·기간은 결제 화면에 표시된 내용을 따릅니다. 이용권은 자녀 1명 기준이며 자녀 추가 시 별도 이용권이 필요합니다."],
+    ["제5조 (이용권과 결제)", "서비스는 무료 체험 기간(자녀 등록 후 7일) 후 유료 이용권으로 이용합니다. 결제는 Google Play 인앱 결제로 처리되며, 가격·기간은 결제 화면에 표시된 내용을 따릅니다. 이용권은 자녀 1명 기준의 «1자녀 이용권»과 자녀 3명까지 함께 쓰는 «패밀리 이용권» 두 가지가 있으며, 자녀가 2명 이상이면 패밀리 이용권으로 이용할 수 있습니다."],
     ["제6조 (환불)", "환불은 Google Play 환불 정책과 전자상거래 등에서의 소비자보호에 관한 법률에 따릅니다."],
     ["제7조 (이용자 콘텐츠)", "이용자가 올린 기록(사진·메모 등)의 권리는 이용자에게 있으며, 회사는 보관·표시 목적 범위에서만 처리합니다. 회사는 이용자 콘텐츠를 광고 등 다른 목적에 쓰지 않습니다."],
     ["제8조 (금지행위)", "타인의 계정 도용, 서비스의 비정상적 이용(자동화 수집, 서버 공격 등), 법령 위반 목적의 이용을 금지합니다."],
@@ -1832,9 +1837,14 @@ const ASK_CATS = [
    Play 개발자 계정이 열리면 ①on = true ②Play Console 에 상품 4개를 아래 ID 로 등록
    ③@capacitor-community/admob 처럼 결제 플러그인 설치 — 화면·서버는 손대지 않는다.
    상품은 **소모성**으로 만든다(자동갱신 구독 아님): 약관에 «자동 갱신은 명시 동의 시만»이라 적었다. */
+/* 인앱결제 어댑터 — Play 계정이 열리면 ① on: true ② 플러그인 설치만 하면 흐름 그대로 돈다.
+   🔴 2026-08-14 «1자녀/패밀리» 2단이 되면서 상품이 **8개**다. 서버 IAP_PRODUCTS 와 이름이 같아야 한다. */
 const BILLING = {
   on: false,
-  products: { 1: "pass_1m", 3: "pass_3m", 6: "pass_6m", 12: "pass_12m" },
+  products: {
+    single: { 1: "pass_1m", 3: "pass_3m", 6: "pass_6m", 12: "pass_12m" },
+    family: { 1: "pass_family_1m", 3: "pass_family_3m", 6: "pass_family_6m", 12: "pass_family_12m" },
+  },
 };
 const billingPlugin = () =>
   window.Capacitor?.Plugins?.InAppPurchase || window.Capacitor?.Plugins?.Purchases ||
@@ -1889,8 +1899,10 @@ function sisterLink(key, title, sub) {
    지금은 **자리만** 잡아둔다 — Play 개발자 계정이 열리면 여기 unitId 를 채우고
    @capacitor-community/admob 플러그인만 붙이면 화면은 손대지 않는다.
 
-   ⚠ 돈 낸 사람에게는 안 띄운다 — 2,900원의 값어치가 «광고 없음»이기도 하다.
-      체험 중(무료로 쓰는 동안)에만 보인다. ADS.on=false 면 어디에도 안 나온다. */
+   ⚠ 돈 낸 사람에게는 안 띄운다 — 이용권 값어치가 «광고 없음»이기도 하다.
+      체험 중(무료로 쓰는 동안)에만 보인다. ADS.on=false 면 어디에도 안 나온다.
+   🔴 아이 화면(kd-)에는 광고를 **영구히 넣지 않는다**(2026-08-14 대표님 확정).
+      Families 정책과도 맞고, 그게 이 앱을 부모가 믿고 쥐여주는 이유다. */
 const ADS = {
   on: false,                 // 플러그인·단위ID 준비되면 true
   showToPaid: false,         // 유료 이용권 사용자에게도 띄울지(기본 안 띄움)
@@ -4345,12 +4357,18 @@ const Screens = {
       })()}
     </div>
 
+    <!-- 🔴 이용권은 «앱 설정»이 아니다 (2026-08-14 대표님: 「결제 페이지 메뉴가 없어」).
+         테마·알림·앱잠금 사이에 끼워 두니 아무도 못 찾았다. 제 자리(제 섹션)로 올린다. -->
+    <div class="mp-sec">이용권</div>
+    <div class="mp-list">
+      ${row("ti-receipt", "이용권 보기 · 결제", passLabel(cur()).t, "location.hash='#pay'")}
+    </div>
+
     <div class="mp-sec">앱</div>
     <div class="mp-list">
       ${row("ti-photo", "테마", themeName, "location.hash='#theme'")}
       ${row("ti-bell", "알림", S.remind?.on ? `준비물 ${esc(S.remind.evening)}` : "끔", "location.hash='#notify'")}
       ${row("ti-lock", "앱 잠금", S.appLock ? "켜짐 · 지문·얼굴" : "꺼짐", "App.appLockToggle()")}
-      ${row("ti-receipt", "이용권", cur()?.pass?.active ? "쓰는 중" : "무료", "location.hash='#pay'")}
       ${row("ti-share-2", "내보내기 · 가져오기", "", "location.hash='#backup'")}
     </div>
 
@@ -4554,11 +4572,16 @@ const Screens = {
   pay: () => {
     const c = curView();
     const list = S.planList || STUB.plans;
-    const seat = S.planSeat || 1;
+    /* 티어는 **서버가 판정한다**(다른 아이 이용권이 살아 있으면 패밀리).
+       화면이 자녀 수를 세지 않는다 — 세면 서버 청구액과 어긋난다(2026-08-14 2단 전환). */
+    const family = !!S.planFamily;
     return `
     ${subHeader("이용권")}
-    <p class="sub">자녀 1명당 하나씩 — 지금은 <b>${esc(c.nickname)}</b> 이용권을 골라요</p>
-    ${seat > 1 ? `<p class="seatnote"><i class='ti ti-discount'></i> <b>${seat}번째 자녀</b>라 더 저렴해요</p>` : ""}
+    ${family
+      ? `<p class="sub"><b>패밀리 이용권</b> — 자녀 3명까지 한 장으로 써요</p>
+         <p class="seatnote"><i class='ti ti-discount'></i> 아이가 둘 이상이라 <b>패밀리 값</b>이 적용됐어요</p>`
+      : `<p class="sub">지금은 <b>${esc(c.nickname)}</b> 이용권을 골라요</p>
+         <p class="seatnote"><i class='ti ti-discount'></i> 아이가 둘 이상이면 <b>패밀리</b>가 더 저렴해요</p>`}
     <!-- 🎁 1주일 무료체험 — **선택지 맨 위**(대표님 2026-08-10: 「1주일 무료체험도 넣어서 누르게 하고」).
          ⚠ 지금은 아이를 등록하면 체험이 **저절로 붙는다**. 그래서 이 줄은 «고르는 것»이 아니라
            «지금 쓰고 있는 것»을 말한다 — 남은 날을 숫자로 보여 준다.
@@ -6630,6 +6653,10 @@ function drawerView(c) {
     ${item("p", "ti-file-text", "서류", "location.hash='#docs'", undone ? String(undone) : "")}
     ${item("p", "ti-message-circle", "대화 · 알림", "location.hash='#notify'", unread ? String(unread) : "")}
     ${item("p", "ti-info-circle", "고객센터 · 문의", "location.hash='#help'")}
+    <!-- 🔴 이용권 (2026-08-14 대표님: 「결제 페이지 메뉴가 없어」)
+         진짜로 없었다 — 입구가 «내정보 → 앱 → 테마·알림·앱잠금 다음» 하나뿐이었다.
+         돈 내는 화면이 제일 안 보이는 곳에 있으면 아무도 못 산다. 서랍에 올린다. -->
+    ${item("b", "ti-receipt", "이용권", "location.hash='#pay'", esc(pass?.t || ""))}
     <!-- 공지사항 (2026-08-14 대표님: 「내정보·설정 위쪽으로 그냥 공지사항으로 올리면 됩니다」)
          새 글이 있으면 N 배지. 목록은 제목 1줄만 — 배너·꾸밈 없음 -->
     ${item("p", "ti-speakerphone", "공지사항", "location.hash='#notices'", noticeNewCount() ? String(noticeNewCount()) : "")}
@@ -8333,7 +8360,7 @@ const App = {
     if (name === "report" && S.loggedIn) this.loadReport();
     // 요금은 자녀마다 다르다(둘째부터 싸다) → 이용권 화면에 들어올 때 그 자녀 기준으로 받아온다
     if (name === "pay" && S.loggedIn && this._planFor !== cur()?.server_id) {
-      this._planFor = cur()?.server_id; S.planList = null; S.planSeat = 1; this.loadPlans();
+      this._planFor = cur()?.server_id; S.planList = null; S.planFamily = false; this.loadPlans();
     }
 
     /* 커뮤니티 대화는 **그 화면에 있을 때만** 받아온다(2026-08-01).
@@ -11710,7 +11737,7 @@ const App = {
       const r = await api(`/plans?child_id=${c.server_id}`);
       if (!r?.ok) return;
       S.planList = r.data.items || null;
-      S.planSeat = r.data.seat || 1;
+      S.planFamily = !!r.data.family;
       this.render();
     } catch (_) { /* 정가 폴백 */ }
   },
@@ -12114,7 +12141,8 @@ const App = {
     const months = S.planSel;
     if (!months) return toast("기간을 골라주세요");
     if (S.payBusy) return;
-    const productId = BILLING.products[months];
+    // 티어는 서버가 알려준 값(S.planFamily)을 그대로 쓴다 — 화면이 자녀 수를 세지 않는다
+    const productId = BILLING.products[S.planFamily ? "family" : "single"][months];
     if (!BILLING.on || !billingPlugin() || !productId) {
       return toast("결제 준비 중이에요 — 스토어 등록이 끝나면 열려요");
     }
