@@ -1,0 +1,548 @@
+<title>학교퀘스트 출시 상황판</title>
+
+<style>
+/* ═══ 토큰 — 밝은 바탕이 기본. 어두운 쪽은 토큰만 다시 정한다 ═══ */
+:root {
+  --paper:#FAF9F6; --card:#FFFFFF; --sunk:#F2F1ED;
+  --ink:#1A1D23; --ink-2:#4A5359; --muted:#77838A;
+  --line:#E3E2DC; --line-2:#D3D2CA;
+  --accent:#0F766E; --accent-soft:#E3F1EF; --accent-ink:#0B5A54;
+  --warn:#9A4C09; --warn-soft:#FBEEE0; --warn-line:#E8C79A;
+  --shadow:0 1px 2px rgba(26,29,35,.06), 0 8px 24px -16px rgba(26,29,35,.22);
+  --r:12px;
+  --sans:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,"D2Coding",monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper:#15171B; --card:#1D2026; --sunk:#24272E;
+    --ink:#E9EBF0; --ink-2:#B6BEC4; --muted:#8B979E;
+    --line:#2C3037; --line-2:#3A3F47;
+    --accent:#3EB8AC; --accent-soft:#16302E; --accent-ink:#7FD6CC;
+    --warn:#F0A94A; --warn-soft:#33260F; --warn-line:#5C4520;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.7);
+  }
+}
+:root[data-theme="dark"] {
+  --paper:#15171B; --card:#1D2026; --sunk:#24272E;
+  --ink:#E9EBF0; --ink-2:#B6BEC4; --muted:#8B979E;
+  --line:#2C3037; --line-2:#3A3F47;
+  --accent:#3EB8AC; --accent-soft:#16302E; --accent-ink:#7FD6CC;
+  --warn:#F0A94A; --warn-soft:#33260F; --warn-line:#5C4520;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 8px 24px -16px rgba(0,0,0,.7);
+}
+
+*,*::before,*::after{box-sizing:border-box}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:var(--sans); font-size:15.5px; line-height:1.65;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1080px; margin:0 auto; padding:40px 22px 96px}
+:focus-visible{outline:2.5px solid var(--accent); outline-offset:3px; border-radius:4px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ── 머리 ── */
+.eyebrow{
+  font-family:var(--mono); font-size:11.5px; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--muted); margin:0 0 10px;
+}
+h1{
+  margin:0; font-size:clamp(30px,5.4vw,46px); font-weight:800; letter-spacing:-.032em;
+  line-height:1.1; text-wrap:balance;
+}
+.sub{margin:12px 0 0; color:var(--ink-2); max-width:62ch; font-size:16px}
+.meta{
+  display:flex; flex-wrap:wrap; gap:8px 18px; margin-top:20px;
+  font-family:var(--mono); font-size:12px; color:var(--muted);
+}
+.meta b{color:var(--ink-2); font-weight:600}
+
+/* ── 판정 줄 ── */
+.verdict{
+  margin:30px 0 0; padding:20px 22px; border-radius:var(--r);
+  background:var(--accent-soft); border:1px solid color-mix(in srgb, var(--accent) 26%, transparent);
+  display:flex; flex-wrap:wrap; align-items:baseline; gap:8px 14px;
+}
+.verdict b{font-size:19px; letter-spacing:-.02em; color:var(--accent-ink)}
+.verdict span{color:var(--ink-2); font-size:14.5px}
+
+/* ── 통계 타일 ── */
+.stats{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-top:14px}
+.stat{
+  background:var(--card); border:1px solid var(--line); border-radius:var(--r);
+  padding:16px 18px; box-shadow:var(--shadow);
+}
+.stat .n{
+  font-family:var(--mono); font-size:26px; font-weight:700; letter-spacing:-.03em;
+  font-variant-numeric:tabular-nums; line-height:1.1;
+}
+.stat .k{margin-top:5px; font-size:12.5px; color:var(--muted)}
+
+/* ── 구획 ── */
+section{margin-top:52px}
+h2{
+  margin:0 0 4px; font-size:12px; font-weight:700; letter-spacing:.15em; text-transform:uppercase;
+  color:var(--accent-ink); font-family:var(--mono);
+}
+h2 + .lede{margin:0 0 20px; color:var(--muted); font-size:14px}
+h3{margin:26px 0 10px; font-size:17px; font-weight:700; letter-spacing:-.015em}
+
+/* ── 남은 일 (크게) ── */
+.blockers{display:grid; gap:12px; margin-top:6px}
+.blocker{
+  background:var(--warn-soft); border:1px solid var(--warn-line); border-radius:var(--r);
+  padding:18px 20px; display:grid; grid-template-columns:auto 1fr; gap:4px 14px;
+}
+.blocker .num{
+  font-family:var(--mono); font-weight:700; font-size:13px; color:var(--warn);
+  grid-row:1/3; padding-top:3px;
+}
+.blocker b{font-size:16px; letter-spacing:-.01em}
+.blocker p{margin:4px 0 0; color:var(--ink-2); font-size:14.5px}
+.blocker .who{
+  display:inline-block; margin-top:8px; font-family:var(--mono); font-size:11px;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--warn);
+  border:1px solid var(--warn-line); border-radius:999px; padding:2px 9px;
+}
+
+/* ── 끝난 것 (조용하게) ── */
+.done{
+  list-style:none; margin:0; padding:0;
+  display:grid; grid-template-columns:repeat(auto-fill,minmax(250px,1fr)); gap:2px 22px;
+}
+.done li{
+  display:grid; grid-template-columns:auto 1fr; gap:10px; align-items:baseline;
+  padding:7px 0; border-bottom:1px solid var(--line); font-size:14.5px; color:var(--ink-2);
+}
+.done li::before{
+  content:""; width:8px; height:8px; border-radius:2px; background:var(--accent);
+  transform:translateY(-1px);
+}
+.done li em{font-style:normal; color:var(--muted); font-family:var(--mono); font-size:12px}
+
+/* ── 표 ── */
+.scroll{overflow-x:auto; margin-top:14px; border:1px solid var(--line); border-radius:var(--r); background:var(--card)}
+table{border-collapse:collapse; width:100%; min-width:520px; font-size:14.5px}
+th,td{padding:11px 16px; text-align:left; border-bottom:1px solid var(--line)}
+thead th{
+  background:var(--sunk); font-size:11.5px; letter-spacing:.09em; text-transform:uppercase;
+  color:var(--muted); font-weight:600; font-family:var(--mono);
+}
+tbody tr:last-child td{border-bottom:none}
+td.num,th.num{text-align:right; font-family:var(--mono); font-variant-numeric:tabular-nums}
+td.num b{font-weight:700}
+.tier{
+  font-family:var(--mono); font-size:11px; letter-spacing:.06em; padding:2px 8px; border-radius:999px;
+  border:1px solid var(--line-2); color:var(--ink-2);
+}
+.tier.fam{background:var(--accent-soft); border-color:color-mix(in srgb,var(--accent) 30%,transparent); color:var(--accent-ink)}
+.free{color:var(--accent-ink); font-weight:700}
+
+/* ── 복사 칩 ── */
+.copy{
+  font-family:var(--mono); font-size:13px; background:var(--sunk); border:1px solid var(--line-2);
+  border-radius:7px; padding:3px 9px; cursor:pointer; color:var(--ink);
+  transition:background .12s, border-color .12s;
+}
+.copy:hover{background:var(--accent-soft); border-color:var(--accent)}
+.copy.hit{background:var(--accent); color:#fff; border-color:var(--accent)}
+
+/* ── 붙여넣기 블록 ── */
+.paste{
+  background:var(--card); border:1px solid var(--line); border-radius:var(--r);
+  padding:16px 18px; margin-top:12px; box-shadow:var(--shadow);
+}
+.paste .lbl{
+  display:flex; justify-content:space-between; align-items:center; gap:12px;
+  font-family:var(--mono); font-size:11px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--muted); margin-bottom:10px;
+}
+.paste pre{
+  margin:0; white-space:pre-wrap; word-break:break-word; font-family:var(--sans);
+  font-size:14.5px; line-height:1.7; color:var(--ink);
+}
+.paste pre.mono{font-family:var(--mono); font-size:13px}
+.count{font-family:var(--mono); color:var(--muted)}
+
+/* ── 두 칸 ── */
+.two{display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:14px; margin-top:14px}
+.note{
+  background:var(--card); border:1px solid var(--line); border-left:3px solid var(--accent);
+  border-radius:var(--r); padding:15px 18px;
+}
+.note b{display:block; margin-bottom:5px; font-size:14.5px}
+.note p{margin:0; font-size:14px; color:var(--ink-2)}
+.note.warn{border-left-color:var(--warn)}
+
+footer{
+  margin-top:64px; padding-top:22px; border-top:1px solid var(--line);
+  font-family:var(--mono); font-size:12px; color:var(--muted);
+  display:flex; flex-wrap:wrap; gap:6px 18px;
+}
+</style>
+
+<div class="wrap">
+
+  <p class="eyebrow">Google Play · 내부 테스트</p>
+  <h1>학교퀘스트 출시 상황판</h1>
+  <p class="sub">Play Console을 채우면서 이 화면만 보면 되도록, 값·문안·남은 일을 한 곳에 모았습니다.
+    상품 ID와 문안은 눌러서 복사할 수 있습니다.</p>
+
+  <div class="meta">
+    <span>패키지 <b>com.eduthink.app</b></span>
+    <span>버전 <b>1.0 (1)</b></span>
+    <span>AAB <b>30.3MB · 서명 완료</b></span>
+    <span>워커 <b>cbf59585</b></span>
+    <span>기준 <b>2026-08-14</b></span>
+  </div>
+
+  <div class="verdict">
+    <b>지금 올릴 수 있습니다.</b>
+    <span>내부 테스트는 결제 없이 올라갑니다. 남은 두 가지는 실제 결제를 붙일 때 필요한 것입니다.</span>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><div class="n">4</div><div class="k">에뮬레이터 전수 통과</div></div>
+    <div class="stat"><div class="n">0</div><div class="k">콘솔 오류</div></div>
+    <div class="stat"><div class="n">3<span style="color:var(--muted)">/4</span></div><div class="k">뒷문 닫음</div></div>
+    <div class="stat"><div class="n">8</div><div class="k">등록할 인앱 상품</div></div>
+  </div>
+
+  <!-- ═══ 남은 일 — 순서가 실제로 있는 절차라 번호를 붙였다 ═══ -->
+  <section>
+    <h2>남은 일</h2>
+    <p class="lede">위에서부터 순서대로. 1·2번은 대표님만 할 수 있고, 3번은 그 뒤에 제가 합니다.</p>
+    <div class="blockers">
+
+      <div class="blocker">
+        <span class="num">01</span>
+        <b>인앱 상품 8개 등록</b>
+        <p>아래 표의 ID·가격 그대로. <b>상품 ID는 한 번 만들면 못 바꿉니다</b> — 오타에 주의해 주세요.
+          유형은 <b>일회성(관리형) 상품</b>입니다.
+          <span class="who">대표님</span></p>
+      </div>
+
+      <div class="blocker">
+        <span class="num">02</span>
+        <b>Play Console 서비스 계정 만들기</b>
+        <p>이게 없으면 서버가 구글 영수증을 확인할 수 없어서 <b>결제해도 이용권이 안 켜집니다.</b>
+          만드신 JSON을 주시면 제가 <code style="font-family:var(--mono);font-size:13px">GOOGLE_PLAY_SA</code>로 넣습니다.
+          <span class="who">대표님</span></p>
+      </div>
+
+      <div class="blocker">
+        <span class="num">03</span>
+        <b>결제 스위치 켜기</b>
+        <p>결제 플러그인 설치 + <code style="font-family:var(--mono);font-size:13px">BILLING.on = true</code>.
+          지금 결제 버튼이 「결제 준비 중」인 이유이고, 위 두 개가 끝나면 바로 열립니다.
+          <span class="who">제가</span></p>
+      </div>
+
+      <div class="blocker">
+        <span class="num">04</span>
+        <b>검수 계정 지우기</b>
+        <p>공개 출시 직전에. launch01 · kdcheck1 + 자녀 3명(첫째·둘째·셋째).
+          지우면 에뮬레이터 4대 검수가 멈추니 <b>맨 마지막</b>에 합니다.
+          <span class="who">제가</span></p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ═══ 가격 ═══ -->
+  <section>
+    <h2>가격</h2>
+    <p class="lede">자녀 자리별 차등은 버리고 1자녀 · 패밀리 두 갈래로. 자녀가 둘 이상이면 서버가 자동으로 패밀리 값을 냅니다.</p>
+
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>구분</th><th>기간</th>
+            <th class="num">정가</th><th class="num">받는 값</th><th class="num">월 환산</th>
+            <th>말하는 법</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td rowspan="4"><span class="tier">1자녀</span></td><td>1개월</td>
+            <td class="num">5,900</td><td class="num"><b>5,900</b></td><td class="num">5,900</td><td>—</td></tr>
+          <tr><td>3개월</td><td class="num">17,700</td><td class="num"><b>16,900</b></td><td class="num">5,633</td><td>약 1주 덤</td></tr>
+          <tr><td>6개월</td><td class="num">35,400</td><td class="num"><b>32,900</b></td><td class="num">5,483</td><td>약 보름 덤</td></tr>
+          <tr><td>12개월</td><td class="num">70,800</td><td class="num"><b>59,000</b></td><td class="num">4,917</td><td class="free">2개월 무료</td></tr>
+
+          <tr><td rowspan="4"><span class="tier fam">패밀리</span></td><td>1개월</td>
+            <td class="num">9,900</td><td class="num"><b>9,900</b></td><td class="num">9,900</td><td>—</td></tr>
+          <tr><td>3개월</td><td class="num">29,700</td><td class="num"><b>27,900</b></td><td class="num">9,300</td><td>약 1주 덤</td></tr>
+          <tr><td>6개월</td><td class="num">59,400</td><td class="num"><b>54,900</b></td><td class="num">9,150</td><td>약 보름 덤</td></tr>
+          <tr><td>12개월</td><td class="num">118,800</td><td class="num"><b>99,000</b></td><td class="num">8,250</td><td class="free">2개월 무료</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="two">
+      <div class="note">
+        <b>12개월은 딱 10개월 값입니다</b>
+        <p>「16.7% 할인」보다 <b>「2개월 무료」</b>가 바로 이해됩니다. 3·6개월 할인폭을 일부러 작게 둬서
+          계단이 12개월로 몰리게 했습니다.</p>
+      </div>
+      <div class="note">
+        <b>패밀리로 넘어가는 지점이 자연스럽습니다</b>
+        <p>자녀 2명이면 5,900 × 2 = 11,800원. 9,900원 패밀리가 바로 이득이라 다자녀 부모가 스스로 고릅니다.</p>
+      </div>
+      <div class="note">
+        <b>무료 체험은 7일</b>
+        <p>약관 제5조와 같은 값입니다. 다만 개학 전까지는 별도로 전원 무료라, 8월 가입자는 실제로 2주 가까이 씁니다.</p>
+      </div>
+      <div class="note warn">
+        <b>무통장은 앱에 노출하지 마세요</b>
+        <p>구글은 앱 안의 디지털 상품을 Play 결제로만 팔게 합니다. 서버에 경로는 살아 있지만
+          앱 화면에서는 Play 결제만 보이는 게 안전합니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ 인앱 상품 ═══ -->
+  <section>
+    <h2>인앱 상품 8개</h2>
+    <p class="lede">ID를 누르면 복사됩니다. 서버와 앱이 이 이름을 그대로 보고 있어서 철자가 하나라도 다르면 결제가 안 붙습니다.</p>
+
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr><th>상품 ID</th><th>이름</th><th class="num">가격</th><th>구분</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><button class="copy" type="button">pass_1m</button></td><td>학교퀘스트 1개월</td><td class="num">5,900</td><td><span class="tier">1자녀</span></td></tr>
+          <tr><td><button class="copy" type="button">pass_3m</button></td><td>학교퀘스트 3개월</td><td class="num">16,900</td><td><span class="tier">1자녀</span></td></tr>
+          <tr><td><button class="copy" type="button">pass_6m</button></td><td>학교퀘스트 6개월</td><td class="num">32,900</td><td><span class="tier">1자녀</span></td></tr>
+          <tr><td><button class="copy" type="button">pass_12m</button></td><td>학교퀘스트 12개월</td><td class="num">59,000</td><td><span class="tier">1자녀</span></td></tr>
+          <tr><td><button class="copy" type="button">pass_family_1m</button></td><td>학교퀘스트 패밀리 1개월</td><td class="num">9,900</td><td><span class="tier fam">패밀리</span></td></tr>
+          <tr><td><button class="copy" type="button">pass_family_3m</button></td><td>학교퀘스트 패밀리 3개월</td><td class="num">27,900</td><td><span class="tier fam">패밀리</span></td></tr>
+          <tr><td><button class="copy" type="button">pass_family_6m</button></td><td>학교퀘스트 패밀리 6개월</td><td class="num">54,900</td><td><span class="tier fam">패밀리</span></td></tr>
+          <tr><td><button class="copy" type="button">pass_family_12m</button></td><td>학교퀘스트 패밀리 12개월</td><td class="num">99,000</td><td><span class="tier fam">패밀리</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ═══ 스토어 문안 ═══ -->
+  <section>
+    <h2>스토어 등록 문안</h2>
+    <p class="lede">그대로 붙여 넣으시면 됩니다. 오른쪽 글자 수는 Play 제한 안에 들어갑니다.</p>
+
+    <div class="paste">
+      <div class="lbl"><span>앱 이름</span><span class="count">18 / 30자</span></div>
+      <pre>학교퀘스트 — 우리 아이 학교생활</pre>
+    </div>
+
+    <div class="paste">
+      <div class="lbl"><span>간단한 설명</span><span class="count">79 / 80자</span></div>
+      <pre>급식·시간표·준비물은 저절로, 집안일은 미션으로. 잔소리 없는 하루를 만듭니다.</pre>
+    </div>
+
+    <div class="paste">
+      <div class="lbl"><span>자세한 설명</span><span class="count">4000자 이내</span></div>
+      <pre>매달 학교 홈페이지 뒤지지 마세요.
+
+학교퀘스트는 우리 아이 학교에서 오는 것들을 알아서 가져옵니다.
+급식·시간표·학사일정이 날마다 저절로 채워지고, 준비물과 방과후 일정은
+한 화면에서 정리됩니다.
+
+■ 저절로 들어오는 학교 정보
+· 오늘 급식 — 알레르기 있는 메뉴에 표시. 그 메뉴 나오는 날 알림도 받을 수 있어요
+· 시간표 — 바뀐 칸은 눌러서 직접 고칠 수 있어요
+· 학사일정 — 개학·방학·시험이 달력에 자동으로
+· 학교정보 — 전교생·학급·교원·학년별 현황 (학교알리미 공시 기준)
+
+■ 준비물과 방과후
+· 내일 준비물을 한 줄로 적어두면 전날 저녁에 알려드려요
+· 학원·방과후는 주간 시간표로 한눈에
+
+■ 잔소리 대신 미션
+· 「아침에 여덟 시 전에 일어나기」 같은 작은 일을 미션으로 줍니다
+· 아이는 자기 폰에서 직접 확인하고 별을 모아요
+· 하루에 받을 수 있는 별의 상한(별 라인)은 부모가 정합니다 —
+  무조건 통과가 안 되게 하는 장치입니다
+· 모은 별은 부모가 정한 보상으로 바꿉니다
+
+■ 서류도 여기서
+· 교외체험학습 신청서·보고서, 결석신고서, 상담신청서를
+  학교 이름과 학년·반이 채워진 상태로 만들어 인쇄하거나 PDF로 저장
+
+■ 자녀 폰 연결
+· 부모 폰에서 6자리 코드를 만들어 아이 폰에 넣으면 연결됩니다
+· 아이 폰에는 아이 화면만 보입니다
+
+급식·시간표·학사일정 정보는 교육부 NEIS 와 학교알리미 공개 자료를 사용합니다.
+학교 사정에 따라 실제와 다를 수 있어요.</pre>
+    </div>
+
+    <div class="two">
+      <div class="paste">
+        <div class="lbl"><span>개인정보처리방침 URL</span></div>
+        <pre class="mono">https://eduthink-site-renderer.dndmotor1.workers.dev/privacy</pre>
+      </div>
+      <div class="paste">
+        <div class="lbl"><span>이용약관 URL</span></div>
+        <pre class="mono">https://eduthink-site-renderer.dndmotor1.workers.dev/terms</pre>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ 양식 답안 ═══ -->
+  <section>
+    <h2>콘솔 양식 답안</h2>
+    <p class="lede">틀리게 신고하면 나중에 앱이 내려갑니다. 아래는 실제 코드·DB를 확인해서 뽑은 값입니다.</p>
+
+    <h3>타깃 연령층 — 혼합(성인 + 만 13세 미만)</h3>
+    <div class="two">
+      <div class="note">
+        <b>대상 연령층에 둘 다 선택</b>
+        <p>만 13세 이상과 만 13세 미만을 <b>함께</b> 고릅니다.
+          「주로 아동을 대상으로 하나요」에는 <b>아니오</b> — 부모용 앱이고 자녀 기능이 딸려 있는 구조입니다.</p>
+      </div>
+      <div class="note">
+        <b>Families 정책은 적용됩니다</b>
+        <p>아이가 쓰는 화면이 있기 때문입니다. <b>부모 동의는 면제 사유가 아니라 요구 사항</b>이라
+          숨기지 않고 그대로 신고하는 게 맞습니다.</p>
+      </div>
+    </div>
+
+    <h3>이미 만족하는 Families 요건</h3>
+    <ul class="done">
+      <li>광고가 아예 없음 <em>코드에 광고 SDK 없음</em></li>
+      <li>부모 동의 기록 <em>children.consent_at</em></li>
+      <li>아동이 결제에 못 닿음 <em>CHILD_SCREENS 화이트리스트</em></li>
+      <li>아동이 커뮤니티에 못 닿음 <em>같은 화이트리스트</em></li>
+      <li>아이 화면에 실제 화폐 없음 <em>별(★)로만 거래</em></li>
+      <li>아동 단독 사용 불가 <em>부모 발급 6자리 코드 필요</em></li>
+    </ul>
+
+    <h3>데이터 보안 — 수집한다고 신고할 것</h3>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>항목</th><th>저장 위치</th><th>목적</th><th>필수</th></tr></thead>
+        <tbody>
+          <tr><td>아이디 · 비밀번호(해시)</td><td>accounts / auth_methods</td><td>계정</td><td>필수</td></tr>
+          <tr><td>휴대폰 번호</td><td>accounts.phone</td><td>비밀번호 찾기</td><td>필수</td></tr>
+          <tr><td>이메일</td><td>accounts.email</td><td>소셜 로그인</td><td>선택</td></tr>
+          <tr><td>자녀 별명 · 학년 · 반 · 출생연도</td><td>children</td><td>학교 연결 · 미션 배정</td><td>필수</td></tr>
+          <tr><td>자녀가 올린 사진</td><td>R2 RECORDS</td><td>부모 확인 · 기록 보관</td><td>선택</td></tr>
+          <tr><td>커뮤니티 글</td><td>community_posts</td><td>같은 반 학부모 대화</td><td>선택</td></tr>
+          <tr><td>푸시 구독 정보</td><td>push_subscriptions</td><td>알림</td><td>선택</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="two">
+      <div class="note">
+        <b>수집하지 않는다고 신고할 것</b>
+        <p>위치 · 연락처 · 통화기록 · 문자 · 설치된 앱 목록 · 캘린더 · 광고 식별자.
+          <b>자녀의 실명도 수집하지 않습니다</b> — 서식에 쓰는 이름은 그 기기 안에만 저장되고 서버로 안 갑니다.</p>
+      </div>
+      <div class="note">
+        <b>콘텐츠 등급 설문</b>
+        <p>폭력·성적 내용·비속어·약물·도박 전부 <b>아니오</b>.
+          <b>사용자 간 소통 기능은 「예」</b> — 같은 반 학부모 대화가 있습니다.
+          50자 제한 · 30초에 한 마디 · 신고 3인 시 자동 비공개 · 차단 가능을 함께 적으면 등급이 오르지 않습니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══ 준비된 것 ═══ -->
+  <section>
+    <h2>준비 완료</h2>
+    <p class="lede">확인이 끝난 것들입니다. 자산은 <code style="font-family:var(--mono);font-size:13px">에듀싱크/store/</code> 폴더에 있습니다.</p>
+    <ul class="done">
+      <li>AAB 서명 빌드 <em>30.3MB · 만료 2053</em></li>
+      <li>앱 아이콘 <em>512 × 512</em></li>
+      <li>그래픽 이미지 <em>1024 × 500</em></li>
+      <li>폰 스크린샷 8장 <em>1080 × 2400</em></li>
+      <li>개인정보처리방침 · 이용약관 <em>공개 URL 200</em></li>
+      <li>모의결제 뒷문 닫음 <em>DEV_TOOLS false</em></li>
+      <li>검수용 날짜 고정 제거 <em>DEV_DATE</em></li>
+      <li>검수용 급식 씨앗 삭제 <em>63행 · 백업 있음</em></li>
+      <li>웹뷰 디버깅 꺼짐 <em>릴리스 빌드 소켓 0</em></li>
+      <li>학교 자료 자동 갱신 <em>급식 12h · 일정 3d</em></li>
+      <li>체험 기간 통일 <em>7일 · 약관과 일치</em></li>
+      <li>공지사항 게시판 <em>관리자에서 즉시 반영</em></li>
+    </ul>
+
+    <h3>마지막 전수검사 — 에뮬레이터 4대 · 실서버</h3>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>대상</th><th class="num">전 화면</th><th class="num">사용법</th><th class="num">미션 문서</th><th class="num">콘솔 오류</th></tr></thead>
+        <tbody>
+          <tr><td>부모</td><td class="num">24 / 24</td><td class="num">16 / 16</td><td class="num">21 / 21</td><td class="num">0</td></tr>
+          <tr><td>첫째 <span class="tier">숭미초 · 방학</span></td><td class="num">9 / 9</td><td class="num">7 / 7</td><td class="num">13 / 13</td><td class="num">0</td></tr>
+          <tr><td>둘째 <span class="tier">숭미초 · 방학</span></td><td class="num">9 / 9</td><td class="num">7 / 7</td><td class="num">13 / 13</td><td class="num">0</td></tr>
+          <tr><td>셋째 <span class="tier fam">강화초 · 개학</span></td><td class="num">9 / 9</td><td class="num">9 / 9</td><td class="num">14 / 14</td><td class="num">0</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="note" style="margin-top:14px">
+      <b>개학한 학교로 실제 검증했습니다</b>
+      <p>날짜를 속여서 흉내 내지 않고, 전국에서 <b>오늘 개학한 초등학교</b>(인천 강화초)를 찾아
+        셋째를 그 학교로 붙였습니다. 방학 학교 둘과 개학 학교 하나를 동시에 보면서 검사했습니다.</p>
+    </div>
+  </section>
+
+  <!-- ═══ 순서 ═══ -->
+  <section>
+    <h2>콘솔에서 하실 순서</h2>
+    <p class="lede">내부 테스트는 결제 상품이 없어도 올라갑니다. 상품 등록은 함께 하시면 좋지만 막히면 나중에 하셔도 됩니다.</p>
+    <div class="blockers">
+      <div class="blocker" style="background:var(--card);border-color:var(--line)">
+        <span class="num" style="color:var(--accent)">01</span>
+        <b>앱 만들기 → 내부 테스트 트랙 선택</b>
+        <p>스토어 검색에 뜨지 않고, 이메일로 지정한 테스터 최대 100명만 설치합니다.</p>
+      </div>
+      <div class="blocker" style="background:var(--card);border-color:var(--line)">
+        <span class="num" style="color:var(--accent)">02</span>
+        <b>AAB 올리기</b>
+        <p><code style="font-family:var(--mono);font-size:13px">에듀싱크/store/app-release.aab</code></p>
+      </div>
+      <div class="blocker" style="background:var(--card);border-color:var(--line)">
+        <span class="num" style="color:var(--accent)">03</span>
+        <b>앱 정보 · 데이터 보안 · 콘텐츠 등급 · 타깃 연령</b>
+        <p>이 페이지의 문안과 답안을 그대로 넣으시면 됩니다.</p>
+      </div>
+      <div class="blocker" style="background:var(--card);border-color:var(--line)">
+        <span class="num" style="color:var(--accent)">04</span>
+        <b>테스터 이메일 등록 → 링크 받기</b>
+        <p>받으신 링크로 실제 폰에 설치해서 마지막으로 확인합니다.</p>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>학교퀘스트 · com.eduthink.app</span>
+    <span>워커 eduthink-site-renderer</span>
+    <span>2026-08-14</span>
+  </footer>
+
+</div>
+
+<script>
+  // 상품 ID·문안을 눌러서 복사 — 콘솔과 이 화면을 오가며 쓰는 페이지라 손이 덜 가게
+  document.querySelectorAll(".copy").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var text = btn.textContent.trim();
+      var done = function () {
+        var old = btn.textContent;
+        btn.textContent = "복사됨";
+        btn.classList.add("hit");
+        setTimeout(function () { btn.textContent = old; btn.classList.remove("hit"); }, 1100);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, done);
+      } else {
+        var ta = document.createElement("textarea");
+        ta.value = text; document.body.appendChild(ta); ta.select();
+        try { document.execCommand("copy"); } catch (e) {}
+        document.body.removeChild(ta); done();
+      }
+    });
+  });
+</script>
