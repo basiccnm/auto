@@ -39,13 +39,19 @@ AMT = r"(\d+(?:\.\d+)?|[½¼¾])\s*(" + UNIT + r")(?![A-Za-z0-9])"
 ING_ANY = re.compile(r"(?<![가-힣])([가-힣A-Za-z][가-힣A-Za-z0-9]{0,13})\s*" + AMT)
 
 # base_unit 이 왼쪽일 때 본문에 써도 되는 단위
+#
+# 🔴 **여기 기준은 `compute_line_costs.to_base()` 와 같아야 한다.**
+#    처음엔 이보다 좁게 잡았다가 기존 74편에서 8건을 오탐했다(2026-08-14) —
+#    `치킨무 1세트`(base=개)·`냉면육수 500ml`(base=kg). 둘 다 원가는 이미
+#    정상으로 계산되고 있었다. `to_base` 가 kg↔ml(밀도 1 가정)과 개↔세트를
+#    허용하기 때문이다. **파이프라인이 받는 표기를 검수기가 막으면 안 된다.**
+#    ⚠️ `to_base` 를 고치면 이 표도 같이 고칠 것.
 OK_UNIT = {
-    "kg": {"g", "kg"},
-    "L": {"ml", "L"},
-    "개": {"개", "장", "알", "조각", "쪽"},
-    "마리": {"마리"},
-    "포기": {"포기", "개"},
+    "kg": {"kg", "g", "ml", "L"},
+    "L": {"L", "ml", "g", "kg"},
+    "개": {"개", "세트", "장", "마리"},
 }
+# base_unit 이 위에 없으면(마리·포기 등) `to_base` 가 그대로 통과시키므로 검사하지 않는다
 
 
 def load_names(conn):
@@ -90,7 +96,7 @@ def main(slugs):
         for m in name_rx.finditer(txt):
             nm, un = m.group(1), m.group(3)
             bu = unit_of[key_of[nm]]
-            if un not in OK_UNIT.get(bu, {bu}):
+            if bu in OK_UNIT and un not in OK_UNIT[bu]:
                 unitbad.add("%s %s (base=%s)" % (nm, un, bu))
 
         flag = "  ❌" if (miss or unitbad) else ""
