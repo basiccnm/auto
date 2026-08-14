@@ -49,4 +49,7 @@ FEATURE_PWA_GUIDE = "false"
 VAPID_PUBLIC = "BFfP1pp6OCiIJ6uKz4RtSrYSGvQAASaFt56yy0fLTUZF5jJv6RwClTaSS_g3ITTi-1JWAfUFNABNFC-Sx0SJ4Ss"
 VAPID_SUBJECT = "mailto:dndmotor1@gmail.com"
 # QA용 /dev/login-as 라우트 스위치 — 검증 끝나면 "false"로 내리고 재배포할 것.
-DEV_TOOLS = "true"
+# 🔒 2026-08-14 출시 준비로 닫았다. 켜져 있는 동안은 실서버에서 mock 결제가 통해
+#    **공짜 이용권이 발급되고** /dev/login-as 로 아무 계정에나 들어갈 수 있다.
+#    다시 켤 일이 있으면 «켠 채로 배포하지 말 것» — 켜고 시험한 뒤 반드시 되돌린다.
+DEV_TOOLS = "false"

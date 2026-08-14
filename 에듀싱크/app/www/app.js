@@ -21,13 +21,12 @@ const ALLERGEN_KO = {
    학부모가 볼 것이 아니다. **배포 전 false 로 바꾼다**(docs/작업로그.md 배포 체크리스트). */
 const DEV_TOOLS = false;   // 배포 상태(2026-07-27). 화면 검수할 때만 true 로 되돌린다.
 
-/* ⚠ 검수용 날짜 고정 (2026-08-09) — 🔴 출시 전 이 세 줄을 지운다(STATUS 에 적어 뒀다).
-   방학에는 급식·시간표가 비어서 화면 절반을 볼 수 없다. 학기 중 날짜로 돌려 봐야
-   «진짜 화면»을 검수할 수 있다. 에뮬이 루팅이 아니라 기기 날짜를 못 바꿔서 앱에 둔다.
-     localStorage.setItem("devDate", "20260520") 하고 새로고침 → 그 날로 본다. 지우면 원래대로.
-   ⚠ 서버는 자기 날짜로 판단한다 — 이건 «앱이 보는 날»만 바꾼다(권한이 늘지 않는다). */
-const DEV_DATE = (() => { try { return (localStorage.getItem("devDate") || "").match(/^\d{8}$/)?.[0] || ""; } catch (e) { return ""; } })();
-const TODAY = DEV_DATE || new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10).replace(/-/g, "");
+/* 오늘 — 한국 시각(UTC+9) 기준 YYYYMMDD.
+   ⚠ 검수용 날짜 고정(devDate)은 **2026-08-14 출시 준비로 제거했다.**
+   방학이라 급식·시간표가 빈 화면을 검수하려고 뒀던 것인데, 이제는 «실제로 개학한 학교»
+   (인천 강화초)를 검수 자녀로 붙여서 진짜 데이터로 본다 — 날짜를 속일 이유가 없다.
+   다시 필요하면 그때 임시로 넣고 **반드시 출시 전에 다시 뺀다**(check_release 가 잡는다). */
+const TODAY = new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10).replace(/-/g, "");
 
 // 한 달치 급식 — 실제로는 GET …/meals?from&to 한 번으로 받는다(기간 조회).
 // 목업이라 평일에 반찬 풀을 돌려 채운다. 모양은 계약 응답과 동일.
